@@ -1,0 +1,73 @@
+// Prisma schema for LPM UNUSU (Lembaga Penjaminan Mutu)
+// Audit Mutu Internal (AMI), Siklus PPEPP, dan Standar SPMI
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model StandarSpmi {
+  id          Int          @id @default(autoincrement())
+  kode        String       @unique @db.VarChar(30) // STD-PEND-01, STD-PENEL-01
+  nama        String       // Standar Kompetensi Lulusan, Standar Dosen & Tendik
+  kategori    String       // Pendidikan, Penelitian, PKM, Tata Kelola
+  pernyataan  String       @db.Text
+  indikator   String?      @db.Text
+  target      String?
+  tahun       Int          @default(2026)
+  dokumenList DokumenMutu[]
+  auditList   AuditButir[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("lpm_standar_spmi")
+}
+
+model DokumenMutu {
+  id          Int          @id @default(autoincrement())
+  standarId   Int?
+  standar     StandarSpmi? @relation(fields: [standarId], references: [id], onDelete: SetNull)
+  jenis       String       @default("Kebijakan") // Kebijakan, Manual, Standar, Formulir / SOP
+  kodeDokumen String       @unique @db.VarChar(50)
+  judul       String
+  revisi      Int          @default(0)
+  filePath    String?
+  tahun       Int          @default(2026)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("lpm_dokumen_mutu")
+}
+
+model PeriodeAmi {
+  id          Int          @id @default(autoincrement())
+  nama        String       // Siklus AMI Tahun Akademik 2026/2027
+  tahun       Int          @default(2026)
+  status      String       @default("Berjalan") // Persiapan, Berjalan, Selesai
+  auditButir  AuditButir[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("lpm_periode_ami")
+}
+
+model AuditButir {
+  id          Int         @id @default(autoincrement())
+  periodeId   Int
+  periode     PeriodeAmi  @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+  standarId   Int
+  standar     StandarSpmi @relation(fields: [standarId], references: [id], onDelete: Restrict)
+  auditee     String      // Program Studi Sistem Informasi / Fakultas Sains
+  auditor     String      // Dr. Ahmad Zaki, M.Kom.
+  hasil       String      @default("Sesuai") // Sesuai, Observasi, Temuan Minor, Temuan Mayor
+  deskripsi   String?     @db.Text
+  rekomendasi String?     @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("lpm_audit_butir")
+}
