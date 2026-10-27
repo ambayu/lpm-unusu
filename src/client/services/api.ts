@@ -8,6 +8,50 @@ const api = axios.create({
   },
 });
 
+// ==========================================
+// SESI SSO ONE UNUSU
+// ==========================================
+export interface SessionUser {
+  id: number;
+  username: string;
+  nama: string;
+  email: string | null;
+  role: string;
+  ssoRole: string;
+  nim?: string | null;
+  nidn?: string | null;
+  prodi?: string | null;
+  fakultas?: string | null;
+}
+
+const TOKEN_KEY = 'lpm_unusu_token';
+const USER_KEY = 'lpm_unusu_user';
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const path = window.location.pathname;
+    if (status === 401 && path !== '/login' && path !== '/sso/callback') {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      window.location.replace('/login');
+    }
+    return Promise.reject(error);
+  }
+);
+
+export const ssoLogin = (client_id: string, token: string) =>
+  api.post<{ success: boolean; token: string; user: SessionUser }>('/auth/sso', { client_id, token });
+
 export interface StandarItem {
   id: number;
   kode: string;
