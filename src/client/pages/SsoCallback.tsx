@@ -35,7 +35,7 @@ export function SsoCallbackPage() {
         saveSession(response.data.token, response.data.user);
 
         if (!cancelled) {
-          window.location.replace('/');
+          window.location.replace(import.meta.env.BASE_URL);
         }
       } catch (err: any) {
         if (!cancelled) {

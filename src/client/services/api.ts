@@ -40,10 +40,10 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const path = window.location.pathname;
-    if (status === 401 && path !== '/login' && path !== '/sso/callback') {
+    if (status === 401 && path !== import.meta.env.BASE_URL + 'login' && path !== import.meta.env.BASE_URL + 'sso/callback') {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
-      window.location.replace('/login');
+      window.location.replace(import.meta.env.BASE_URL + 'login');
     }
     return Promise.reject(error);
   }
