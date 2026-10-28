@@ -19,10 +19,16 @@ function ProtectedRoute({ children }: { children: React.ReactElement }) {
   return children;
 }
 
+const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 export function App() {
+  const currentPath = window.location.pathname;
+  const isBaseSubpath = BASE_PATH && currentPath.startsWith(BASE_PATH);
+  const routerBasename = isBaseSubpath ? BASE_PATH : '';
+
   return (
     <AuthProvider>
-      <Router basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+      <Router basename={routerBasename}>
         <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
           <Navbar />
           <main className="flex-1">
@@ -32,11 +38,11 @@ export function App() {
               <Route path="/" element={<ProtectedRoute><StandarPage /></ProtectedRoute>} />
               <Route path="/dokumen" element={<ProtectedRoute><DokumenPage /></ProtectedRoute>} />
               <Route path="/ami" element={<ProtectedRoute><AmiPage /></ProtectedRoute>} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </main>
           <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
-            <p>Ac {new Date().getFullYear()} LPM UNUSU — Lembaga Penjaminan Mutu Universitas Nahdlatul Ulama Sumatera Utara</p>
+            <p>© {new Date().getFullYear()} LPM UNUSU — Lembaga Penjaminan Mutu Universitas Nahdlatul Ulama Sumatera Utara</p>
           </footer>
         </div>
       </Router>

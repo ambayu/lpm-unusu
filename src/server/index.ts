@@ -20,6 +20,7 @@ app.use(express.json());
 // Static files in production
 const clientDistPath = path.resolve(process.cwd(), "dist/client");
 app.use(express.static(clientDistPath));
+app.use("/lpm", express.static(clientDistPath));
 
 // Health check
 app.get("/api/health", (req: Request, res: Response) => {
