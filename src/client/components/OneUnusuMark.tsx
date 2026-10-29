@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 
 /**
  * Tanda ONE UNUSU untuk halaman masuk aplikasi yang terintegrasi SSO.

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { ArrowRight, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { OneUnusuMark } from '../components/OneUnusuMark';
 
