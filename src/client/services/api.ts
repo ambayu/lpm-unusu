@@ -50,7 +50,7 @@ api.interceptors.response.use(
 );
 
 export const ssoLogin = (client_id: string, token: string) =>
-  api.post<{ success: boolean; token: string; user: SessionUser }>('/auth/sso', { client_id, token });
+  api.post<{ success: boolean; token: string; user: SessionUser; message?: string }>('/auth/sso', { client_id, token });
 
 export interface StandarItem {
   id: number;

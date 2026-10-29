@@ -4,6 +4,36 @@ import { Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { ssoLogin } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
+type SsoExchangeResult = Awaited<ReturnType<typeof ssoLogin>>;
+
+/**
+ * Token SSO hanya boleh ditukar satu kali. React menjalankan efek dua kali pada
+ * mode pengembangan (StrictMode) dan halaman callback dapat dirender ulang,
+ * sehingga penukaran dideduplikasi per token. Tanpa ini permintaan kedua
+ * ditolak server karena token sudah terpakai.
+ */
+const exchangeRequests = new Map<string, Promise<SsoExchangeResult>>();
+
+function exchangeSsoToken(clientId: string, token: string): Promise<SsoExchangeResult> {
+  const key = `${clientId}:${token}`;
+  const pending = exchangeRequests.get(key);
+
+  if (pending) {
+    return pending;
+  }
+
+  const request = ssoLogin(clientId, token);
+  exchangeRequests.set(key, request);
+
+  request.catch(() => {
+    // Penukaran gagal (mis. jaringan terputus) boleh dicoba lagi; hasil sukses
+    // tetap disimpan agar token tidak pernah dikirim ulang.
+    exchangeRequests.delete(key);
+  });
+
+  return request;
+}
+
 /**
  * Callback SSO ONE UNUSU.
  * URL: /sso/callback?client_id=..&token=..
@@ -27,7 +57,7 @@ export function SsoCallbackPage() {
 
     (async () => {
       try {
-        const response = await ssoLogin(clientId, token);
+        const response = await exchangeSsoToken(clientId, token);
         if (!response.data?.success) {
           throw new Error(response.data?.message || 'Login SSO gagal');
         }

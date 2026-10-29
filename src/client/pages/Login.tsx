@@ -2,12 +2,14 @@ import React from 'react';
 import { KeyRound, ArrowRight, ShieldCheck, Award } from 'lucide-react';
 
 const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
+const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || 'lpm-unusu';
 
 export function LoginPage() {
   const handleSsoLogin = () => {
-    // Autentikasi dipusatkan di ONE UNUSU. Setelah login, pilih aplikasi
-    // "LPM UNUSU" dari portal untuk masuk ke sini.
-    window.location.href = `${ONE_UNUSU_URL}/login`;
+    // Autentikasi dipusatkan di ONE UNUSU. Halaman otorisasi portal menerbitkan
+    // tiket lalu mengembalikan pengguna ke aplikasi ini.
+    const target = `${ONE_UNUSU_URL}/sso/authorize?client_id=${encodeURIComponent(SSO_CLIENT_ID)}`;
+    window.location.href = target;
   };
 
   return (
