@@ -9,7 +9,7 @@ export function LoginPage() {
   const handleSsoLogin = () => {
     // Autentikasi dipusatkan di ONE UNUSU. Halaman otorisasi portal menerbitkan
     // tiket lalu mengembalikan pengguna ke aplikasi ini.
-    const target = `${ONE_UNUSU_URL}/sso/authorize?client_id=${encodeURIComponent(SSO_CLIENT_ID)}`;
+    const target = `${ONE_UNUSU_URL}/authorize?client_id=${encodeURIComponent(SSO_CLIENT_ID)}`;
     window.location.href = target;
   };
 
