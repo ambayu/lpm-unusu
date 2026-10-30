@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import { FullHeroSlider } from '../components/FullHeroSlider';
+import { assetUrl } from '../lib/assets';
 
 const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
 
@@ -221,7 +222,7 @@ export const LandingPage: React.FC = () => {
             <div className="relative mx-auto flex max-w-lg items-end justify-center">
               <div className="absolute inset-x-2 bottom-0 h-[86%] rounded-[40px] bg-gradient-to-tr from-blue-100/90 via-amber-100/70 to-transparent border border-blue-100" />
               <img
-                src="/assets/profil-auditor.png"
+                src={assetUrl("/assets/profil-auditor.png")}
                 alt="Auditor Penjaminan Mutu Internal LPM UNUSU"
                 className="relative z-10 block w-full max-w-[480px] sm:max-w-[500px] h-auto object-contain drop-shadow-[0_25px_50px_rgba(30,58,138,0.22)] transition-transform duration-300 hover:scale-[1.02]"
                 loading="lazy"

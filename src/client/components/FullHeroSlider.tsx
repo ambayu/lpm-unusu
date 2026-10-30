@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { assetUrl } from "../lib/assets";
 
 export interface HeroSlideItem {
   id: number;
@@ -14,8 +15,8 @@ export interface HeroSlideItem {
 const defaultHeroSlides: HeroSlideItem[] = [
   {
     id: 1,
-    image: "/assets/hero/lpm-hero-1.png",
-    imageMobile: "/assets/hero/lpm-hero-1.png",
+    image: assetUrl("/assets/hero/lpm-hero-1.png"),
+    imageMobile: assetUrl("/assets/hero/lpm-hero-1.png"),
     title: "Auditor Mutu Internal UNUSU",
     badge: "Siklus PPEPP Nasional",
     headline: "Standar Penjaminan Mutu Internal",
@@ -23,8 +24,8 @@ const defaultHeroSlides: HeroSlideItem[] = [
   },
   {
     id: 2,
-    image: "/assets/hero/lpm-hero-2.png",
-    imageMobile: "/assets/hero/lpm-hero-2.png",
+    image: assetUrl("/assets/hero/lpm-hero-2.png"),
+    imageMobile: assetUrl("/assets/hero/lpm-hero-2.png"),
     title: "Evaluasi Kurikulum & Capaian Akademik",
     badge: "Outcome-Based Education",
     headline: "Capaian Pembelajaran Terstandarisasi",
@@ -32,8 +33,8 @@ const defaultHeroSlides: HeroSlideItem[] = [
   },
   {
     id: 3,
-    image: "/assets/hero/lpm-hero-3.png",
-    imageMobile: "/assets/hero/lpm-hero-3.png",
+    image: assetUrl("/assets/hero/lpm-hero-3.png"),
+    imageMobile: assetUrl("/assets/hero/lpm-hero-3.png"),
     title: "Kampus Terpadu UNUSU Medan",
     badge: "Audit AMI Real-Time",
     headline: "Audit Mutu Internal Berkelanjutan",
@@ -41,8 +42,8 @@ const defaultHeroSlides: HeroSlideItem[] = [
   },
   {
     id: 4,
-    image: "/assets/hero/lpm-hero-4.png",
-    imageMobile: "/assets/hero/lpm-hero-4.png",
+    image: assetUrl("/assets/hero/lpm-hero-4.png"),
+    imageMobile: assetUrl("/assets/hero/lpm-hero-4.png"),
     title: "Pusat Dokumentasi & Akreditasi",
     badge: "Bank Dokumen Legal",
     headline: "Arsip Kebijakan, Manual & SOP",

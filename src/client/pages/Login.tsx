@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRightIcon, ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { AnimatedFlatSsoLogo } from '../components/AnimatedFlatSsoLogo';
+import { assetUrl } from '../lib/assets';
 
 const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
 const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || 'lpm-unusu';
@@ -85,7 +86,7 @@ export function LoginPage() {
       {/* ===== SISI KANAN: WALLPAPER KAMPUS (OVERLAY BLUE) ===== */}
       <div className="w-full lg:w-1/2 relative flex flex-col justify-end p-8 sm:p-14 lg:p-16 overflow-hidden min-h-[420px] lg:min-h-screen text-white">
         <img
-          src="/assets/campus-login.png"
+          src={assetUrl("/assets/campus-login.png")}
           alt="Gedung Kampus UNUSU Gaperta Medan"
           className="absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.82]"
         />
