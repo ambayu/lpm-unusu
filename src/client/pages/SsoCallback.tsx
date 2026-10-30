@@ -1,17 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { ShieldCheckIcon, ExclamationTriangleIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { ssoLogin } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 type SsoExchangeResult = Awaited<ReturnType<typeof ssoLogin>>;
 
-/**
- * Token SSO hanya boleh ditukar satu kali. React menjalankan efek dua kali pada
- * mode pengembangan (StrictMode) dan halaman callback dapat dirender ulang,
- * sehingga penukaran dideduplikasi per token. Tanpa ini permintaan kedua
- * ditolak server karena token sudah terpakai.
- */
 const exchangeRequests = new Map<string, Promise<SsoExchangeResult>>();
 
 function exchangeSsoToken(clientId: string, token: string): Promise<SsoExchangeResult> {
@@ -26,19 +20,12 @@ function exchangeSsoToken(clientId: string, token: string): Promise<SsoExchangeR
   exchangeRequests.set(key, request);
 
   request.catch(() => {
-    // Penukaran gagal (mis. jaringan terputus) boleh dicoba lagi; hasil sukses
-    // tetap disimpan agar token tidak pernah dikirim ulang.
     exchangeRequests.delete(key);
   });
 
   return request;
 }
 
-/**
- * Callback SSO ONE UNUSU.
- * URL: /sso/callback?client_id=..&token=..
- * Token diverifikasi backend aplikasi ini (server-to-server).
- */
 export function SsoCallbackPage() {
   const [params] = useSearchParams();
   const { saveSession } = useAuth();
@@ -49,7 +36,7 @@ export function SsoCallbackPage() {
     const token = params.get('token');
 
     if (!clientId || !token) {
-      setError('Parameter SSO tidak lengkap. Silakan login ulang dari ONE UNUSU.');
+      setError('Parameter SSO tidak lengkap. Silakan login ulang dari Portal ONE UNUSU.');
       return;
     }
 
@@ -72,7 +59,7 @@ export function SsoCallbackPage() {
           setError(
             err.response?.data?.message ||
             err.message ||
-            'Gagal memverifikasi token SSO. Token mungkin sudah kedaluwarsa.'
+            'Gagal memverifikasi token SSO. Token mungkin sudah kedaluwarsa atau telah digunakan.'
           );
         }
       }
@@ -84,34 +71,34 @@ export function SsoCallbackPage() {
   }, [params, saveSession]);
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 text-center">
+    <div className="min-h-screen bg-[#F1F5F2] flex items-center justify-center px-4">
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-xl border border-slate-200/80 p-8 text-center">
         {error ? (
           <>
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 mb-4">
-              <ShieldAlert className="w-7 h-7" />
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 mb-4 ring-4 ring-rose-100">
+              <ExclamationTriangleIcon className="w-7 h-7" />
             </div>
             <h1 className="text-lg font-bold text-slate-900 mb-2">Login SSO Gagal</h1>
-            <p className="text-sm text-slate-600 mb-6">{error}</p>
+            <p className="text-xs text-slate-600 mb-6 leading-relaxed">{error}</p>
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-700 text-white text-sm font-bold hover:bg-emerald-800 transition-all"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-800 text-white text-xs font-bold hover:bg-emerald-900 transition-all shadow-xs"
             >
               Kembali ke Halaman Login
             </Link>
           </>
         ) : (
           <>
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 mb-4">
-              <Loader2 className="w-7 h-7 animate-spin" />
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-800 mb-4 ring-4 ring-emerald-100">
+              <ArrowPathIcon className="w-7 h-7 animate-spin" />
             </div>
             <h1 className="text-lg font-bold text-slate-900 mb-2">Memverifikasi Sesi SSO</h1>
-            <p className="text-sm text-slate-600">
-              Mohon tunggu, Malin sedang menghubungkan akun ONE UNUSU Sanak...
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Mohon tunggu, sistem sedang memverifikasi tiket autentikasi dari Portal ONE UNUSU...
             </p>
-            <div className="mt-6 flex items-center justify-center gap-2 text-xs text-emerald-700 font-medium">
-              <ShieldCheck className="w-4 h-4" />
-              Token sekali pakai • berlaku 5 menit
+            <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-emerald-800 font-semibold bg-emerald-50/80 py-1.5 px-3 rounded-full border border-emerald-200/60 w-fit mx-auto">
+              <ShieldCheckIcon className="w-4 h-4 text-emerald-700" />
+              <span>Tiket single-use aman • berlaku 5 menit</span>
             </div>
           </>
         )}

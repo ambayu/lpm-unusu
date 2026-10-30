@@ -171,6 +171,80 @@ app.get("/api/standar", async (req: Request, res: Response) => {
   }
 });
 
+app.post("/api/standar", async (req: Request, res: Response) => {
+  try {
+    const { kode, nama, kategori, pernyataan, indikator, target, tahun, author } = req.body;
+    if (!kode || !nama || !kategori || !pernyataan) {
+      return res.status(400).json({ success: false, message: "Kode, nama, kategori, dan pernyataan wajib diisi" });
+    }
+    const created = await prisma.standarSpmi.create({
+      data: {
+        kode,
+        nama,
+        kategori,
+        pernyataan,
+        indikator,
+        target,
+        tahun: Number(tahun) || 2026,
+        ...(author && { author }),
+      },
+    });
+    res.json({ success: true, data: created, message: "Standar SPMI berhasil ditambahkan" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || "Gagal menambah standar SPMI" });
+  }
+});
+
+app.get("/api/standar/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const item = await prisma.standarSpmi.findUnique({
+      where: { id: Number(id) },
+    });
+    if (!item) {
+      return res.status(404).json({ success: false, message: "Standar SPMI tidak ditemukan" });
+    }
+    res.json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Gagal mengambil data standar SPMI" });
+  }
+});
+
+app.put("/api/standar/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { kode, nama, kategori, pernyataan, indikator, target, tahun, author } = req.body;
+    const updated = await prisma.standarSpmi.update({
+      where: { id: Number(id) },
+      data: {
+        ...(kode && { kode }),
+        ...(nama && { nama }),
+        ...(kategori && { kategori }),
+        ...(pernyataan && { pernyataan }),
+        indikator: indikator !== undefined ? indikator : undefined,
+        target: target !== undefined ? target : undefined,
+        ...(tahun && { tahun: Number(tahun) }),
+        ...(author && { author }),
+      },
+    });
+    res.json({ success: true, data: updated, message: "Standar SPMI berhasil diperbarui" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || "Gagal memperbarui standar SPMI" });
+  }
+});
+
+app.delete("/api/standar/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.standarSpmi.delete({
+      where: { id: Number(id) },
+    });
+    res.json({ success: true, message: "Standar SPMI berhasil dihapus" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || "Gagal menghapus standar SPMI" });
+  }
+});
+
 // 2. Dokumen Mutu / SOP
 app.get("/api/dokumen-mutu", async (req: Request, res: Response) => {
   try {
@@ -181,6 +255,83 @@ app.get("/api/dokumen-mutu", async (req: Request, res: Response) => {
     res.json({ success: true, data: docs });
   } catch (error) {
     res.status(500).json({ success: false, message: "Gagal mengambil dokumen mutu" });
+  }
+});
+
+app.post("/api/dokumen-mutu", async (req: Request, res: Response) => {
+  try {
+    const { standarId, kodeDokumen, judul, jenis, revisi, filePath, tahun, author } = req.body;
+    if (!kodeDokumen || !judul) {
+      return res.status(400).json({ success: false, message: "Kode dokumen dan judul wajib diisi" });
+    }
+    const created = await prisma.dokumenMutu.create({
+      data: {
+        standarId: standarId ? Number(standarId) : null,
+        kodeDokumen,
+        judul,
+        jenis: jenis || "Standar",
+        revisi: Number(revisi) || 0,
+        filePath,
+        tahun: Number(tahun) || 2026,
+        ...(author && { author }),
+      },
+      include: { standar: true },
+    });
+    res.json({ success: true, data: created, message: "Dokumen mutu berhasil didaftarkan" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || "Gagal menambah dokumen mutu" });
+  }
+});
+
+app.get("/api/dokumen-mutu/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const doc = await prisma.dokumenMutu.findUnique({
+      where: { id: Number(id) },
+      include: { standar: true },
+    });
+    if (!doc) {
+      return res.status(404).json({ success: false, message: "Dokumen mutu tidak ditemukan" });
+    }
+    res.json({ success: true, data: doc });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Gagal mengambil detail dokumen mutu" });
+  }
+});
+
+app.put("/api/dokumen-mutu/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { standarId, kodeDokumen, judul, jenis, revisi, filePath, tahun, author } = req.body;
+    const updated = await prisma.dokumenMutu.update({
+      where: { id: Number(id) },
+      data: {
+        standarId: standarId !== undefined ? (standarId ? Number(standarId) : null) : undefined,
+        ...(kodeDokumen && { kodeDokumen }),
+        ...(judul && { judul }),
+        ...(jenis && { jenis }),
+        revisi: revisi !== undefined ? Number(revisi) : undefined,
+        filePath: filePath !== undefined ? filePath : undefined,
+        ...(tahun && { tahun: Number(tahun) }),
+        ...(author && { author }),
+      },
+      include: { standar: true },
+    });
+    res.json({ success: true, data: updated, message: "Dokumen mutu berhasil diperbarui" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || "Gagal memperbarui dokumen mutu" });
+  }
+});
+
+app.delete("/api/dokumen-mutu/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.dokumenMutu.delete({
+      where: { id: Number(id) },
+    });
+    res.json({ success: true, message: "Dokumen mutu berhasil dihapus" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || "Gagal menghapus dokumen mutu" });
   }
 });
 
@@ -202,7 +353,7 @@ app.get("/api/audit", async (req: Request, res: Response) => {
 
 app.post("/api/audit", async (req: Request, res: Response) => {
   try {
-    const { periodeId, standarId, auditee, auditor, hasil, deskripsi, rekomendasi } = req.body;
+    const { periodeId, standarId, auditee, auditor, hasil, deskripsi, rekomendasi, author } = req.body;
     const newAudit = await prisma.auditButir.create({
       data: {
         periodeId: Number(periodeId),
@@ -212,11 +363,70 @@ app.post("/api/audit", async (req: Request, res: Response) => {
         hasil: hasil || "Sesuai",
         deskripsi,
         rekomendasi,
+        ...(author && { author }),
       }
     });
     res.json({ success: true, data: newAudit, message: "Hasil audit AMI berhasil disimpan" });
   } catch (error) {
     res.status(500).json({ success: false, message: "Gagal menambah data audit" });
+  }
+});
+
+app.get("/api/audit/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const item = await prisma.auditButir.findUnique({
+      where: { id: Number(id) },
+      include: {
+        periode: true,
+        standar: true,
+      },
+    });
+    if (!item) {
+      return res.status(404).json({ success: false, message: "Catatan audit AMI tidak ditemukan" });
+    }
+    res.json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Gagal mengambil detail audit AMI" });
+  }
+});
+
+app.put("/api/audit/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { periodeId, standarId, auditee, auditor, hasil, deskripsi, rekomendasi, author } = req.body;
+    const updated = await prisma.auditButir.update({
+      where: { id: Number(id) },
+      data: {
+        ...(periodeId && { periodeId: Number(periodeId) }),
+        ...(standarId && { standarId: Number(standarId) }),
+        ...(auditee && { auditee }),
+        ...(auditor && { auditor }),
+        ...(hasil && { hasil }),
+        deskripsi: deskripsi !== undefined ? deskripsi : undefined,
+        rekomendasi: rekomendasi !== undefined ? rekomendasi : undefined,
+        ...(author && { author }),
+      },
+      include: {
+        periode: true,
+        standar: true,
+      },
+    });
+    res.json({ success: true, data: updated, message: "Temuan audit AMI berhasil diperbarui" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || "Gagal memperbarui catatan audit AMI" });
+  }
+});
+
+app.delete("/api/audit/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.auditButir.delete({
+      where: { id: Number(id) },
+    });
+    res.json({ success: true, message: "Catatan audit AMI berhasil dihapus" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || "Gagal menghapus catatan audit AMI" });
   }
 });
 

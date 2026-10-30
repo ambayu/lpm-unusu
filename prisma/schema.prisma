@@ -19,6 +19,7 @@ model StandarSpmi {
   indikator   String?      @db.Text
   target      String?
   tahun       Int          @default(2026)
+  author      String?      @default("Super Admin LPM") @db.VarChar(100)
   dokumenList DokumenMutu[]
   auditList   AuditButir[]
   createdAt   DateTime     @default(now())
@@ -37,6 +38,7 @@ model DokumenMutu {
   revisi      Int          @default(0)
   filePath    String?
   tahun       Int          @default(2026)
+  author      String?      @default("Super Admin LPM") @db.VarChar(100)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
@@ -66,6 +68,7 @@ model AuditButir {
   hasil       String      @default("Sesuai") // Sesuai, Observasi, Temuan Minor, Temuan Mayor
   deskripsi   String?     @db.Text
   rekomendasi String?     @db.Text
+  author      String?     @default("Super Admin LPM") @db.VarChar(100)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
