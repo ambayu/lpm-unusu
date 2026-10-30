@@ -20,9 +20,6 @@ function ensureKeyframes() {
     @keyframes onuOrbitCCW { to { transform: rotate(-360deg); } }
     @keyframes onuGlow     { 0%,100%{ opacity:.08 } 50%{ opacity:.22 } }
     @keyframes onuPing     { 0%,100%{ transform:scale(1);opacity:1 } 50%{ transform:scale(1.45);opacity:.45 } }
-    @media (prefers-reduced-motion: reduce) {
-      * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
-    }
   `;
   document.head.appendChild(s);
 }
@@ -80,7 +77,7 @@ export const AnimatedFlatSsoLogo: React.FC<Props> = ({ size = 200, className = '
         </defs>
 
         {/* Ambient Glow */}
-        <circle cx={cx} cy={cy} r="95" fill="#22C55E"
+        <circle cx={cx} cy={cy} r="95" fill="#22C55E" opacity="0.12"
           style={{ animation: 'onuGlow 4s ease-in-out infinite' }}
         />
 
