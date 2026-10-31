@@ -70,9 +70,13 @@ interface AuthRequest extends Request {
 
 const SSO_ROLE_MAP: Record<string, string> = {
   SUPERADMIN: "admin",
+  ADMIN_LPM: "admin",
   DOSEN: "dosen",
   MAHASISWA: "mahasiswa",
 };
+
+/** Role SSO yang diizinkan mengakses panel LPM (Admin & Dosen) */
+const ALLOWED_SSO_ROLES = new Set(["SUPERADMIN", "ADMIN_LPM", "DOSEN"]);
 
 const mapSsoRole = (role: string): string => SSO_ROLE_MAP[role] ?? "mahasiswa";
 
@@ -134,6 +138,14 @@ app.post("/api/auth/sso", async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: ssoPayload?.message || "Verifikasi token SSO gagal" });
     }
 
+    // Tolak login jika role SSO tidak diizinkan di LPM
+    if (!ALLOWED_SSO_ROLES.has(ssoUser.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "Akses ditolak. Hanya Administrator LPM dan Dosen yang diizinkan masuk ke panel ini.",
+      });
+    }
+
     const sessionUser: SsoSession = {
       id: ssoUser.id,
       username: ssoUser.username,
@@ -158,6 +170,19 @@ app.post("/api/auth/sso", async (req: Request, res: Response) => {
 // Seluruh API di bawah ini wajib membawa JWT sesi lokal (hasil SSO).
 app.use("/api", authenticate);
 
+/** Middleware otorisasi — hanya role tertentu yang boleh lewat. */
+const requireRole = (...allowed: string[]) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    const role = (req as AuthRequest).user?.role;
+    if (!role || !allowed.includes(role)) {
+      return res.status(403).json({
+        success: false,
+        message: "Akses ditolak. Anda tidak memiliki izin untuk operasi ini.",
+      });
+    }
+    next();
+  };
+
 // 1. Standar SPMI
 app.get("/api/standar", async (req: Request, res: Response) => {
   try {
@@ -171,7 +196,7 @@ app.get("/api/standar", async (req: Request, res: Response) => {
   }
 });
 
-app.post("/api/standar", async (req: Request, res: Response) => {
+app.post("/api/standar", requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { kode, nama, kategori, pernyataan, indikator, target, tahun, author } = req.body;
     if (!kode || !nama || !kategori || !pernyataan) {
@@ -210,7 +235,7 @@ app.get("/api/standar/:id", async (req: Request, res: Response) => {
   }
 });
 
-app.put("/api/standar/:id", async (req: Request, res: Response) => {
+app.put("/api/standar/:id", requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { kode, nama, kategori, pernyataan, indikator, target, tahun, author } = req.body;
@@ -233,7 +258,7 @@ app.put("/api/standar/:id", async (req: Request, res: Response) => {
   }
 });
 
-app.delete("/api/standar/:id", async (req: Request, res: Response) => {
+app.delete("/api/standar/:id", requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await prisma.standarSpmi.delete({
@@ -258,7 +283,7 @@ app.get("/api/dokumen-mutu", async (req: Request, res: Response) => {
   }
 });
 
-app.post("/api/dokumen-mutu", async (req: Request, res: Response) => {
+app.post("/api/dokumen-mutu", requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { standarId, kodeDokumen, judul, jenis, revisi, filePath, tahun, author } = req.body;
     if (!kodeDokumen || !judul) {
@@ -299,7 +324,7 @@ app.get("/api/dokumen-mutu/:id", async (req: Request, res: Response) => {
   }
 });
 
-app.put("/api/dokumen-mutu/:id", async (req: Request, res: Response) => {
+app.put("/api/dokumen-mutu/:id", requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { standarId, kodeDokumen, judul, jenis, revisi, filePath, tahun, author } = req.body;
@@ -323,7 +348,7 @@ app.put("/api/dokumen-mutu/:id", async (req: Request, res: Response) => {
   }
 });
 
-app.delete("/api/dokumen-mutu/:id", async (req: Request, res: Response) => {
+app.delete("/api/dokumen-mutu/:id", requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await prisma.dokumenMutu.delete({
@@ -351,7 +376,7 @@ app.get("/api/audit", async (req: Request, res: Response) => {
   }
 });
 
-app.post("/api/audit", async (req: Request, res: Response) => {
+app.post("/api/audit", requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { periodeId, standarId, auditee, auditor, hasil, deskripsi, rekomendasi, author } = req.body;
     const newAudit = await prisma.auditButir.create({
@@ -391,7 +416,7 @@ app.get("/api/audit/:id", async (req: Request, res: Response) => {
   }
 });
 
-app.put("/api/audit/:id", async (req: Request, res: Response) => {
+app.put("/api/audit/:id", requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { periodeId, standarId, auditee, auditor, hasil, deskripsi, rekomendasi, author } = req.body;
@@ -418,7 +443,7 @@ app.put("/api/audit/:id", async (req: Request, res: Response) => {
   }
 });
 
-app.delete("/api/audit/:id", async (req: Request, res: Response) => {
+app.delete("/api/audit/:id", requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await prisma.auditButir.delete({
