@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { fetchStandar, deleteStandar, StandarItem } from '../services/api';
 import { AdminPanelTemplate } from '../components/AdminPanelTemplate';
 import { CardContainer } from '../components/CardContainer';
@@ -16,6 +17,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 export const StandarPage: React.FC = () => {
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.ssoRole === 'SUPERADMIN' || currentUser?.ssoRole === 'ADMIN_LPM';
   const [standarList, setStandarList] = useState<StandarItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,13 +85,15 @@ export const StandarPage: React.FC = () => {
           >
             <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <Link
-            to="/admin/standar/tambah"
-            className="inline-flex items-center justify-center gap-2.5 px-5 py-2.5 h-[42px] rounded-[12px] bg-blue-900 hover:bg-blue-950 text-white text-sm font-bold transition-all shadow-md hover:shadow-lg active:scale-98 cursor-pointer"
-          >
-            <PlusIcon className="w-5 h-5 text-amber-400" />
-            <span>Tambah Standar</span>
-          </Link>
+          {isAdmin && (
+            <Link
+              to="/admin/standar/tambah"
+              className="inline-flex items-center justify-center gap-2.5 px-5 py-2.5 h-[42px] rounded-[12px] bg-blue-900 hover:bg-blue-950 text-white text-sm font-bold transition-all shadow-md hover:shadow-lg active:scale-98 cursor-pointer"
+            >
+              <PlusIcon className="w-5 h-5 text-amber-400" />
+              <span>Tambah Standar</span>
+            </Link>
+          )}
         </div>
       }
     >
@@ -254,23 +259,27 @@ export const StandarPage: React.FC = () => {
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-center align-top">
-                      <div className="inline-flex items-center gap-2">
-                        <Link
-                          to={`/admin/standar/edit/${item.id}`}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] bg-blue-50 text-blue-900 hover:bg-blue-900 hover:text-white border border-blue-200 transition-all shadow-2xs"
-                          title="Edit Butir Standar"
-                        >
-                          <PencilSquareIcon className="w-4 h-4" />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(item.id, item.kode)}
-                          disabled={deletingId === item.id}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white border border-rose-200 transition-all shadow-2xs cursor-pointer disabled:opacity-50"
-                          title="Hapus Butir Standar"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="inline-flex items-center gap-2">
+                          <Link
+                            to={`/admin/standar/edit/${item.id}`}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] bg-blue-50 text-blue-900 hover:bg-blue-900 hover:text-white border border-blue-200 transition-all shadow-2xs"
+                            title="Edit Butir Standar"
+                          >
+                            <PencilSquareIcon className="w-4 h-4" />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(item.id, item.kode)}
+                            disabled={deletingId === item.id}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white border border-rose-200 transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                            title="Hapus Butir Standar"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-medium italic">Hanya Baca</span>
+                      )}
                     </td>
                   </tr>
                 ))}

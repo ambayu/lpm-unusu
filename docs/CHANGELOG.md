@@ -3,6 +3,33 @@
 Semua perubahan penting pada aplikasi satelit LPM UNUSU didokumentasikan di file ini.
 Format mengikuti standar ISO `[YYYY-MM-DD]`.
 
+## [2026-11-01]
+
+### Added
+- **Halaman Matriks Hak Akses & Izin (`PermissionsPage.tsx`)**:
+  - Implementasi komponen halaman hak akses sistem RBAC LPM lengkap dengan pencarian real-time dan wrapper `CardContainer` (Part 10.8).
+  - Integrasi API endpoint `/api/permissions` untuk menampilkan matriks guard perizinan modul penjaminan mutu.
+- **REST API Endpoints RBAC & Dashboard di Backend (`src/server/index.ts`)**:
+  - Penambahan endpoint `/api/dashboard/stats` untuk ringkasan real-time metrik SPMI, Dokumen, Audit AMI, Users, Roles, dan Permissions.
+  - Penambahan endpoint `/api/users` (CRUD), `/api/roles` (CRUD), dan `/api/permissions` (READ) yang diproteksi `authenticate` dan `requireRole("admin")`.
+
+### Changed
+- **Standardisasi Card Container Pattern (Part 10.8) & Error Resilience**:
+  - Refactor halaman `UsersPage.tsx`, `RolesPage.tsx`, dan `Dashboard.tsx` agar konsisten menggunakan komponen standar `CardContainer` (border `#CBD5E1`, rounded `[14px]`, header `#F8FAFC`, shadow `2xs`).
+  - Menghilangkan struktur div card non-standar (`rounded-2xl`, `border-slate-200`) pada panel data, filter bar, dan grid metrik tata kelola.
+  - Integrasi penanganan error dengan komponen `ErrorState` reusable dan tombol retry pada `UsersPage`, `RolesPage`, dan `DashboardPage`.
+- **Audit Navigasi & Label Menu RBAC (Anti-Slop Clean Labeling)**:
+  - Standardisasi label menu navigasi RBAC pada Sidebar dan Dashboard: `'Pengguna'`, `'Peran'`, `'Izin'` tanpa awalan redundant kata `'Menu'` atau suffix non-standar (`'Peran RBAC'` -> `'Peran'`, `'Hak Akses'` -> `'Izin'`).
+  - Penambahan section navigasi `KONTROL AKSES & RBAC` pada `SidebarLayout.tsx` dan link menu Dashboard (`/admin`).
+  - Sinkronisasi token storage key (`lpm_unusu_token` dan fallback `lpm_token`) pada seluruh halaman klien RBAC.
+
+### Fixed
+- **Navigasi Dashboard & Routing RBAC**:
+  - Memverifikasi routing rute `/admin`, `/admin/dashboard`, `/admin/pengguna` (`/admin/users`), `/admin/peran` (`/admin/roles`), dan `/admin/izin` (`/admin/permissions`) terdaftar penuh di `App.tsx` dan dibungkus `ProtectedRoute`.
+  - Kontrol hak akses antarmuka (Client-side RBAC Guard): Tombol mutasi data (Tambah, Edit, Hapus) pada `StandarPage`, `DokumenPage`, `AmiPage`, `UsersPage`, dan `RolesPage` kini diproteksi secara kondisional hanya untuk pengguna dengan hak peran administrator (`admin` / `SUPERADMIN` / `ADMIN_LPM`), sementara peran nonsupervisor/auditor dibatasi sebagai *read-only*.
+  - Pembersihan safe typing pada state navigasi `LoginPage.tsx` tanpa cast `any` mentah.
+  - Verifikasi build check `npm run build` dan typecheck `npx tsc --noEmit` berhasil 100% tanpa error.
+
 ## [2026-10-30]
 
 ### Changed

@@ -455,6 +455,225 @@ app.delete("/api/audit/:id", requireRole("admin"), async (req: Request, res: Res
   }
 });
 
+// In-memory RBAC store (users, roles, permissions) for LPM access governance
+let rbacUsers = [
+  {
+    id: 1,
+    username: "superadmin",
+    nama: "Dr. Ahmad Fauzi, M.Kom",
+    email: "ahmad.fauzi@unusu.ac.id",
+    role: "admin",
+    ssoRole: "SUPERADMIN",
+    fakultas: "Fakultas Sains dan Teknologi",
+    prodi: "Sistem Informasi",
+    status: "Aktif",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 2,
+    username: "auditor1",
+    nama: "Siti Nurhaliza, M.Pd",
+    email: "siti.nurhaliza@unusu.ac.id",
+    role: "dosen",
+    ssoRole: "DOSEN",
+    fakultas: "Fakultas Tarbiyah dan Keguruan",
+    prodi: "Pendidikan Agama Islam",
+    status: "Aktif",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 3,
+    username: "auditor2",
+    nama: "Hendra Gunawan, S.T",
+    email: "hendra.gunawan@unusu.ac.id",
+    role: "dosen",
+    ssoRole: "DOSEN",
+    fakultas: "Fakultas Sains dan Teknologi",
+    prodi: "Ilmu Komputer",
+    status: "Aktif",
+    createdAt: new Date().toISOString(),
+  },
+];
+
+let rbacRoles = [
+  {
+    id: "admin",
+    name: "admin",
+    label: "Super Admin SPMI",
+    description: "Akses penuh konfigurasi butir SPMI, buku dokumen kebijakan, periode audit AMI, serta manajemen RBAC LPM.",
+    permissionsCount: 8,
+    usersCount: 1,
+    isSystem: true,
+  },
+  {
+    id: "dosen",
+    name: "dosen",
+    label: "Auditor Mutu Internal (Dosen)",
+    description: "Melakukan peninjauan butir standar, input evaluasi instrumen audit lapangan, dan rekomendasi perbaikan mutu.",
+    permissionsCount: 4,
+    usersCount: 2,
+    isSystem: true,
+  },
+  {
+    id: "mahasiswa",
+    name: "mahasiswa",
+    label: "Observer Mutu (Mahasiswa)",
+    description: "Melihat pangkalan data mutu, arsip SOP publik, dan status akreditasi institusi/prodi.",
+    permissionsCount: 2,
+    usersCount: 0,
+    isSystem: false,
+  },
+];
+
+const rbacPermissions = [
+  { id: "p1", name: "lpm:view_dashboard", action: "READ", resource: "Dashboard & Metrik SPMI", guard: "Active" },
+  { id: "p2", name: "lpm:manage_standar", action: "WRITE / UPDATE", resource: "Pangkalan Standar PPEPP", guard: "Admin Only" },
+  { id: "p3", name: "lpm:manage_dokumen", action: "WRITE / UPDATE", resource: "Bank Dokumen & SOP", guard: "Admin Only" },
+  { id: "p4", name: "lpm:conduct_audit", action: "WRITE / EVALUATE", resource: "Instrumen & Temuan AMI", guard: "Auditor & Admin" },
+  { id: "p5", name: "lpm:manage_users", action: "CRUD", resource: "Manajemen Pengguna LPM", guard: "Admin Only" },
+  { id: "p6", name: "lpm:manage_roles", action: "CRUD", resource: "Manajemen Peran & Wewenang", guard: "Admin Only" },
+  { id: "p7", name: "lpm:manage_permissions", action: "CONFIG", resource: "Matriks Izin Akses RBAC", guard: "Admin Only" },
+];
+
+// 4. Dashboard Stats
+app.get("/api/dashboard/stats", async (req: Request, res: Response) => {
+  try {
+    const [totalStandar, totalDokumen, audits] = await Promise.all([
+      prisma.standarSpmi.count(),
+      prisma.dokumenMutu.count(),
+      prisma.auditButir.findMany({
+        include: { periode: true, standar: true },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    const totalAudit = audits.length;
+    const auditMayor = audits.filter((a) => a.hasil === "Temuan Mayor").length;
+    const auditMinor = audits.filter((a) => a.hasil === "Temuan Minor").length;
+    const auditSesuai = audits.filter((a) => a.hasil === "Sesuai").length;
+
+    res.json({
+      success: true,
+      data: {
+        stats: {
+          totalStandar,
+          totalDokumen,
+          totalAudit,
+          totalUsers: rbacUsers.length,
+          totalRoles: rbacRoles.length,
+          totalPermissions: rbacPermissions.length,
+          auditMayor,
+          auditMinor,
+          auditSesuai,
+        },
+        recentAudits: audits.slice(0, 5),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || "Gagal mengambil statistik dashboard" });
+  }
+});
+
+// 5. RBAC API (Users, Roles, Permissions)
+app.get("/api/users", async (req: Request, res: Response) => {
+  res.json({ success: true, data: rbacUsers });
+});
+
+app.post("/api/users", requireRole("admin"), async (req: Request, res: Response) => {
+  const { username, nama, email, role, ssoRole, fakultas, prodi, status } = req.body;
+  if (!username || !nama) {
+    return res.status(400).json({ success: false, message: "Username dan nama wajib diisi" });
+  }
+  const newUser = {
+    id: rbacUsers.length ? Math.max(...rbacUsers.map((u) => u.id)) + 1 : 1,
+    username,
+    nama,
+    email: email || null,
+    role: role || "dosen",
+    ssoRole: ssoRole || "DOSEN",
+    fakultas: fakultas || null,
+    prodi: prodi || null,
+    status: status || "Aktif",
+    createdAt: new Date().toISOString(),
+  };
+  rbacUsers.push(newUser);
+  res.json({ success: true, data: newUser, message: "Pengguna berhasil ditambahkan" });
+});
+
+app.put("/api/users/:id", requireRole("admin"), async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  const idx = rbacUsers.findIndex((u) => u.id === id);
+  if (idx === -1) {
+    return res.status(404).json({ success: false, message: "Pengguna tidak ditemukan" });
+  }
+  rbacUsers[idx] = { ...rbacUsers[idx], ...req.body, id };
+  res.json({ success: true, data: rbacUsers[idx], message: "Pengguna berhasil diperbarui" });
+});
+
+app.delete("/api/users/:id", requireRole("admin"), async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  rbacUsers = rbacUsers.filter((u) => u.id !== id);
+  res.json({ success: true, message: "Pengguna berhasil dihapus" });
+});
+
+app.get("/api/roles", async (req: Request, res: Response) => {
+  // Update users count dynamically
+  const rolesWithCount = rbacRoles.map((r) => ({
+    ...r,
+    usersCount: rbacUsers.filter((u) => u.role === r.name).length,
+  }));
+  res.json({ success: true, data: rolesWithCount });
+});
+
+app.post("/api/roles", requireRole("admin"), async (req: Request, res: Response) => {
+  const { name, label, description } = req.body;
+  if (!name || !label) {
+    return res.status(400).json({ success: false, message: "Nama dan label peran wajib diisi" });
+  }
+  const newRole = {
+    id: name.toLowerCase().replace(/\s+/g, "_"),
+    name: name.toLowerCase().replace(/\s+/g, "_"),
+    label,
+    description: description || "",
+    permissionsCount: 4,
+    usersCount: 0,
+    isSystem: false,
+  };
+  rbacRoles.push(newRole);
+  res.json({ success: true, data: newRole, message: "Peran baru berhasil dibuat" });
+});
+
+app.put("/api/roles/:id", requireRole("admin"), async (req: Request, res: Response) => {
+  const id = req.params.id;
+  const idx = rbacRoles.findIndex((r) => r.id === id);
+  if (idx === -1) {
+    return res.status(404).json({ success: false, message: "Peran tidak ditemukan" });
+  }
+  rbacRoles[idx] = { ...rbacRoles[idx], ...req.body, id };
+  res.json({ success: true, data: rbacRoles[idx], message: "Peran berhasil diperbarui" });
+});
+
+app.delete("/api/roles/:id", requireRole("admin"), async (req: Request, res: Response) => {
+  const id = req.params.id;
+  const role = rbacRoles.find((r) => r.id === id);
+  if (role?.isSystem) {
+    return res.status(400).json({ success: false, message: "Peran sistem inti tidak dapat dihapus" });
+  }
+  rbacRoles = rbacRoles.filter((r) => r.id !== id);
+  res.json({ success: true, message: "Peran berhasil dihapus" });
+});
+
+app.get("/api/permissions", async (req: Request, res: Response) => {
+  res.json({ success: true, data: rbacPermissions });
+});
+
+// Root handler & middleware guard: pastikan rute root / melayani landing page publik dan tidak diarahkan ke /admin
+app.get("/", (req: Request, res: Response, next: NextFunction) => {
+  // Rute root adalah landing page publik resmi LPM UNUSU.
+  // Pengalihan ke /admin hanya terjadi jika pengguna secara sadar mengakses /admin atau melalui navigasi UI.
+  next();
+});
+
 // SPA Fallback
 app.get("*", (req: Request, res: Response) => {
   res.sendFile(path.join(clientDistPath, "index.html"), (err) => {

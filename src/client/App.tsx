@@ -1,19 +1,25 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { SidebarLayout } from './components/SidebarLayout';
 import { LandingPage } from './pages/Landing';
+import { DashboardPage } from './pages/Dashboard';
 import { StandarPage } from './pages/Standar';
 import { StandarFormPage } from './pages/StandarForm';
 import { DokumenPage } from './pages/Dokumen';
 import { DokumenFormPage } from './pages/DokumenForm';
 import { AmiPage } from './pages/Ami';
 import { AmiFormPage } from './pages/AmiForm';
+import { UsersPage } from './pages/Users';
+import { RolesPage } from './pages/Roles';
+import { PermissionsPage } from './pages/Permissions';
 import { LoginPage } from './pages/Login';
 import { SsoCallbackPage } from './pages/SsoCallback';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F1F5F2] text-xs font-semibold text-slate-500">
@@ -22,7 +28,7 @@ function ProtectedRoute({ children }: { children: React.ReactElement }) {
     );
   }
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
   return <SidebarLayout>{children}</SidebarLayout>;
 }
@@ -46,15 +52,24 @@ export function App() {
           <Route path="/sso/callback" element={<SsoCallbackPage />} />
 
           {/* Panel Manajemen Admin Ber-Sidebar */}
-          {/* Standar SPMI */}
           <Route
             path="/admin"
             element={
               <ProtectedRoute>
-                <StandarPage />
+                <DashboardPage />
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Standar SPMI */}
           <Route
             path="/admin/standar"
             element={
@@ -128,6 +143,56 @@ export function App() {
             element={
               <ProtectedRoute>
                 <AmiFormPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Manajemen Pengguna & Hak Akses (RBAC) */}
+          <Route
+            path="/admin/pengguna"
+            element={
+              <ProtectedRoute>
+                <UsersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute>
+                <UsersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/peran"
+            element={
+              <ProtectedRoute>
+                <RolesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/roles"
+            element={
+              <ProtectedRoute>
+                <RolesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/izin"
+            element={
+              <ProtectedRoute>
+                <PermissionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/permissions"
+            element={
+              <ProtectedRoute>
+                <PermissionsPage />
               </ProtectedRoute>
             }
           />

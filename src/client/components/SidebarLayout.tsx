@@ -13,6 +13,9 @@ import {
   ChevronDoubleRightIcon,
   HomeIcon,
   ChevronDownIcon,
+  Squares2X2Icon,
+  UsersIcon,
+  KeyIcon,
 } from '@heroicons/react/24/outline';
 
 interface SidebarLayoutProps {
@@ -29,11 +32,21 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
 
   const isActive = (path: string) =>
     location.pathname === path ||
-    (path === '/admin/standar' && (location.pathname === '/admin' || location.pathname.startsWith('/admin/standar/'))) ||
+    (path === '/admin' && (location.pathname === '/admin' || location.pathname === '/admin/dashboard')) ||
+    (path === '/admin/standar' && location.pathname.startsWith('/admin/standar/')) ||
     (path === '/admin/dokumen' && location.pathname.startsWith('/admin/dokumen/')) ||
-    (path === '/admin/ami' && location.pathname.startsWith('/admin/ami/'));
+    (path === '/admin/ami' && location.pathname.startsWith('/admin/ami/')) ||
+    (path === '/admin/pengguna' && (location.pathname === '/admin/users' || location.pathname.startsWith('/admin/pengguna/'))) ||
+    (path === '/admin/peran' && (location.pathname === '/admin/roles' || location.pathname.startsWith('/admin/peran/'))) ||
+    (path === '/admin/izin' && (location.pathname === '/admin/permissions' || location.pathname.startsWith('/admin/izin/')));
 
   const navItems = [
+    {
+      path: '/admin',
+      label: 'Dashboard',
+      icon: Squares2X2Icon,
+      desc: 'Ikhtisar Capaian & Metrik',
+    },
     {
       path: '/admin/standar',
       label: 'Standar SPMI',
@@ -54,8 +67,30 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
     },
   ];
 
+  const rbacItems = [
+    {
+      path: '/admin/pengguna',
+      label: 'Pengguna',
+      icon: UsersIcon,
+      desc: 'Akun & Penugasan Mutu',
+    },
+    {
+      path: '/admin/peran',
+      label: 'Peran',
+      icon: ShieldCheckIcon,
+      desc: 'Level Otoritas & Akses',
+    },
+    {
+      path: '/admin/izin',
+      label: 'Izin',
+      icon: KeyIcon,
+      desc: 'Matriks Guard Perizinan',
+    },
+  ];
+
   const getBreadcrumbLabel = (path: string) => {
-    if (path === '/admin' || path === '/admin/standar') return 'Pangkalan Standar Mutu SPMI';
+    if (path === '/admin' || path === '/admin/dashboard') return 'Dashboard Ekosistem Mutu';
+    if (path === '/admin/standar') return 'Pangkalan Standar Mutu SPMI';
     if (path === '/admin/standar/tambah') return 'Tambah Standar SPMI Baru';
     if (path.startsWith('/admin/standar/edit/')) return 'Edit Standar SPMI';
     if (path === '/admin/dokumen') return 'Bank Dokumen Kebijakan, Manual & SOP';
@@ -64,6 +99,9 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
     if (path === '/admin/ami') return 'Audit Mutu Internal (AMI) & Temuan Lapangan';
     if (path === '/admin/ami/tambah') return 'Catat Temuan Audit AMI Baru';
     if (path.startsWith('/admin/ami/edit/')) return 'Edit Temuan Audit AMI';
+    if (path === '/admin/pengguna' || path === '/admin/users') return 'Manajemen Pengguna LPM';
+    if (path === '/admin/peran' || path === '/admin/roles') return 'Manajemen Peran & Wewenang RBAC';
+    if (path === '/admin/izin' || path === '/admin/permissions') return 'Matriks Izin & Hak Akses';
     return 'Lembaga Penjaminan Mutu';
   };
 
@@ -108,6 +146,54 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             )}
             <nav className="space-y-1.5" role="navigation" aria-label="Menu utama">
               {navItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileOpen(false)}
+                    title={isCollapsed ? item.label : undefined}
+                    aria-current={active ? 'page' : undefined}
+                    className={`w-full flex items-center rounded-[12px] text-[13.5px] font-semibold transition-all ${
+                      isCollapsed ? 'justify-center p-2.5' : 'px-3.5 py-2.5 gap-3'
+                    } ${
+                      active
+                        ? 'bg-[#DBEAFE] text-blue-900 font-bold shadow-2xs'
+                        : 'text-slate-600 hover:bg-[#E2EDFB] hover:text-blue-900'
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0 transition-colors ${
+                        active
+                          ? 'bg-blue-900 text-white shadow-2xs'
+                          : 'bg-[#DBEAFE] text-blue-700'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    {!isCollapsed && (
+                      <div className="truncate">
+                        <div className="leading-tight">{item.label}</div>
+                        <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
+                          {item.desc}
+                        </div>
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
+          <div>
+            {!isCollapsed && (
+              <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                KONTROL AKSES & RBAC
+              </p>
+            )}
+            <nav className="space-y-1.5" role="navigation" aria-label="Menu RBAC">
+              {rbacItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
                 return (
@@ -300,7 +386,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
 
             <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs sm:text-sm">
               <Link to="/admin" className="text-blue-900 hover:text-blue-950 font-medium flex items-center gap-1">
-                <HomeIcon className="w-4 h-4" />
+                <Squares2X2Icon className="w-4 h-4" />
                 <span className="font-bold">LPM UNUSU</span>
               </Link>
               <span className="text-slate-400 font-bold">›</span>

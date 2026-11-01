@@ -98,6 +98,12 @@ export const LandingPage: React.FC = () => {
           {/* Navigasi Utama */}
           <nav className="hidden md:flex items-center space-x-1 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/60" aria-label="Navigasi utama">
             <a
+              href="#profil"
+              className="px-4 py-2 text-xs font-medium text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl transition-all"
+            >
+              Profil Lembaga
+            </a>
+            <a
               href="#spmi"
               className="px-4 py-2 text-xs font-medium text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl transition-all"
             >
@@ -157,6 +163,7 @@ export const LandingPage: React.FC = () => {
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-3">
+            <a href="#profil" onClick={() => setMobileMenuOpen(false)} className="block text-xs font-medium text-slate-700 py-1.5">Profil Lembaga</a>
             <a href="#spmi" onClick={() => setMobileMenuOpen(false)} className="block text-xs font-medium text-slate-700 py-1.5">Standar SPMI</a>
             <a href="#dokumen" onClick={() => setMobileMenuOpen(false)} className="block text-xs font-medium text-slate-700 py-1.5">Buku Dokumen & SOP</a>
             <a href="#ami" onClick={() => setMobileMenuOpen(false)} className="block text-xs font-medium text-slate-700 py-1.5">Audit AMI</a>
