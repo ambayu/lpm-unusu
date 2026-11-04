@@ -24,6 +24,58 @@ export interface SessionUser {
   fakultas?: string | null;
 }
 
+/**
+ * Cakupan akses aplikasi (app-scoped role).
+ * Dihitung SERVER, bukan klien — klien hanya menampilkan hasilnya.
+ */
+export type AppAccessReason =
+  | 'allowed'
+  | 'foreign_app_admin'
+  | 'role_not_allowed'
+  | 'missing_role';
+
+export interface AppAccessInfo {
+  app: string;
+  appName: string;
+  allowed: boolean;
+  reason: AppAccessReason;
+  ssoRole: string;
+  role: string;
+  roleLabel: string;
+  isAppAdmin: boolean;
+  foreignApp: { code: string; name: string } | null;
+  message: string;
+}
+
+/** Peran SSO yang sah untuk aplikasi LPM (selaras dengan server). */
+export const LPM_APP_ROLES = ['ADMIN_LPM', 'SUPERADMIN', 'DOSEN'] as const;
+
+export const SSO_ROLE_LABEL: Record<string, string> = {
+  SUPERADMIN: 'Superadmin Ekosistem',
+  ADMIN_LPM: 'Administrator LPM',
+  ADMIN_LPPM: 'Administrator LPPM',
+  ADMIN_ESURAT: 'Administrator E-Surat',
+  ADMIN_SARPRAS: 'Administrator Sarpras',
+  ADMIN_AKREDITASI: 'Administrator Akreditasi',
+  ADMIN_LMS: 'Administrator LMS',
+  ADMIN_SSO: 'Administrator ONE UNUSU',
+  DOSEN: 'Dosen / Auditor Mutu',
+  MAHASISWA: 'Mahasiswa / Observer',
+};
+
+/** Peran admin aplikasi lain — ditolak pada penugasan peran di panel LPM. */
+export const FOREIGN_APP_ROLES = [
+  'ADMIN_LPPM',
+  'ADMIN_ESURAT',
+  'ADMIN_SARPRAS',
+  'ADMIN_AKREDITASI',
+  'ADMIN_LMS',
+  'ADMIN_SSO',
+] as const;
+
+export const isLpmScopedRole = (ssoRole?: string | null): boolean =>
+  !!ssoRole && (LPM_APP_ROLES as readonly string[]).includes(ssoRole.toUpperCase());
+
 const TOKEN_KEY = 'lpm_unusu_token';
 const USER_KEY = 'lpm_unusu_user';
 
@@ -39,18 +91,69 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
+    const code = error.response?.data?.code;
     const path = window.location.pathname;
     if (status === 401 && path !== import.meta.env.BASE_URL + 'login' && path !== import.meta.env.BASE_URL + 'sso/callback') {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
       window.location.replace(import.meta.env.BASE_URL + 'login');
     }
+    // Peran di luar cakupan aplikasi (mis. admin LPPM): sesi lokal dibersihkan
+    // agar tidak ada sisa kredensial lintas aplikasi di peramban.
+    if (status === 403 && (code === 'FOREIGN_APP_ADMIN' || code === 'APP_ACCESS_DENIED')) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
     return Promise.reject(error);
   }
 );
 
 export const ssoLogin = (client_id: string, token: string) =>
-  api.post<{ success: boolean; token: string; user: SessionUser; message?: string }>('/auth/sso', { client_id, token });
+  api.post<{
+    success: boolean;
+    token: string;
+    user: SessionUser;
+    appAccess?: AppAccessInfo;
+    code?: string;
+    message?: string;
+  }>('/auth/sso', { client_id, token });
+
+/** Verifikasi ulang sesi ke server + ambil cakupan akses aplikasi. */
+export const fetchSession = () =>
+  api.get<{ success: boolean; user: SessionUser; appAccess: AppAccessInfo }>('/auth/me');
+
+/** Daftar peran yang sah untuk aplikasi LPM (dropdown penugasan peran). */
+export const fetchAppRoles = () =>
+  api.get<{
+    success: boolean;
+    app: string;
+    appName: string;
+    data: { code: string; label: string; internalRole: string; isAppAdmin: boolean }[];
+    deniedRoles: { code: string; label: string; appName: string }[];
+  }>('/auth/app-roles');
+
+export interface AccessDenialItem {
+  id: string;
+  at: string;
+  source: 'sso_exchange' | 'api_request';
+  ssoRole: string;
+  reason: AppAccessReason;
+  username: string;
+  nama: string;
+  foreignApp: string | null;
+  path: string;
+  ip: string;
+}
+
+/** Jejak penolakan akses lintas aplikasi (khusus Administrator LPM). */
+export const fetchAccessDenials = (limit = 25) =>
+  api.get<{
+    success: boolean;
+    app: string;
+    data: AccessDenialItem[];
+    total: number;
+    summary: { foreignAdmin: number; other: number };
+  }>('/security/access-denials', { params: { limit } });
 
 export interface StandarItem {
   id: number;

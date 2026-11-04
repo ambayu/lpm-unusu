@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { CardContainer } from '../components/CardContainer';
 import { ErrorState } from '../components/ErrorState';
+import { LPM_APP_ROLES, SSO_ROLE_LABEL, FOREIGN_APP_ROLES, fetchAppRoles } from '../services/api';
 
 interface UserItem {
   id: number;
@@ -26,8 +27,8 @@ interface UserItem {
 }
 
 export const UsersPage: React.FC = () => {
-  const { user: currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.ssoRole === 'SUPERADMIN' || currentUser?.ssoRole === 'ADMIN_LPM';
+  const { user: currentUser, isAppAdmin } = useAuth();
+  const isAdmin = isAppAdmin || currentUser?.ssoRole === 'SUPERADMIN' || currentUser?.ssoRole === 'ADMIN_LPM';
   const [users, setUsers] = useState<UserItem[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +37,16 @@ export const UsersPage: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+
+  // Peran sah versi server (`GET /api/auth/app-roles`). Fallback ke konstanta
+  // lokal agar dropdown tetap berfungsi bila endpoint tidak tersedia.
+  const [roleOptions, setRoleOptions] = useState<{ code: string; label: string }[]>(
+    LPM_APP_ROLES.map((code) => ({ code, label: SSO_ROLE_LABEL[code] || code }))
+  );
+  const [deniedRoleLabels, setDeniedRoleLabels] = useState<string[]>(
+    FOREIGN_APP_ROLES.map((code) => SSO_ROLE_LABEL[code] || code)
+  );
+  const [rolesFromServer, setRolesFromServer] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -81,6 +92,34 @@ export const UsersPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  // Ambil cakupan peran dari server agar dropdown tidak pernah menawarkan peran
+  // aplikasi lain (satu sumber kebenaran dengan guard `resolveAppAccess`).
+  useEffect(() => {
+    let active = true;
+
+    fetchAppRoles()
+      .then((res) => {
+        if (!active || !res.data?.success) return;
+        const allowed = res.data.data ?? [];
+        const denied = res.data.deniedRoles ?? [];
+
+        if (allowed.length > 0) {
+          setRoleOptions(allowed.map((item) => ({ code: item.code, label: item.label })));
+          setRolesFromServer(true);
+        }
+        if (denied.length > 0) {
+          setDeniedRoleLabels(denied.map((item) => item.label));
+        }
+      })
+      .catch(() => {
+        /* fallback konstanta lokal sudah terpasang pada state awal */
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const openAddModal = () => {
@@ -265,14 +304,15 @@ export const UsersPage: React.FC = () => {
                       <td className="py-3 px-4">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                            u.role === 'admin'
+                            u.ssoRole === 'SUPERADMIN' || u.ssoRole === 'ADMIN_LPM'
                               ? 'bg-blue-50 text-blue-900 border border-blue-200'
                               : 'bg-emerald-50 text-emerald-900 border border-emerald-200'
                           }`}
                         >
                           <ShieldCheckIcon className="w-3.5 h-3.5" />
-                          {u.role === 'admin' ? 'Admin SPMI' : 'Auditor Mutu'}
+                          {SSO_ROLE_LABEL[u.ssoRole] || (u.role === 'admin' ? 'Admin SPMI' : 'Auditor Mutu')}
                         </span>
+                        <div className="text-[10px] text-slate-400 mt-1 font-mono">{u.ssoRole || '—'}</div>
                       </td>
                       <td className="py-3 px-4 text-slate-600">
                         <div>{u.fakultas || '-'}</div>
@@ -360,15 +400,24 @@ export const UsersPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Peran Aplikasi (RBAC)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Peran SSO (Cakupan LPM)</label>
                   <select
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800 bg-white"
+                    value={formData.ssoRole}
+                    onChange={(e) => {
+                      const ssoRole = e.target.value;
+                      setFormData({
+                        ...formData,
+                        ssoRole,
+                        role: ssoRole === 'DOSEN' ? 'dosen' : 'admin',
+                      });
+                    }}
+                    className="w-full px-3 py-2 min-h-[44px] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800 bg-white"
                   >
-                    <option value="admin">Admin LPM</option>
-                    <option value="dosen">Dosen / Auditor</option>
-                    <option value="mahasiswa">Mahasiswa / Observer</option>
+                    {roleOptions.map((option) => (
+                      <option key={option.code} value={option.code}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -376,12 +425,25 @@ export const UsersPage: React.FC = () => {
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800 bg-white"
+                    className="w-full px-3 py-2 min-h-[44px] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800 bg-white"
                   >
                     <option value="Aktif">Aktif</option>
                     <option value="Nonaktif">Nonaktif</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                <p className="text-[11px] text-amber-900 leading-relaxed">
+                  <strong>Pemisahan admin per aplikasi.</strong> Panel LPM hanya menerima peran
+                  Administrator LPM, Superadmin, dan Dosen/Auditor. Peran admin aplikasi lain
+                  ({deniedRoleLabels.join(', ')}) ditolak server bila ditugaskan di sini.
+                </p>
+                <p className="text-[10px] text-amber-800/80 mt-1.5">
+                  {rolesFromServer
+                    ? 'Daftar peran tersinkron dengan /api/auth/app-roles.'
+                    : 'Daftar peran memakai konstanta lokal (endpoint peran belum merespons).'}
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

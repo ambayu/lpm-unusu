@@ -12,6 +12,7 @@ import {
   ArrowTrendingUpIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
+  LockClosedIcon,
 } from '@heroicons/react/24/outline';
 import { CardContainer } from '../components/CardContainer';
 import { ErrorState } from '../components/ErrorState';
@@ -30,7 +31,7 @@ interface StatsOverview {
 }
 
 export const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, roleLabel } = useAuth();
   const [stats, setStats] = useState<StatsOverview>({
     totalStandar: 0,
     totalDokumen: 0,
@@ -90,6 +91,16 @@ export const DashboardPage: React.FC = () => {
           <p className="text-blue-200 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
             Sistem Informasi Penjaminan Mutu Internal (SPMI) dan Pengendalian Audit Mutu Internal (AMI) Universitas Nahdlatul Ulama Sumatera Utara.
           </p>
+          {/* Cakupan akses aplikasi — memperjelas pemisahan admin per aplikasi */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-[11px] font-semibold text-white">
+              <LockClosedIcon className="w-3.5 h-3.5 text-amber-300" />
+              {roleLabel}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-400/15 border border-emerald-300/30 text-[11px] font-semibold text-emerald-100">
+              Akses panel: LPM UNUSU
+            </span>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2.5">
           <Link

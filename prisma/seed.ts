@@ -186,6 +186,96 @@ async function main() {
     console.log('Sample Audit Butir seeded.');
   }
 
+  // 6. Indikator & target capaian mutu (modul PPEPP)
+  //    Idempoten via composite unique (standarId, kode).
+  const indikatorSeed = [
+    {
+      standarId: standarPendidikan.id,
+      kode: 'IND-PEND-01-1',
+      nama: 'Persentase prodi dengan dokumen pemetaan CPL ke CPMK',
+      satuan: '%',
+      target: 100,
+      capaian: 85,
+      tahun: 2026,
+      status: 'Belum Tercapai',
+      catatan: 'Menunggu penyelesaian pemetaan CPMK pada 3 prodi baru.',
+    },
+    {
+      standarId: standarPendidikan.id,
+      kode: 'IND-PEND-01-2',
+      nama: 'Jumlah prodi terakreditasi Baik Sekali / Unggul',
+      satuan: 'prodi',
+      target: 12,
+      capaian: 9,
+      tahun: 2026,
+      status: 'Belum Tercapai',
+    },
+    {
+      standarId: standarDosen.id,
+      kode: 'IND-PEND-02-1',
+      nama: 'Persentase dosen tetap berpendidikan S3',
+      satuan: '%',
+      target: 25,
+      capaian: 15,
+      tahun: 2026,
+      status: 'Belum Tercapai',
+      catatan: 'Perlu percepatan studi lanjut melalui program beasiswa internal.',
+    },
+    {
+      standarId: standarPenelitian.id,
+      kode: 'IND-PENEL-01-1',
+      nama: 'Rata-rata publikasi ilmiah bereputasi per dosen per tahun',
+      satuan: 'artikel',
+      target: 1,
+      capaian: 1.4,
+      tahun: 2026,
+      status: 'Melebihi Target',
+    },
+  ];
+
+  for (const indikator of indikatorSeed) {
+    await prisma.indikatorSpmi.upsert({
+      where: { standarId_kode: { standarId: indikator.standarId, kode: indikator.kode } },
+      update: {},
+      create: indikator,
+    });
+  }
+  console.log(`Indikator SPMI seeded: ${indikatorSeed.length} butir.`);
+
+  // 7. Siklus PPEPP untuk standar pendidikan (5 tahap)
+  //    Idempoten via composite unique (standarId, tahun, tahap).
+  const tahapPpepp = [
+    { tahap: 'Penetapan', status: 'Selesai', mulai: '2025-08-01', selesai: '2025-09-15' },
+    { tahap: 'Pelaksanaan', status: 'Selesai', mulai: '2025-09-16', selesai: '2026-01-31' },
+    { tahap: 'Evaluasi', status: 'Berjalan', mulai: '2026-02-01', selesai: null },
+    { tahap: 'Pengendalian', status: 'Belum Mulai', mulai: null, selesai: null },
+    { tahap: 'Peningkatan', status: 'Belum Mulai', mulai: null, selesai: null },
+  ];
+
+  for (const item of tahapPpepp) {
+    await prisma.siklusPpepp.upsert({
+      where: {
+        standarId_tahun_tahap: {
+          standarId: standarPendidikan.id,
+          tahun: 2026,
+          tahap: item.tahap,
+        },
+      },
+      update: {},
+      create: {
+        standarId: standarPendidikan.id,
+        periodeId: periode.id,
+        tahun: 2026,
+        tahap: item.tahap,
+        status: item.status,
+        tanggalMulai: item.mulai ? new Date(item.mulai) : null,
+        tanggalSelesai: item.selesai ? new Date(item.selesai) : null,
+        penanggungJawab: 'Ketua LPM UNUSU',
+      },
+    });
+  }
+  console.log(`Siklus PPEPP seeded: ${tahapPpepp.length} tahap.`);
+
   console.log('LPM UNUSU Seeder complete! ✨');
 }
 

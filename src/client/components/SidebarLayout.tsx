@@ -25,7 +25,7 @@ interface SidebarLayoutProps {
 export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, roleLabel, isAppAdmin } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -186,53 +186,55 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             </nav>
           </div>
 
-          <div>
-            {!isCollapsed && (
-              <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                KONTROL AKSES & RBAC
-              </p>
-            )}
-            <nav className="space-y-1.5" role="navigation" aria-label="Menu RBAC">
-              {rbacItems.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.path);
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setMobileOpen(false)}
-                    title={isCollapsed ? item.label : undefined}
-                    aria-current={active ? 'page' : undefined}
-                    className={`w-full flex items-center rounded-[12px] text-[13.5px] font-semibold transition-all ${
-                      isCollapsed ? 'justify-center p-2.5' : 'px-3.5 py-2.5 gap-3'
-                    } ${
-                      active
-                        ? 'bg-[#DBEAFE] text-blue-900 font-bold shadow-2xs'
-                        : 'text-slate-600 hover:bg-[#E2EDFB] hover:text-blue-900'
-                    }`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0 transition-colors ${
+          {isAppAdmin && (
+            <div>
+              {!isCollapsed && (
+                <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                  KONTROL AKSES & RBAC
+                </p>
+              )}
+              <nav className="space-y-1.5" role="navigation" aria-label="Menu RBAC">
+                {rbacItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.path);
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileOpen(false)}
+                      title={isCollapsed ? item.label : undefined}
+                      aria-current={active ? 'page' : undefined}
+                      className={`w-full flex items-center rounded-[12px] text-[13.5px] font-semibold transition-all ${
+                        isCollapsed ? 'justify-center p-2.5' : 'px-3.5 py-2.5 gap-3'
+                      } ${
                         active
-                          ? 'bg-blue-900 text-white shadow-2xs'
-                          : 'bg-[#DBEAFE] text-blue-700'
+                          ? 'bg-[#DBEAFE] text-blue-900 font-bold shadow-2xs'
+                          : 'text-slate-600 hover:bg-[#E2EDFB] hover:text-blue-900'
                       }`}
                     >
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    {!isCollapsed && (
-                      <div className="truncate">
-                        <div className="leading-tight">{item.label}</div>
-                        <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
-                          {item.desc}
-                        </div>
+                      <div
+                        className={`w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0 transition-colors ${
+                          active
+                            ? 'bg-blue-900 text-white shadow-2xs'
+                            : 'bg-[#DBEAFE] text-blue-700'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
                       </div>
-                    )}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
+                      {!isCollapsed && (
+                        <div className="truncate">
+                          <div className="leading-tight">{item.label}</div>
+                          <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
+                            {item.desc}
+                          </div>
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          )}
 
           <div>
             {!isCollapsed && (
@@ -409,7 +411,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                   <div className="text-xs font-bold text-slate-800 truncate max-w-[120px]">
                     {user?.nama || 'Auditor Mutu'}
                   </div>
-                  <div className="text-[10px] text-blue-900 font-semibold">{user?.role || 'Super Admin'}</div>
+                  <div className="text-[10px] text-blue-900 font-semibold">{roleLabel}</div>
                 </div>
                 <ChevronDownIcon className="w-3.5 h-3.5 text-slate-400" />
               </button>
@@ -424,8 +426,11 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                     <p className="font-bold text-slate-900">{user?.nama || 'Auditor Mutu'}</p>
                     <p className="text-[11px] text-slate-500 font-normal">{user?.email || 'lpm@unusu.ac.id'}</p>
                     <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 text-[10px] font-bold border border-blue-200">
-                      {user?.role || 'Auditor Internal'}
+                      {roleLabel}
                     </span>
+                    <p className="text-[10px] text-slate-400 mt-1.5">
+                      Cakupan akses: <span className="font-semibold text-slate-600">Panel LPM UNUSU</span>
+                    </p>
                   </div>
                   <Link
                     to="/"

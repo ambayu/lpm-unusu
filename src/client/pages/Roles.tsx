@@ -6,10 +6,13 @@ import {
   PencilSquareIcon,
   TrashIcon,
   KeyIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  LockClosedIcon,
+  BuildingOffice2Icon,
 } from '@heroicons/react/24/outline';
 import { CardContainer } from '../components/CardContainer';
 import { ErrorState } from '../components/ErrorState';
+import { fetchAppRoles } from '../services/api';
 
 interface RoleItem {
   id: string;
@@ -21,9 +24,18 @@ interface RoleItem {
   isSystem: boolean;
 }
 
+interface ScopeRoleItem {
+  code: string;
+  label: string;
+  internalRole: string;
+  isAppAdmin: boolean;
+}
+
 export const RolesPage: React.FC = () => {
-  const { user: currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.ssoRole === 'SUPERADMIN' || currentUser?.ssoRole === 'ADMIN_LPM';
+  const { user: currentUser, isAppAdmin } = useAuth();
+  // Satu sumber kebenaran cakupan aplikasi: `isAppAdmin` dari AuthContext
+  // (diturunkan dari `appAccess` server), bukan tebakan dari field role lokal.
+  const isAdmin = isAppAdmin;
   const [roles, setRoles] = useState<RoleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +72,32 @@ export const RolesPage: React.FC = () => {
 
   useEffect(() => {
     fetchRoles();
+  }, []);
+
+  // Cakupan peran lintas aplikasi (admin LPPM dkk. tidak sah di panel LPM).
+  const [scopeRoles, setScopeRoles] = useState<ScopeRoleItem[]>([]);
+  const [deniedScopeRoles, setDeniedScopeRoles] = useState<{ code: string; label: string; appName: string }[]>([]);
+  const [scopeLoading, setScopeLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    fetchAppRoles()
+      .then((res) => {
+        if (!active || !res.data?.success) return;
+        setScopeRoles(res.data.data ?? []);
+        setDeniedScopeRoles(res.data.deniedRoles ?? []);
+      })
+      .catch(() => {
+        /* panel cakupan bersifat informatif — kegagalan tidak memblokir halaman */
+      })
+      .finally(() => {
+        if (active) setScopeLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const openAddModal = () => {
@@ -310,6 +348,103 @@ export const RolesPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Cakupan peran per aplikasi — sumber: GET /api/auth/app-roles */}
+      <CardContainer
+        title="Cakupan Peran per Aplikasi"
+        subtitle="Peran administrator hanya berlaku pada aplikasi pemiliknya. Server menolak peran di kolom kanan bila ditugaskan ke pengguna LPM."
+        badge={
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-bold text-slate-700">
+            <LockClosedIcon className="w-3.5 h-3.5" />
+            App-scoped
+          </span>
+        }
+      >
+        {scopeLoading ? (
+          <p className="py-8 text-center text-xs font-semibold text-slate-500">
+            Memuat cakupan peran dari server...
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="rounded-[12px] border border-emerald-200 bg-emerald-50/60 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <ShieldCheckIcon className="w-4 h-4 text-emerald-700" aria-hidden="true" />
+                <h3 className="text-xs font-bold text-emerald-900 uppercase tracking-wider">
+                  Diizinkan di panel LPM
+                </h3>
+              </div>
+              <ul className="space-y-2">
+                {scopeRoles.length === 0 ? (
+                  <li className="text-[11px] text-slate-600">
+                    Belum ada data peran dari server.
+                  </li>
+                ) : (
+                  scopeRoles.map((role) => {
+                    const isCurrent = currentUser?.ssoRole === role.code;
+                    return (
+                      <li
+                        key={role.code}
+                        className="flex items-start justify-between gap-2 rounded-[10px] bg-white border border-emerald-200/70 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-slate-900 truncate">
+                            {role.label}
+                          </p>
+                          <code className="text-[10px] font-mono text-slate-500">{role.code}</code>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            {role.isAppAdmin ? 'Admin' : 'Pengguna'}
+                          </span>
+                          {isCurrent && (
+                            <span className="text-[9px] font-bold text-blue-900">Peran Anda</span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+            </div>
+
+            <div className="rounded-[12px] border border-rose-200 bg-rose-50/60 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <LockClosedIcon className="w-4 h-4 text-rose-700" aria-hidden="true" />
+                <h3 className="text-xs font-bold text-rose-900 uppercase tracking-wider">
+                  Ditolak — milik aplikasi lain
+                </h3>
+              </div>
+              <ul className="space-y-2">
+                {deniedScopeRoles.length === 0 ? (
+                  <li className="text-[11px] text-slate-600">
+                    Tidak ada peran aplikasi lain yang terdaftar pada konfigurasi server.
+                  </li>
+                ) : (
+                  deniedScopeRoles.map((role) => (
+                    <li
+                      key={role.code}
+                      className="flex items-start justify-between gap-2 rounded-[10px] bg-white border border-rose-200/70 px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-slate-900 truncate">{role.label}</p>
+                        <code className="text-[10px] font-mono text-slate-500">{role.code}</code>
+                      </div>
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex-shrink-0">
+                        <BuildingOffice2Icon className="w-3 h-3" aria-hidden="true" />
+                        {role.appName}
+                      </span>
+                    </li>
+                  ))
+                )}
+              </ul>
+              <p className="mt-3 text-[10px] text-rose-800 leading-relaxed">
+                Akun dengan peran ini menerima <code className="font-mono">403 FOREIGN_APP_ADMIN</code>{' '}
+                saat mencoba masuk, dan percobaannya tercatat pada panel Jejak Penolakan Akses.
+              </p>
+            </div>
+          </div>
+        )}
+      </CardContainer>
     </div>
   );
 };

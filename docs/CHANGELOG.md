@@ -3,6 +3,60 @@
 Semua perubahan penting pada aplikasi satelit LPM UNUSU didokumentasikan di file ini.
 Format mengikuti standar ISO `[YYYY-MM-DD]`.
 
+## [2026-11-04] (lanjutan)
+
+### Added
+- **Notifikasi Penolakan di Halaman Login** (`LoginPage`): membaca penanda `sessionStorage['lpm_sso_denied']` yang ditulis `SsoCallbackPage`, lalu menampilkan kartu `role="alert"` berisi peran SSO terdeteksi, aplikasi pemilik peran, dan langkah lanjutan (tombol "Masuk ke panel aplikasi Anda" + "Tutup", keduanya 44px). Penanda langsung dibersihkan setelah dibaca sehingga tidak berulang; parsing dibungkus `try/catch` karena `sessionStorage` dapat diblokir.
+- **Panel "Cakupan Peran per Aplikasi"** (`RolesPage`): dua kolom dari `GET /api/auth/app-roles` — peran yang diizinkan (badge Admin/Pengguna + penanda "Peran Anda") dan peran milik aplikasi lain beserta nama aplikasinya, dengan catatan `403 FOREIGN_APP_ADMIN`.
+- **Revalidasi Sesi Saat Tab Aktif Kembali** (`AuthContext`): `visibilitychange` + `focus` memicu `refreshSession()` (throttle 60 detik) sehingga peran yang dicabut atau dipindah ke aplikasi lain langsung menutup panel LPM tanpa menunggu reload. Bila server membalas `appAccess.allowed === false`, token & data pengguna di `localStorage` dibuang dan `ProtectedRoute` mengalihkan ke `/akses-ditolak`.
+- **Sinkronisasi Cakupan Peran dari Server** (`UsersPage`): dropdown "Peran SSO" kini mengambil `GET /api/auth/app-roles` (fallback konstanta lokal bila endpoint gagal), plus indikator kecil "tersinkron dengan /api/auth/app-roles". Daftar peran yang ditolak pada catatan peringatan juga berasal dari `deniedRoles` server, bukan hardcode.
+- **Jejak Audit Penolakan Akses Lintas Aplikasi**:
+  - `recordAccessDenial()` + buffer `accessDenials` (maks 100 entri) di `src/server/index.ts`, dipanggil pada dua titik penolakan: tukar token SSO (`source: "sso_exchange"`) dan middleware `authenticate` (`source: "api_request"`).
+  - Endpoint `GET /api/security/access-denials` (guard `requireLpmAdmin`) mengembalikan entri terbaru + `summary.foreignAdmin` / `summary.other`.
+  - `fetchAccessDenials()` + tipe `AccessDenialItem` di `src/client/services/api.ts`.
+  - Panel "Jejak Penolakan Akses Lintas Aplikasi" pada `PermissionsPage` (Card Container + badge total, dua kartu ringkasan, tabel waktu/akun/peran/sumber, state loading–empty–error, tombol muat ulang 44px).
+- **Penolakan SSO Terstruktur di Halaman Callback**: `SsoCallbackPage` kini membedakan kegagalan token (generik) dari penolakan cakupan aplikasi (`403 FOREIGN_APP_ADMIN`), menampilkan peran SSO, panel tujuan, aplikasi asal peran, langkah perbaikan, serta aksi "Buka Portal ONE UNUSU" / "Kembali ke Halaman Login". Penanda `sessionStorage['lpm_sso_denied']` disimpan untuk konteks halaman login.
+
+### Changed
+- `SsoCallbackPage` memakai container standar (`rounded-[14px]`, `border-[#CBD5E1]`, header `#F8FAFC`) menggantikan kartu `rounded-3xl` ad-hoc, dengan tap target minimum 44px.
+
+### Fixed
+- `RolesPage` menentukan hak admin dari `isAppAdmin` (AuthContext) alih-alih menebak dari `currentUser.role === 'admin'`/`ssoRole`, sehingga tombol tambah/ubah/hapus peran tidak lagi tampil bagi pengguna yang bukan admin sah panel LPM.
+- Pesan penolakan lintas aplikasi tidak lagi tampil sebagai "Login SSO Gagal" generik yang menyesatkan pengguna dengan peran sah di aplikasi lain.
+
+## [2026-11-04]
+
+### Added
+- **Bootstrap Dokumentasi Proyek (`docs/`) — Docs Governance**:
+  - `docs/README.md`: indeks dokumentasi, urutan baca wajib (pre-coding audit), peta folder, ringkasan struktur repo aktual, perintah operasional, dan aturan pemeliharaan dokumen.
+  - `docs/PROJECT_RULES.md`: hierarki aturan (user → `AGENTS.md` → `PROJECT_RULES` → `ARCHITECTURE` → design-system), boundary peran (Frontend/Database/QA), larangan eksekusi (build/test, mutasi destruktif, `git push`), konvensi kode frontend/backend/database, aturan UI wajib, aturan SSO app-scoped, workflow Definition of Done, dan daftar anti-pattern.
+  - `docs/routes/ROUTE_MANIFEST.md`: manifest rute aktual dari `App.tsx` (publik, admin, `adminOnly`), perilaku `ProtectedRoute`, sinkronisasi menu sidebar, dan checklist menambah rute.
+  - `docs/API_ENDPOINTS.md`: referensi seluruh endpoint `/api` beserta middleware guard-nya (`authenticate`, `requireRole`, `requireLpmAdmin`) dan catatan RBAC in-memory.
+  - `docs/adr/README.md` + `docs/adr/ADR-0001-app-scoped-admin.md`: format ADR dan keputusan pemisahan administrator per aplikasi (konteks, keputusan, konsekuensi, alternatif ditolak).
+- **Pemisahan Administrator per Aplikasi (App-Scoped Role)**:
+  - `resolveAppAccess()` di `src/server/index.ts` sebagai satu sumber kebenaran otorisasi: `LPM_APP_ROLES` (`SUPERADMIN`, `ADMIN_LPM`, `DOSEN`) vs `FOREIGN_APP_ADMIN_ROLES` (`ADMIN_LPPM`, `ADMIN_ESURAT`, `ADMIN_SARPRAS`, `ADMIN_AKREDITASI`, `ADMIN_LMS`, `ADMIN_SSO`).
+  - Endpoint baru `GET /api/auth/me` (verifikasi sesi + `appAccess`) dan `GET /api/auth/app-roles` (peran sah vs peran ditolak).
+  - Middleware `requireLpmAdmin` pada CRUD `/api/users`; penugasan `ssoRole` di luar cakupan LPM ditolak `403 FOREIGN_APP_ROLE`.
+  - Halaman `src/client/pages/AccessDenied.tsx` (rute `/akses-ditolak`) yang menjelaskan peran, cakupan aplikasi, dan langkah perbaikan.
+
+### Changed
+- **`POST /api/auth/sso`**: peran di luar cakupan LPM kini ditolak dengan `403` + `code` eksplisit (`FOREIGN_APP_ADMIN` / `APP_ACCESS_DENIED`) dan pesan spesifik, bukan lagi pesan generik.
+- **Middleware `authenticate`**: memvalidasi ulang peran setiap request sehingga token lama (terbit sebelum pemisahan) tidak dapat dipakai lintas aplikasi; JWT menyertakan `appCode: "lpm-unusu"`.
+- **`AuthContext`**: menambah `appAccess`, `accessDenied`, `roleLabel`, `isAppAdmin`, `refreshSession()`; sesi divalidasi ulang ke server saat boot sehingga `localStorage` tidak lagi menjadi dasar otorisasi.
+- **`App.tsx`**: `ProtectedRoute` menerima prop `adminOnly`; rute RBAC (`/admin/pengguna|users|peran|roles|izin|permissions`) kini khusus administrator LPM; peran di luar cakupan diarahkan ke `/akses-ditolak`.
+- **`SidebarLayout`**: menu "Kontrol Akses & RBAC" hanya tampil untuk `isAppAdmin`; label peran memakai `roleLabel`; dropdown profil menampilkan cakupan akses panel.
+- **`UsersPage`**: dropdown peran diganti menjadi "Peran SSO (Cakupan LPM)" berisi tiga peran sah, ditambah banner aturan pemisahan admin dan badge tabel berbasis `ssoRole`.
+- **`DashboardPage`**: banner sambutan menampilkan chip peran dan chip "Akses panel: LPM UNUSU".
+- **Dokumen design system disinkronkan dengan kode aktual**:
+  - `TYPOGRAPHY.md`: font efektif adalah `Quicksand` (dari `tailwind.config.js`); import Google Fonts `Plus Jakarta Sans`/`Inter` di `index.css` dicatat sebagai tech-debt.
+  - `COLORS.md`: menambah tabel nilai netral/struktural yang benar-benar dipakai (`#CBD5E1`, `#F8FAFC`, `#DBEAFE`, `#E2EDFB`, `#F0F4FA`, `#E9EFF7`, `#1E3A8A`) + aturan kontras AA.
+  - `DESIGN_RULES.md`: menambah bagian layout/container, aksesibilitas, otorisasi tampil di UI, state & ketahanan data, serta ikon/copywriting.
+  - `COMPONENTS.md`: menambah `AdminPanelTemplate` dan peta pemakaian komponen.
+  - `PAGE_TEMPLATES.md`: menambah template Auth (SSO), Guard/Access Denied, Dashboard, serta peta halaman → template.
+
+### Fixed
+- **Kebocoran otorisasi lintas aplikasi**: administrator LPPM (atau admin aplikasi lain) tidak lagi dapat memperoleh sesi panel LPM maupun memanggil API mutasi, baik lewat tukar token SSO maupun token lama.
+
 ## [2026-11-01]
 
 ### Added

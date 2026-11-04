@@ -1,17 +1,55 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRightIcon, ChevronLeftIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowRightIcon,
+  ChevronLeftIcon,
+  ShieldExclamationIcon,
+  ArrowTopRightOnSquareIcon,
+  XMarkIcon,
+  LockClosedIcon,
+} from '@heroicons/react/24/outline';
 import { AnimatedFlatSsoLogo } from '../components/AnimatedFlatSsoLogo';
 import { useAuth } from '../context/AuthContext';
 import { assetUrl } from '../lib/assets';
+import { SSO_ROLE_LABEL } from '../services/api';
 
 const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
 const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || 'lpm-unusu';
+/** Panel LPPM UNUSU — aplikasi cabang terpisah (admin LPPM tidak dapat masuk LPM). */
+const LPPM_PANEL_URL = import.meta.env.VITE_LPPM_URL || 'http://localhost:5178';
+
+/** Ditulis oleh halaman callback SSO ketika server menolak cakupan aplikasi. */
+const DENIED_FLAG_KEY = 'lpm_sso_denied';
+
+interface DeniedNotice {
+  ssoRole?: string;
+  reason?: string;
+  app?: string;
+}
 
 export function LoginPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Penolakan lintas aplikasi dari percobaan login sebelumnya (mis. admin LPPM).
+  const [deniedNotice, setDeniedNotice] = useState<DeniedNotice | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DENIED_FLAG_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as DeniedNotice;
+      if (parsed && (parsed.ssoRole || parsed.reason)) {
+        setDeniedNotice(parsed);
+      }
+      // Sekali tampil, penanda dibersihkan agar tidak muncul lagi pada kunjungan berikutnya.
+      sessionStorage.removeItem(DENIED_FLAG_KEY);
+    } catch {
+      /* sessionStorage dapat diblokir atau berisi data rusak — abaikan */
+    }
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -19,6 +57,12 @@ export function LoginPage() {
       navigate(from, { replace: true });
     }
   }, [user, navigate, location]);
+
+  const deniedRoleLabel = deniedNotice?.ssoRole
+    ? SSO_ROLE_LABEL[deniedNotice.ssoRole] || deniedNotice.ssoRole
+    : 'Administrator aplikasi lain';
+  const deniedIsForeignAdmin = deniedNotice?.reason === 'foreign_app_admin';
+
   const handleSsoLogin = () => {
     const target = `${ONE_UNUSU_URL}/authorize?client_id=${encodeURIComponent(SSO_CLIENT_ID)}`;
     window.location.href = target;
@@ -76,6 +120,68 @@ export function LoginPage() {
             </div>
           </div>
 
+          {/* Penolakan lintas aplikasi dari percobaan login sebelumnya */}
+          {deniedNotice && (
+            <div
+              role="alert"
+              className="rounded-2xl border border-rose-300 bg-rose-50 p-4 text-left shadow-2xs"
+            >
+              <div className="flex items-start gap-2.5">
+                <span className="w-8 h-8 rounded-lg bg-rose-100 border border-rose-200 text-rose-700 flex items-center justify-center flex-shrink-0">
+                  <LockClosedIcon className="w-4 h-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-rose-900">
+                    {deniedIsForeignAdmin
+                      ? 'Akun ini bukan administrator LPM'
+                      : 'Akses panel LPM ditolak'}
+                  </p>
+                  <p className="mt-1 text-[11px] text-rose-800 leading-relaxed">
+                    {deniedIsForeignAdmin ? (
+                      <>
+                        Akun Anda terdaftar sebagai{' '}
+                        <strong className="font-bold">{deniedRoleLabel}</strong>
+                        {deniedNotice.app ? (
+                          <>
+                            {' '}
+                            pada <strong className="font-bold">{deniedNotice.app}</strong>
+                          </>
+                        ) : null}
+                        . Peran admin tidak berlaku lintas aplikasi, sehingga panel LPM UNUSU tidak
+                        dapat diakses dengan akun tersebut.
+                      </>
+                    ) : (
+                      <>
+                        Peran{' '}
+                        <strong className="font-bold">{deniedRoleLabel}</strong> tidak termasuk
+                        cakupan aplikasi LPM UNUSU. Hubungi Administrator LPM untuk penyesuaian
+                        peran.
+                      </>
+                    )}
+                  </p>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                    <a
+                      href={LPPM_PANEL_URL}
+                      className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-white border border-rose-300 text-[11px] font-bold text-rose-900 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 transition-colors"
+                    >
+                      <span>Masuk ke panel aplikasi Anda</span>
+                      <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setDeniedNotice(null)}
+                      className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-xl text-[11px] font-semibold text-rose-800 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 transition-colors cursor-pointer"
+                      aria-label="Tutup pemberitahuan penolakan akses"
+                    >
+                      <XMarkIcon className="w-4 h-4" aria-hidden="true" />
+                      <span>Tutup</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Tombol Masuk — Royal Blue, Teks Saja */}
           <button
             type="button"
@@ -86,6 +192,27 @@ export function LoginPage() {
             <span>Masuk dengan ONE UNUSU</span>
             <ArrowRightIcon className="w-4 h-4 text-amber-400 group-hover:translate-x-1.5 transition-transform" />
           </button>
+
+          {/* Pemisahan admin per aplikasi — transparan sejak halaman login */}
+          <div className="rounded-2xl border border-[#CBD5E1] bg-slate-50/80 p-4 text-left">
+            <div className="flex items-start gap-2.5">
+              <ShieldExclamationIcon className="w-4 h-4 text-blue-900 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-800">Panel ini khusus LPM UNUSU</p>
+                <p className="mt-1 text-[11px] text-slate-600 leading-relaxed">
+                  Akun administrator LPPM, E-Surat, Sarpras, Akreditasi, dan LMS tidak dapat masuk ke panel
+                  ini. Hak akses diverifikasi ulang oleh server pada setiap permintaan API.
+                </p>
+                <a
+                  href={LPPM_PANEL_URL}
+                  className="mt-2.5 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-white border border-[#CBD5E1] text-[11px] font-bold text-blue-900 hover:bg-blue-50 hover:border-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 transition-colors"
+                >
+                  <span>Buka panel LPPM UNUSU</span>
+                  <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}

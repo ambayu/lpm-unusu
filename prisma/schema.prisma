@@ -1,5 +1,12 @@
 // Prisma schema for LPM UNUSU (Lembaga Penjaminan Mutu)
 // Audit Mutu Internal (AMI), Siklus PPEPP, dan Standar SPMI
+//
+// CATATAN INDEXING (lihat docs/database/SCHEMA_MIGRATION_PLAN.md):
+// - Kolom FK (`standarId`, `periodeId`) sudah memiliki index implisit dari
+//   constraint FOREIGN KEY di MySQL/InnoDB, jadi tidak dideklarasikan ulang
+//   secara tunggal. Yang ditambahkan adalah index komposit yang memperluas
+//   index FK tersebut agar query filter + agregasi tidak full table scan.
+// - Seluruh index bersifat ADDITIVE (CREATE INDEX) — tanpa operasi destruktif.
 
 datasource db {
   provider = "mysql"
@@ -22,9 +29,18 @@ model StandarSpmi {
   author      String?      @default("Super Admin LPM") @db.VarChar(100)
   dokumenList DokumenMutu[]
   auditList   AuditButir[]
+  indikatorList IndikatorSpmi[]
+  siklusList  SiklusPpepp[]
+  tindakLanjutList TindakLanjut[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
+  // Filter daftar standar per kategori + tahun (Pangkalan Standar SPMI)
+  @@index([kategori, tahun])
+  // Arsip standar per tahun akademik
+  @@index([tahun])
+  // Pencarian/pengurutan nama standar
+  @@index([nama])
   @@map("lpm_standar_spmi")
 }
 
@@ -38,10 +54,27 @@ model DokumenMutu {
   revisi      Int          @default(0)
   filePath    String?
   tahun       Int          @default(2026)
+  // Status daur hidup dokumen mutu (additive): Draft, Review, Berlaku, Kedaluwarsa
+  status      String       @default("Berlaku") @db.VarChar(20)
+  // Masa berlaku dokumen (additive, nullable — dokumen lama tidak terpengaruh)
+  berlakuMulai  DateTime?
+  berlakuSampai DateTime?
   author      String?      @default("Super Admin LPM") @db.VarChar(100)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
+  // Tab dokumen per jenis + tahun (Kebijakan / Manual / Standar / SOP)
+  @@index([jenis, tahun])
+  // Arsip dokumen per tahun
+  @@index([tahun])
+  // Drill-down dokumen milik satu standar, difilter jenisnya
+  @@index([standarId, jenis])
+  // Default listing orderBy createdAt desc
+  @@index([createdAt(sort: Desc)])
+  // Daftar dokumen per status daur hidup (Draft / Review / Berlaku / Kedaluwarsa)
+  @@index([status, tahun])
+  // Pemantauan masa berlaku dokumen (reminder kedaluwarsa)
+  @@index([berlakuSampai])
   @@map("lpm_dokumen_mutu")
 }
 
@@ -50,10 +83,18 @@ model PeriodeAmi {
   nama        String       // Siklus AMI Tahun Akademik 2026/2027
   tahun       Int          @default(2026)
   status      String       @default("Berjalan") // Persiapan, Berjalan, Selesai
+  // Rentang pelaksanaan audit (additive, nullable — periode lama tetap valid)
+  tanggalMulai   DateTime?
+  tanggalSelesai DateTime?
   auditButir  AuditButir[]
+  siklusList  SiklusPpepp[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
+  // Cari periode aktif (status = Berjalan) untuk dropdown input audit
+  @@index([status])
+  // Rekap periode per tahun akademik
+  @@index([tahun, status])
   @@map("lpm_periode_ami")
 }
 
@@ -69,8 +110,111 @@ model AuditButir {
   deskripsi   String?     @db.Text
   rekomendasi String?     @db.Text
   author      String?     @default("Super Admin LPM") @db.VarChar(100)
+  tindakLanjutList TindakLanjut[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
+  // Agregasi dashboard: GROUP BY hasil (mayor/minor/observasi/sesuai)
+  @@index([hasil])
+  // Listing default orderBy createdAt desc
+  @@index([createdAt(sort: Desc)])
+  // Rekap temuan per periode dikelompokkan hasil (matriks AMI)
+  @@index([periodeId, hasil])
+  // Rekap temuan per butir standar dikelompokkan hasil
+  @@index([standarId, hasil])
+  // Filter riwayat audit per unit auditee (prodi/fakultas)
+  @@index([auditee])
   @@map("lpm_audit_butir")
+}
+
+// =============================================================================
+// MODUL PPEPP — tabel baru (additive, lihat
+// docs/database/MIGRATION_20261102_PPEPP_INDICATOR.md)
+// =============================================================================
+
+/// Indikator & target capaian mutu per butir Standar SPMI.
+/// Menggantikan pemakaian kolom teks `StandarSpmi.indikator`/`target` yang
+/// tidak bisa diagregasi (satu standar hanya boleh punya satu teks).
+model IndikatorSpmi {
+  id          Int          @id @default(autoincrement())
+  standarId   Int
+  standar     StandarSpmi  @relation(fields: [standarId], references: [id], onDelete: Cascade)
+  kode        String       @db.VarChar(40) // IND-PEND-01-1
+  nama        String       @db.VarChar(255)
+  satuan      String?      @db.VarChar(40) // %, orang, dokumen, rasio
+  target      Decimal?     @db.Decimal(10, 2)
+  capaian     Decimal?     @db.Decimal(10, 2)
+  tahun       Int          @default(2026)
+  // Status ketercapaian: Tercapai, Belum Tercapai, Melebihi Target, Belum Dinilai
+  status      String       @default("Belum Dinilai") @db.VarChar(20)
+  catatan     String?      @db.Text
+  author      String?      @default("Super Admin LPM") @db.VarChar(100)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Kode indikator unik dalam satu standar (aman: tabel baru, tanpa data lama)
+  @@unique([standarId, kode])
+  // Daftar indikator per standar + tahun (halaman detail Standar SPMI)
+  @@index([standarId, tahun])
+  // Rekap ketercapaian lintas standar pada satu tahun
+  @@index([tahun, status])
+  @@map("lpm_indikator_spmi")
+}
+
+/// Jejak siklus PPEPP (Penetapan, Pelaksanaan, Evaluasi, Pengendalian,
+/// Peningkatan) per standar per tahun akademik.
+model SiklusPpepp {
+  id            Int          @id @default(autoincrement())
+  standarId     Int
+  standar       StandarSpmi  @relation(fields: [standarId], references: [id], onDelete: Cascade)
+  periodeId     Int?
+  periode       PeriodeAmi?  @relation(fields: [periodeId], references: [id], onDelete: SetNull)
+  // Penetapan | Pelaksanaan | Evaluasi | Pengendalian | Peningkatan
+  tahap         String       @db.VarChar(20)
+  // Belum Mulai | Berjalan | Selesai | Terlambat
+  status        String       @default("Belum Mulai") @db.VarChar(20)
+  tahun         Int          @default(2026)
+  tanggalMulai  DateTime?
+  tanggalSelesai DateTime?
+  penanggungJawab String?    @db.VarChar(120)
+  catatan       String?      @db.Text
+  author        String?      @default("Super Admin LPM") @db.VarChar(100)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Satu tahap hanya boleh tercatat sekali per standar per tahun
+  @@unique([standarId, tahun, tahap])
+  // Papan kanban PPEPP: seluruh tahap pada satu tahun, dikelompokkan status
+  @@index([tahun, tahap, status])
+  // Progres PPEPP per periode AMI
+  @@index([periodeId, tahap])
+  @@map("lpm_siklus_ppepp")
+}
+
+/// Rencana tindak lanjut atas temuan audit (tahap Pengendalian/Peningkatan).
+model TindakLanjut {
+  id          Int          @id @default(autoincrement())
+  auditId     Int?
+  audit       AuditButir?  @relation(fields: [auditId], references: [id], onDelete: SetNull)
+  standarId   Int
+  standar     StandarSpmi  @relation(fields: [standarId], references: [id], onDelete: Cascade)
+  uraian      String       @db.Text
+  penanggungJawab String?  @db.VarChar(120)
+  // Terbuka | Dikerjakan | Selesai | Dibatalkan
+  status      String       @default("Terbuka") @db.VarChar(20)
+  prioritas   String       @default("Sedang") @db.VarChar(10) // Rendah, Sedang, Tinggi
+  tenggat     DateTime?
+  tanggalSelesai DateTime?
+  buktiPath   String?
+  author      String?      @default("Super Admin LPM") @db.VarChar(100)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Daftar tindak lanjut per temuan audit
+  @@index([auditId, status])
+  // Papan monitoring tenggat tindak lanjut
+  @@index([status, tenggat])
+  // Rekap tindak lanjut per standar
+  @@index([standarId, status])
+  @@map("lpm_tindak_lanjut")
 }

@@ -15,9 +15,22 @@ import { PermissionsPage } from './pages/Permissions';
 import { LoginPage } from './pages/Login';
 import { SsoCallbackPage } from './pages/SsoCallback';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AccessDeniedPage } from './pages/AccessDenied';
 
-function ProtectedRoute({ children }: { children: React.ReactElement }) {
-  const { user, loading } = useAuth();
+/**
+ * Penjaga rute panel admin.
+ * - Belum login  -> /login
+ * - Peran bukan milik aplikasi LPM (mis. ADMIN_LPPM) -> halaman Akses Ditolak
+ * - Rute khusus admin & bukan Administrator LPM -> dialihkan ke dashboard
+ */
+function ProtectedRoute({
+  children,
+  adminOnly = false,
+}: {
+  children: React.ReactElement;
+  adminOnly?: boolean;
+}) {
+  const { user, loading, accessDenied, isAppAdmin } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -29,6 +42,12 @@ function ProtectedRoute({ children }: { children: React.ReactElement }) {
   }
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  if (accessDenied) {
+    return <Navigate to="/akses-ditolak" replace />;
+  }
+  if (adminOnly && !isAppAdmin) {
+    return <Navigate to="/admin/dashboard" replace />;
   }
   return <SidebarLayout>{children}</SidebarLayout>;
 }
@@ -50,6 +69,9 @@ export function App() {
           {/* Autentikasi SSO */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/sso/callback" element={<SsoCallbackPage />} />
+
+          {/* Penolakan akses lintas aplikasi (mis. admin LPPM membuka panel LPM) */}
+          <Route path="/akses-ditolak" element={<AccessDeniedPage />} />
 
           {/* Panel Manajemen Admin Ber-Sidebar */}
           <Route
@@ -147,11 +169,11 @@ export function App() {
             }
           />
 
-          {/* Manajemen Pengguna & Hak Akses (RBAC) */}
+          {/* Manajemen Pengguna & Hak Akses (RBAC) — khusus Administrator LPM */}
           <Route
             path="/admin/pengguna"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute adminOnly>
                 <UsersPage />
               </ProtectedRoute>
             }
@@ -159,7 +181,7 @@ export function App() {
           <Route
             path="/admin/users"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute adminOnly>
                 <UsersPage />
               </ProtectedRoute>
             }
@@ -167,7 +189,7 @@ export function App() {
           <Route
             path="/admin/peran"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute adminOnly>
                 <RolesPage />
               </ProtectedRoute>
             }
@@ -175,7 +197,7 @@ export function App() {
           <Route
             path="/admin/roles"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute adminOnly>
                 <RolesPage />
               </ProtectedRoute>
             }
@@ -183,7 +205,7 @@ export function App() {
           <Route
             path="/admin/izin"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute adminOnly>
                 <PermissionsPage />
               </ProtectedRoute>
             }
@@ -191,7 +213,7 @@ export function App() {
           <Route
             path="/admin/permissions"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute adminOnly>
                 <PermissionsPage />
               </ProtectedRoute>
             }

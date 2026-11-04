@@ -47,6 +47,26 @@ Komponen-komponen bersama (shared components) yang wajib digunakan kembali di se
    - Tanggung Jawab: Hero banner slider full-bleed untuk landing page publik.
    - Aksesibilitas: `aria-label` pada section, dot buttons, dan nav buttons.
 
+9. **`AdminPanelTemplate`**
+   - Lokasi: `src/client/components/AdminPanelTemplate.tsx`
+   - Tanggung Jawab: Panel pembungkus halaman admin (single unified white panel) dengan
+     header `title` + `description` + `badge` + `actions`; border `#CBD5E1`,
+     radius `[16px]`, `shadow-xs`.
+   - Props: `title` (wajib), `description` (wajib), `badge`, `actions`, `children`, `className`.
+   - Kapan dipakai: halaman admin yang membutuhkan header panel besar (bukan card per
+     section). Untuk tabel/form tunggal di dalam halaman, tetap gunakan `CardContainer`.
+
+## Peta Pemakaian Komponen
+
+| Komponen | Dipakai di |
+|---|---|
+| `SidebarLayout` | seluruh rute `/admin/*` via `ProtectedRoute` |
+| `CardContainer` | `Dashboard`, `Standar`, `Dokumen`, `Ami`, `Users`, `Roles`, `Permissions`, `AccessDenied` |
+| `AdminPanelTemplate` | panel halaman admin ber-header besar (form/detail) |
+| `StatusBadge` | tabel Standar, Dokumen, AMI |
+| `EmptyState` / `ErrorState` | seluruh halaman data saat kosong / gagal muat |
+| `FullHeroSlider`, `OneUnusuMark`, `AnimatedFlatSsoLogo` | `Landing`, `Login` |
+
 ## Komponen Dihapus (Legacy)
 
 - ~~`Navbar.tsx`~~ — Tidak digunakan; admin menggunakan `SidebarLayout`, landing punya navbar inline.

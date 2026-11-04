@@ -2,16 +2,21 @@
 
 ## Font Family
 
-Font utama didefinisikan di `tailwind.config.js` dan di-import melalui Google Fonts di `index.css`:
+Font efektif ditentukan di `tailwind.config.js` (`theme.extend.fontFamily.sans`):
 
 ```
-font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif
+font-sans: "Quicksand", ui-sans-serif, system-ui, -apple-system, sans-serif
 ```
 
-Import CSS:
-```css
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Inter:wght@300..800&display=swap');
-```
+Karena `font-sans` adalah default Tailwind untuk `<body>`, **seluruh UI LPM UNUSU
+dirender dengan Quicksand** (karakter geometris membulat, sesuai identitas kampus).
+
+> ⚠️ **Tech-debt terverifikasi:** `src/client/index.css` masih meng-import
+> `Plus Jakarta Sans` + `Inter` dari Google Fonts, padahal konfigurasi Tailwind memakai
+> `Quicksand`. Import tersebut tidak berefek pada UI (tidak ada yang merujuk family-nya)
+> dan menambah satu request font. Perbaikan yang disarankan: ganti import menjadi
+> `family=Quicksand:wght@300..700` (atau hapus import bila font di-self-host).
+> Jangan mengubah `fontFamily` tanpa memperbarui dokumen ini dan `CHANGELOG.md`.
 
 ## Type Scale
 
