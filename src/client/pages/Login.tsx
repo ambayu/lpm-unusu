@@ -7,12 +7,13 @@ import {
   LockClosedIcon,
 } from '@heroicons/react/24/outline';
 import { AnimatedFlatSsoLogo } from '../components/AnimatedFlatSsoLogo';
+import { SsoLoadingScreen } from '../components/SsoLoadingScreen';
 import { useAuth } from '../context/AuthContext';
 import { assetUrl } from '../lib/assets';
 import { SSO_ROLE_LABEL } from '../services/api';
 
-const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
-const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || 'lpm-unusu';
+const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'https://unusu.bpp-developer.com/sso';
+const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || 'cli65a45bdb5b19c943';
 
 /** Ditulis oleh halaman callback SSO ketika server menolak cakupan aplikasi. */
 const DENIED_FLAG_KEY = 'lpm_sso_denied';
@@ -30,6 +31,10 @@ export function LoginPage() {
 
   // Penolakan lintas aplikasi dari percobaan login sebelumnya (mis. admin LPPM).
   const [deniedNotice, setDeniedNotice] = useState<DeniedNotice | null>(null);
+
+  // True sejak tombol masuk ditekan hingga browser benar-benar berpindah ke
+  // Portal ONE UNUSU. Dipakai untuk menampilkan layar tunggu penuh.
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     try {
@@ -60,9 +65,35 @@ export function LoginPage() {
   const deniedIsForeignAdmin = deniedNotice?.reason === 'foreign_app_admin';
 
   const handleSsoLogin = () => {
+    if (redirecting) return;
+    // Hanya menyalakan layar tunggu. Perpindahan ke Portal ONE UNUSU baru
+    // dijalankan oleh `onReady` setelah jeda animasi terlewati, sehingga logo
+    // SSO sempat terlihat utuh alih-alih berkedip sepersekian detik.
+    setRedirecting(true);
+  };
+
+  const goToPortal = () => {
+  // Langsung ke /authorize, tanpa melewati halaman login portal.
+  // Portal sendiri yang menentukan: bila sesi SSO masih aktif, tiket diterbitkan
+  // dan pengguna mendarat di panel aplikasi ini; bila tidak, portal menampilkan
+  // form login lalu melanjutkan ke /authorize secara otomatis. Dengan begitu
+  // pengguna yang sudah login di ONE UNUSU tidak melihat form login dua kali.
     const target = `${ONE_UNUSU_URL}/authorize?client_id=${encodeURIComponent(SSO_CLIENT_ID)}`;
     window.location.href = target;
   };
+
+  // Layar tunggu satu halaman penuh selama browser berpindah ke Portal ONE
+  // UNUSU, supaya pengguna tidak menekan tombol masuk berulang kali.
+  if (redirecting) {
+    return (
+      <SsoLoadingScreen
+        title="Menghubungkan ke ONE UNUSU"
+        description="Mengalihkan Anda ke Portal Single Sign-On kampus. Jangan tutup halaman ini."
+        delayMs={1400}
+        onReady={goToPortal}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-white relative selection:bg-lpm-yellow-400 selection:text-slate-950">

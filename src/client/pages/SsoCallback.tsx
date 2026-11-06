@@ -3,7 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import {
   ShieldCheckIcon,
   ExclamationTriangleIcon,
-  ArrowPathIcon,
   LockClosedIcon,
   ArrowTopRightOnSquareIcon,
   UserCircleIcon,
@@ -11,12 +10,13 @@ import {
 import { ssoLogin } from '../services/api';
 import type { AppAccessInfo } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { SsoLoadingScreen } from '../components/SsoLoadingScreen';
 
 type SsoExchangeResult = Awaited<ReturnType<typeof ssoLogin>>;
 
 const exchangeRequests = new Map<string, Promise<SsoExchangeResult>>();
 
-const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
+const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'https://unusu.bpp-developer.com/sso';
 
 /** Penanda sesi ditolak karena peran milik aplikasi lain — dibaca halaman Login. */
 const DENIED_FLAG_KEY = 'lpm_sso_denied';
@@ -106,6 +106,20 @@ export function SsoCallbackPage() {
   }, [params, saveSession]);
 
   const isForeignAdmin = denial?.reason === 'foreign_app_admin';
+
+  // Verifikasi tiket menunggu request jaringan nyata (server-to-server), jadi
+  // layar tunggu penuh memang pantas ditampilkan. Gayanya disamakan dengan
+  // layar tunggu di halaman login supaya seluruh rangkaian masuk terasa satu
+  // alur, bukan beberapa halaman berbeda. Penolakan akses (`denial`) dan gagal
+  // verifikasi (`error`) tetap memakai kartu penjelasan di bawah.
+  if (!error && !denial) {
+    return (
+      <SsoLoadingScreen
+        title="Memverifikasi tiket masuk"
+        description="Aplikasi sedang memvalidasi token sekali pakai Anda. Jangan tutup halaman ini."
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F1F5F2] flex items-center justify-center px-4 py-10">
@@ -211,7 +225,7 @@ export function SsoCallbackPage() {
                   </Link>
                 </div>
               </>
-            ) : error ? (
+            ) : (
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 mb-4 ring-4 ring-rose-100">
                   <ExclamationTriangleIcon className="w-7 h-7" />
@@ -226,21 +240,6 @@ export function SsoCallbackPage() {
                 >
                   Kembali ke Halaman Login
                 </Link>
-              </div>
-            ) : (
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-lpm-blue-50 text-lpm-blue-800 mb-4 ring-4 ring-lpm-blue-100">
-                  <ArrowPathIcon className="w-7 h-7 animate-spin" />
-                </div>
-                <h2 className="text-lg font-bold text-slate-900 mb-2">Memverifikasi Sesi SSO</h2>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Mohon tunggu, sistem sedang memverifikasi tiket autentikasi dari Portal ONE
-                  UNUSU...
-                </p>
-                <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-lpm-blue-800 font-semibold bg-lpm-blue-50/80 py-1.5 px-3 rounded-full border border-lpm-blue-200/60 w-fit mx-auto">
-                  <ShieldCheckIcon className="w-4 h-4 text-lpm-blue-700" />
-                  <span>Tiket single-use aman, berlaku 5 menit</span>
-                </div>
               </div>
             )}
           </div>
