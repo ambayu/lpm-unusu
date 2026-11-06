@@ -89,7 +89,7 @@ export const StandarFormPage: React.FC = () => {
       submitting={submitting}
       error={error}
       onSubmit={handleSubmit}
-      accentClassName="bg-blue-900 hover:bg-blue-950"
+      accentClassName="bg-lpm-blue-900 hover:bg-lpm-blue-950"
     >
       {loading ? (
         <div className="py-16 text-center text-xs text-slate-500 font-medium">
@@ -113,7 +113,7 @@ export const StandarFormPage: React.FC = () => {
                   placeholder="Contoh: STD-PEND-01"
                   value={formData.kode}
                   onChange={(e) => setFormData({ ...formData, kode: e.target.value })}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-mono font-bold text-blue-900"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-mono font-bold text-lpm-blue-900"
                 />
                 <p className="text-[11px] text-slate-400 mt-1 font-normal">
                   Gunakan format standar instrumen, misal STD-PEND, STD-PENEL, STD-PKM.
@@ -127,7 +127,7 @@ export const StandarFormPage: React.FC = () => {
                 <select
                   value={formData.kategori}
                   onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-medium text-slate-800"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-medium text-slate-800"
                 >
                   <option value="Pendidikan">Pendidikan (Tridharma)</option>
                   <option value="Penelitian">Penelitian (Tridharma)</option>
@@ -149,7 +149,7 @@ export const StandarFormPage: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, tahun: parseInt(e.target.value) || 2026 })
                   }
-                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-medium text-slate-800"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-medium text-slate-800"
                 />
                 <p className="text-[11px] text-slate-400 mt-1 font-normal">
                   Tahun berlakunya siklus penetapan PPEPP.
@@ -166,7 +166,7 @@ export const StandarFormPage: React.FC = () => {
                   placeholder="Contoh: Standar Kompetensi Lulusan & Capaian Pembelajaran Lulusan (CPL)"
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-semibold text-slate-900"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-semibold text-slate-900"
                 />
               </div>
             </div>
@@ -188,7 +188,7 @@ export const StandarFormPage: React.FC = () => {
                   placeholder="Deskripsikan pernyataan standar mutu SPMI secara eksplisit dan terukur..."
                   value={formData.pernyataan}
                   onChange={(e) => setFormData({ ...formData, pernyataan: e.target.value })}
-                  className="w-full text-xs p-3.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-normal leading-relaxed text-slate-800"
+                  className="w-full text-xs p-3.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-normal leading-relaxed text-slate-800"
                 />
               </div>
 
@@ -202,7 +202,7 @@ export const StandarFormPage: React.FC = () => {
                     placeholder="Contoh: 100% Lulusan Tepat Waktu (<= 8 Semester)"
                     value={formData.target}
                     onChange={(e) => setFormData({ ...formData, target: e.target.value })}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-medium text-slate-800"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-medium text-slate-800"
                   />
                   <p className="text-[11px] text-slate-400 mt-1 font-normal">
                     Kuantifikasi capaian yang diharapkan universitas / program studi.
@@ -218,7 +218,7 @@ export const StandarFormPage: React.FC = () => {
                     placeholder="Contoh: Persentase kelulusan tepat waktu terverifikasi di SIAKAD"
                     value={formData.indikator}
                     onChange={(e) => setFormData({ ...formData, indikator: e.target.value })}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-medium text-slate-800"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-medium text-slate-800"
                   />
                   <p className="text-[11px] text-slate-400 mt-1 font-normal">
                     Tolok ukur bukti verifikasi pada saat pelaksanaan AMI.

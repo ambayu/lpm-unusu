@@ -92,8 +92,8 @@ export const PermissionsPage: React.FC = () => {
       <CardContainer>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-900 border border-blue-200 text-xs font-semibold uppercase tracking-wider mb-2">
-              <ShieldCheckIcon className="w-4 h-4 text-amber-500" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-lpm-blue-50 text-lpm-blue-900 border border-lpm-blue-200 text-xs font-semibold uppercase tracking-wider mb-2">
+              <ShieldCheckIcon className="w-4 h-4 text-lpm-yellow-400" />
               Kontrol Hak Akses RBAC
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
@@ -121,7 +121,7 @@ export const PermissionsPage: React.FC = () => {
               placeholder="Cari nama izin, aksi, atau resource..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800 text-slate-700"
+              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-lpm-blue-800 text-slate-700"
             />
           </div>
           <div className="text-xs text-slate-500">
@@ -156,8 +156,8 @@ export const PermissionsPage: React.FC = () => {
                   <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
-                        <KeyIcon className="w-4 h-4 text-blue-800 shrink-0" />
-                        <code className="font-mono font-semibold text-blue-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-[11px]">
+                        <KeyIcon className="w-4 h-4 text-lpm-blue-800 shrink-0" />
+                        <code className="font-mono font-semibold text-lpm-blue-900 bg-lpm-blue-50 px-2 py-0.5 rounded border border-lpm-blue-200 text-[11px]">
                           {p.name}
                         </code>
                       </div>
@@ -169,8 +169,8 @@ export const PermissionsPage: React.FC = () => {
                     </td>
                     <td className="px-5 py-3.5 font-medium text-slate-800">{p.resource}</td>
                     <td className="px-5 py-3.5">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-lpm-blue-50 text-lpm-blue-800 border border-lpm-blue-200">
+                        <CheckCircleIcon className="w-3.5 h-3.5 text-lpm-blue-700" />
                         {p.guard}
                       </span>
                     </td>
@@ -218,7 +218,7 @@ export const PermissionsPage: React.FC = () => {
           <ErrorState description={denialError} onRetry={fetchDenials} />
         ) : denials.length === 0 ? (
           <div className="py-10 text-center">
-            <div className="w-11 h-11 rounded-[12px] bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center mx-auto mb-3">
+            <div className="w-11 h-11 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-700 flex items-center justify-center mx-auto mb-3">
               <ShieldCheckIcon className="w-5 h-5" />
             </div>
             <p className="text-xs font-semibold text-slate-800">

@@ -24,7 +24,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
           <button
             type="button"
             onClick={onRetry}
-            className="text-xs font-bold text-lpm-green-700 hover:text-lpm-green-800 hover:underline"
+            className="text-xs font-bold text-lpm-blue-700 hover:text-lpm-blue-800 hover:underline"
           >
             Coba Lagi
           </button>

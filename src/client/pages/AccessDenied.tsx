@@ -58,7 +58,7 @@ export function AccessDeniedPage() {
               <div
                 className={`w-11 h-11 rounded-[12px] border flex items-center justify-center flex-shrink-0 ${
                   alreadyAllowed
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    ? 'bg-lpm-blue-50 border-lpm-blue-200 text-lpm-blue-700'
                     : 'bg-rose-50 border-rose-200 text-rose-600'
                 }`}
               >
@@ -111,8 +111,8 @@ export function AccessDeniedPage() {
               </div>
             </div>
 
-            <div className="rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3">
-              <p className="text-[11px] sm:text-xs text-amber-900 leading-relaxed">
+            <div className="rounded-[12px] border border-lpm-yellow-400 bg-lpm-yellow-400 px-4 py-3">
+              <p className="text-[11px] sm:text-xs text-lpm-yellow-400 leading-relaxed">
                 <strong>Kenapa ini terjadi?</strong> Satu akun ONE UNUSU dapat memiliki peran pada banyak
                 aplikasi, tetapi setiap panel hanya menerima peran miliknya sendiri. Administrator LPPM tidak
                 dapat membuka panel LPM — begitu pula sebaliknya. Bila Anda memang ditugaskan di LPM, minta
@@ -124,7 +124,7 @@ export function AccessDeniedPage() {
               {alreadyAllowed && (
                 <Link
                   to="/admin/dashboard"
-                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-[12px] bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs transition-colors"
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-[12px] bg-lpm-blue-700 hover:bg-lpm-blue-800 text-white text-xs font-bold shadow-xs transition-colors"
                 >
                   <Squares2X2Icon className="w-4 h-4" />
                   Lanjut ke Dashboard LPM
@@ -132,7 +132,7 @@ export function AccessDeniedPage() {
               )}
               <button
                 onClick={handleSwitchAccount}
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-[12px] bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-[12px] bg-lpm-blue-900 hover:bg-lpm-blue-800 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
               >
                 <ArrowRightOnRectangleIcon className="w-4 h-4" />
                 Keluar &amp; Ganti Akun

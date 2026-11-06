@@ -174,7 +174,7 @@ export const PenggunaFormPage: React.FC = () => {
       title={isEdit ? 'Edit Pengguna LPM' : 'Tambah Pengguna Baru'}
       description="Akun pengguna LPM UNUSU terhubung langsung dengan ONE UNUSU SSO. Peran menentukan cakupan modul yang dapat diakses."
       badge={
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-blue-50 border border-blue-200 text-[10px] font-bold uppercase tracking-wider text-blue-900">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-lpm-blue-50 border border-lpm-blue-200 text-[10px] font-bold uppercase tracking-wider text-lpm-blue-900">
           <UserCircleIcon className="w-3.5 h-3.5" aria-hidden="true" />
           Tata Kelola
         </span>
@@ -186,19 +186,19 @@ export const PenggunaFormPage: React.FC = () => {
       submitting={submitting}
       error={error}
       onSubmit={handleSubmit}
-      accentClassName="bg-blue-900 hover:bg-blue-950"
+      accentClassName="bg-lpm-blue-900 hover:bg-lpm-blue-950"
     >
       {sukses && (
         <div
           role="status"
-          className="p-4 rounded-[12px] bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold"
+          className="p-4 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-800 text-xs font-semibold"
         >
           {sukses}
         </div>
       )}
 
       {!isAdmin && (
-        <div className="p-4 rounded-[12px] bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+        <div className="p-4 rounded-[12px] bg-lpm-yellow-400 border border-lpm-yellow-400 text-lpm-blue-900 text-xs font-semibold">
           Hanya Administrator LPM yang boleh menambah atau mengubah pengguna.
         </div>
       )}
@@ -225,7 +225,7 @@ export const PenggunaFormPage: React.FC = () => {
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   placeholder="Contoh: 0102030405"
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
                 />
               </div>
 
@@ -240,7 +240,7 @@ export const PenggunaFormPage: React.FC = () => {
                   value={formData.nama}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
                   placeholder="Contoh: Dr. H. Ahmad Farhan, M.Kom."
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
                 />
               </div>
 
@@ -254,7 +254,7 @@ export const PenggunaFormPage: React.FC = () => {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="Contoh: dosen@unusu.ac.id"
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
                 />
               </div>
             </div>
@@ -280,7 +280,7 @@ export const PenggunaFormPage: React.FC = () => {
                       role: ssoRole === 'DOSEN' ? 'dosen' : 'admin',
                     });
                   }}
-                  className="w-full px-3 py-2 min-h-[44px] text-xs border border-[#CBD5E1] rounded-[10px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs border border-[#CBD5E1] rounded-[10px] bg-white focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
                 >
                   {roleOptions.map((option) => (
                     <option key={option.code} value={option.code}>
@@ -298,7 +298,7 @@ export const PenggunaFormPage: React.FC = () => {
                   id="pengguna-status"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3 py-2 min-h-[44px] text-xs border border-[#CBD5E1] rounded-[10px] bg-white focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs border border-[#CBD5E1] rounded-[10px] bg-white focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
                 >
                   <option value="Aktif">Aktif</option>
                   <option value="Nonaktif">Nonaktif</option>
@@ -315,7 +315,7 @@ export const PenggunaFormPage: React.FC = () => {
                   value={formData.fakultas}
                   onChange={(e) => setFormData({ ...formData, fakultas: e.target.value })}
                   placeholder="Fakultas Sains dan Teknologi"
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
                 />
               </div>
 
@@ -329,7 +329,7 @@ export const PenggunaFormPage: React.FC = () => {
                   value={formData.prodi}
                   onChange={(e) => setFormData({ ...formData, prodi: e.target.value })}
                   placeholder="Sistem Informasi"
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
                 />
               </div>
             </div>

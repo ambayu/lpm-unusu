@@ -84,10 +84,10 @@ const hasilLabel = (hasil?: string | null) => {
 
 const hasilBadgeClass = (hasil?: string | null) => {
   const label = hasilLabel(hasil);
-  if (label === 'Sesuai') return 'bg-emerald-50 text-emerald-800 border-emerald-200';
-  if (label === 'Terlampaui') return 'bg-blue-50 text-blue-900 border-blue-200';
+  if (label === 'Sesuai') return 'bg-lpm-blue-50 text-lpm-blue-800 border-lpm-blue-200';
+  if (label === 'Terlampaui') return 'bg-lpm-blue-50 text-lpm-blue-900 border-lpm-blue-200';
   if (label === 'Temuan Mayor') return 'bg-rose-50 text-rose-800 border-rose-200';
-  if (label === 'Temuan Minor') return 'bg-amber-50 text-amber-800 border-amber-200';
+  if (label === 'Temuan Minor') return 'bg-lpm-yellow-400 text-lpm-blue-900 border-lpm-yellow-400';
   return 'bg-slate-50 text-slate-700 border-slate-200';
 };
 
@@ -131,7 +131,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   linkClass,
   valueClass = 'text-slate-900',
 }) => (
-  <div className="bg-white border border-[#CBD5E1] rounded-[14px] p-5 shadow-xs hover:border-blue-400 transition-all flex flex-col justify-between">
+  <div className="bg-white border border-[#CBD5E1] rounded-[14px] p-5 shadow-xs hover:border-lpm-blue-400 transition-all flex flex-col justify-between">
     <div className="flex items-center justify-between gap-2">
       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</span>
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>
@@ -243,12 +243,12 @@ export const DashboardPage: React.FC = () => {
       {/* 1. BANNER SAMBUTAN */}
       <section
         aria-label="Sambutan panel LPM UNUSU"
-        className="relative overflow-hidden rounded-[16px] border border-lpm-green-dark bg-lpm-green text-white"
+        className="relative overflow-hidden rounded-[16px] border border-lpm-blue-dark bg-lpm-blue text-white"
       >
         <div className="px-5 py-6 sm:px-7 sm:py-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
-              <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+              <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-lpm-yellow-400">
                 <ShieldCheckIcon className="w-3.5 h-3.5" aria-hidden="true" />
                 Portal Penjaminan Mutu Internal
               </span>
@@ -261,7 +261,7 @@ export const DashboardPage: React.FC = () => {
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-white/10 border border-white/20 text-[11px] font-semibold text-white">
-                  <LockClosedIcon className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
+                  <LockClosedIcon className="w-3.5 h-3.5 text-lpm-yellow-400" aria-hidden="true" />
                   {roleLabel}
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-white/10 border border-white/20 text-[11px] font-semibold text-white">
@@ -273,14 +273,14 @@ export const DashboardPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2.5 shrink-0">
               <Link
                 to="/admin/standar/tambah"
-                className="min-h-[44px] inline-flex items-center gap-1.5 rounded-[8px] bg-white px-3.5 text-xs font-bold text-blue-900 hover:bg-blue-50 transition-colors"
+                className="min-h-[44px] inline-flex items-center gap-1.5 rounded-[8px] bg-white px-3.5 text-xs font-bold text-lpm-blue-900 hover:bg-lpm-blue-50 transition-colors"
               >
                 <AcademicCapIcon className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Tambah Standar SPMI</span>
               </Link>
               <Link
                 to="/admin/ami/tambah"
-                className="min-h-[44px] inline-flex items-center gap-1.5 rounded-[8px] bg-amber-400 px-3.5 text-xs font-bold text-slate-950 hover:bg-amber-300 transition-colors"
+                className="min-h-[44px] inline-flex items-center gap-1.5 rounded-[8px] bg-lpm-yellow-400 px-3.5 text-xs font-bold text-slate-950 hover:bg-lpm-yellow-400 transition-colors"
               >
                 <ClipboardDocumentCheckIcon className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Catat Temuan AMI</span>
@@ -298,7 +298,7 @@ export const DashboardPage: React.FC = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
                 Ringkasan Mutu LPM UNUSU
               </h2>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-bold text-blue-900">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-lpm-blue-50 border border-lpm-blue-200 text-[11px] font-bold text-lpm-blue-900">
                 <Squares2X2Icon className="w-3.5 h-3.5" aria-hidden="true" />
                 Siklus PPEPP
               </span>
@@ -314,7 +314,7 @@ export const DashboardPage: React.FC = () => {
               disabled={loading}
               aria-label="Segarkan data statistik LPM"
               title="Muat ulang data"
-              className="inline-flex items-center px-3.5 py-2.5 rounded-[12px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 cursor-pointer"
+              className="inline-flex items-center px-3.5 py-2.5 rounded-[12px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-lpm-blue-700 disabled:opacity-60 cursor-pointer"
             >
               <ArrowPathIcon
                 className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`}
@@ -325,7 +325,7 @@ export const DashboardPage: React.FC = () => {
             <Link
               to="/admin/standar"
               aria-label="Buka pangkalan Standar SPMI"
-              className="inline-flex items-center px-4 py-2.5 rounded-[12px] bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-xs transition min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2.5 rounded-[12px] bg-lpm-blue-900 hover:bg-lpm-blue-950 text-white font-bold text-xs shadow-xs transition min-h-[44px] focus:outline-none focus:ring-2 focus:ring-lpm-blue-700"
             >
               <AcademicCapIcon className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
               <span>Standar SPMI</span>
@@ -374,30 +374,30 @@ export const DashboardPage: React.FC = () => {
               value={data.totalStandar}
               hint={`${data.indikatorTotal} indikator mutu terdaftar`}
               icon={AcademicCapIcon}
-              accent="bg-blue-50 text-blue-700"
+              accent="bg-lpm-blue-50 text-lpm-blue-700"
               to="/admin/standar"
               linkLabel="Daftar"
-              linkClass="text-blue-700 hover:text-blue-900"
+              linkClass="text-lpm-blue-700 hover:text-lpm-blue-900"
             />
             <MetricCard
               label="Dokumen Mutu"
               value={data.totalDokumen}
               hint="Kebijakan, manual, standar & SOP"
               icon={BookOpenIcon}
-              accent="bg-amber-50 text-amber-700"
+              accent="bg-lpm-yellow-400 text-lpm-blue-900"
               to="/admin/dokumen"
               linkLabel="Daftar"
-              linkClass="text-amber-700 hover:text-amber-800"
+              linkClass="text-lpm-yellow-400 hover:text-lpm-yellow-400"
             />
             <MetricCard
               label="Butir Audit AMI"
               value={data.totalAudit}
               hint={`${data.auditMayor} mayor · ${data.auditMinor} minor · ${data.auditSesuai} sesuai`}
               icon={ClipboardDocumentCheckIcon}
-              accent="bg-violet-50 text-violet-700"
+              accent="bg-lpm-blue-700 text-lpm-blue-700"
               to="/admin/ami"
               linkLabel="Daftar"
-              linkClass="text-violet-700 hover:text-violet-900"
+              linkClass="text-lpm-blue-700 hover:text-lpm-blue-700"
             />
             <MetricCard
               label="RTL Terbuka"
@@ -531,7 +531,7 @@ export const DashboardPage: React.FC = () => {
                   <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                     Tercapai
                   </dt>
-                  <dd className="text-base font-bold text-emerald-700 tabular-nums">
+                  <dd className="text-base font-bold text-lpm-blue-700 tabular-nums">
                     {data.indikatorTercapai}
                   </dd>
                 </div>
@@ -539,7 +539,7 @@ export const DashboardPage: React.FC = () => {
                   <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                     Persentase
                   </dt>
-                  <dd className="text-base font-bold text-blue-900 tabular-nums">
+                  <dd className="text-base font-bold text-lpm-blue-900 tabular-nums">
                     {persenIndikator}%
                   </dd>
                 </div>
@@ -557,11 +557,11 @@ export const DashboardPage: React.FC = () => {
             <CardContainer
               title="Temuan Audit Terbaru"
               subtitle="5 butir evaluasi AMI terakhir yang dilaporkan auditor"
-              badge={<ClipboardDocumentCheckIcon className="w-4 h-4 text-blue-900" />}
+              badge={<ClipboardDocumentCheckIcon className="w-4 h-4 text-lpm-blue-900" />}
               actions={
                 <Link
                   to="/admin/ami"
-                  className="text-xs font-bold text-blue-900 hover:text-blue-950 min-h-[44px] inline-flex items-center"
+                  className="text-xs font-bold text-lpm-blue-900 hover:text-lpm-blue-950 min-h-[44px] inline-flex items-center"
                 >
                   Lihat Semua
                 </Link>
@@ -577,7 +577,7 @@ export const DashboardPage: React.FC = () => {
                   {recentAudits.map((item) => (
                     <div
                       key={item.id}
-                      className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors bg-slate-50/50 flex items-start justify-between gap-3"
+                      className="p-3.5 rounded-xl border border-slate-200 hover:border-lpm-blue-200 transition-colors bg-slate-50/50 flex items-start justify-between gap-3"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -618,11 +618,11 @@ export const DashboardPage: React.FC = () => {
             <CardContainer
               title="Dokumen Mutu Terbaru"
               subtitle="5 arsip kebijakan, manual, standar, dan SOP terakhir"
-              badge={<BookOpenIcon className="w-4 h-4 text-amber-700" />}
+              badge={<BookOpenIcon className="w-4 h-4 text-lpm-yellow-400" />}
               actions={
                 <Link
                   to="/admin/dokumen"
-                  className="text-xs font-bold text-amber-700 hover:text-amber-900 min-h-[44px] inline-flex items-center"
+                  className="text-xs font-bold text-lpm-yellow-400 hover:text-lpm-yellow-400 min-h-[44px] inline-flex items-center"
                 >
                   Lihat Semua
                 </Link>
@@ -638,14 +638,14 @@ export const DashboardPage: React.FC = () => {
                   {recentDokumen.map((item) => (
                     <div
                       key={item.id}
-                      className="p-3.5 rounded-xl border border-slate-200 hover:border-amber-300 transition-colors bg-slate-50/50 flex items-start justify-between gap-3"
+                      className="p-3.5 rounded-xl border border-slate-200 hover:border-lpm-yellow-400 transition-colors bg-slate-50/50 flex items-start justify-between gap-3"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono text-[10px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
                             {item.kodeDokumen}
                           </span>
-                          <span className="text-[10px] uppercase font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                          <span className="text-[10px] uppercase font-bold text-lpm-blue-900 bg-lpm-yellow-400 border border-lpm-yellow-400 px-2 py-0.5 rounded">
                             {item.jenis}
                           </span>
                         </div>
@@ -681,11 +681,11 @@ export const DashboardPage: React.FC = () => {
             <CardContainer
               title="Standar SPMI Terbaru"
               subtitle="5 butir standar yang terakhir ditetapkan"
-              badge={<AcademicCapIcon className="w-4 h-4 text-blue-900" />}
+              badge={<AcademicCapIcon className="w-4 h-4 text-lpm-blue-900" />}
               actions={
                 <Link
                   to="/admin/standar"
-                  className="text-xs font-bold text-blue-900 hover:text-blue-950 min-h-[44px] inline-flex items-center"
+                  className="text-xs font-bold text-lpm-blue-900 hover:text-lpm-blue-950 min-h-[44px] inline-flex items-center"
                 >
                   Lihat Semua
                 </Link>
@@ -714,11 +714,11 @@ export const DashboardPage: React.FC = () => {
           <CardContainer
             title="Tata Kelola Akses Panel LPM"
             subtitle="Komposisi pengguna, peran, dan izin yang terdaftar pada sistem"
-            badge={<ShieldCheckIcon className="w-4 h-4 text-blue-900" />}
+            badge={<ShieldCheckIcon className="w-4 h-4 text-lpm-blue-900" />}
             actions={
               <Link
                 to="/admin/pengguna"
-                className="text-xs font-bold text-blue-900 hover:text-blue-950 min-h-[44px] inline-flex items-center"
+                className="text-xs font-bold text-lpm-blue-900 hover:text-lpm-blue-950 min-h-[44px] inline-flex items-center"
               >
                 Kelola Pengguna
               </Link>
@@ -726,7 +726,7 @@ export const DashboardPage: React.FC = () => {
           >
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="flex items-center gap-3 rounded-[12px] border border-slate-200 bg-slate-50/60 p-3.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-lpm-blue-50 text-lpm-blue-700 flex items-center justify-center shrink-0">
                   <UsersIcon className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div>
@@ -737,7 +737,7 @@ export const DashboardPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-[12px] border border-slate-200 bg-slate-50/60 p-3.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-lpm-yellow-400 text-lpm-blue-900 flex items-center justify-center shrink-0">
                   <ShieldCheckIcon className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div>
@@ -748,7 +748,7 @@ export const DashboardPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-[12px] border border-slate-200 bg-slate-50/60 p-3.5">
-                <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-700 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-lpm-blue-700 text-lpm-blue-700 flex items-center justify-center shrink-0">
                   <KeyIcon className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div>
@@ -763,11 +763,11 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />
+                <CheckCircleIcon className="w-3.5 h-3.5 text-lpm-blue-700" aria-hidden="true" />
                 {data.auditSesuai} butir sesuai standar
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <ExclamationTriangleIcon className="w-3.5 h-3.5 text-amber-600" aria-hidden="true" />
+                <ExclamationTriangleIcon className="w-3.5 h-3.5 text-lpm-yellow-400" aria-hidden="true" />
                 {data.auditMinor} temuan minor
               </span>
               <span className="inline-flex items-center gap-1.5">
@@ -775,7 +775,7 @@ export const DashboardPage: React.FC = () => {
                 {data.auditMayor} temuan mayor
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-blue-700" aria-hidden="true" />
+                <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-lpm-blue-700" aria-hidden="true" />
                 {data.indikatorTercapai}/{data.indikatorTotal} indikator tercapai
               </span>
               <span className="inline-flex items-center gap-1.5">

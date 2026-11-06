@@ -72,7 +72,7 @@ export const StandarPage: React.FC = () => {
       title="Pangkalan Standar SPMI UNUSU"
       description="Kelola butir komitmen mutu dan siklus PPEPP (Penetapan, Pelaksanaan, Evaluasi, Pengendalian, Peningkatan) seluruh program studi."
       badge={
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-bold text-blue-900">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-lpm-blue-50 border border-lpm-blue-200 text-[11px] font-bold text-lpm-blue-900">
           <AcademicCapIcon className="w-3.5 h-3.5" aria-hidden="true" />
           Standar SPMI
         </span>
@@ -101,7 +101,7 @@ export const StandarPage: React.FC = () => {
               <p className="text-xs font-medium text-slate-500">Total Butir Standar</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{totalStandar}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-blue-50 border border-blue-200 text-blue-900 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-900 flex items-center justify-center">
               <AcademicCapIcon className="w-6 h-6" />
             </div>
           </div>
@@ -109,9 +109,9 @@ export const StandarPage: React.FC = () => {
           <div className="bg-white p-4 sm:p-5 rounded-[14px] border border-[#CBD5E1] shadow-2xs flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-slate-500">Standar Pendidikan</p>
-              <p className="mt-1 text-2xl font-bold text-blue-900">{countPendidikan}</p>
+              <p className="mt-1 text-2xl font-bold text-lpm-blue-900">{countPendidikan}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-blue-50 border border-blue-200 text-blue-900 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-900 flex items-center justify-center">
               <span className="font-bold text-xs">OBE</span>
             </div>
           </div>
@@ -119,9 +119,9 @@ export const StandarPage: React.FC = () => {
           <div className="bg-white p-4 sm:p-5 rounded-[14px] border border-[#CBD5E1] shadow-2xs flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-slate-500">Standar Riset</p>
-              <p className="mt-1 text-2xl font-bold text-amber-700">{countRiset}</p>
+              <p className="mt-1 text-2xl font-bold text-lpm-yellow-400">{countRiset}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-yellow-400 border border-lpm-yellow-400 text-lpm-blue-900 flex items-center justify-center">
               <span className="font-bold text-xs">LPPM</span>
             </div>
           </div>
@@ -129,9 +129,9 @@ export const StandarPage: React.FC = () => {
           <div className="bg-white p-4 sm:p-5 rounded-[14px] border border-[#CBD5E1] shadow-2xs flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-slate-500">Standar PKM</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-800">{countPkm}</p>
+              <p className="mt-1 text-2xl font-bold text-lpm-blue-800">{countPkm}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-800 flex items-center justify-center">
               <span className="font-bold text-xs">PKM</span>
             </div>
           </div>
@@ -147,7 +147,7 @@ export const StandarPage: React.FC = () => {
             value={selectedKategori}
             onChange={(e) => setSelectedKategori(e.target.value)}
             aria-label="Filter kategori standar SPMI"
-            className="text-xs bg-white border border-[#CBD5E1] rounded-[10px] px-3 py-2 min-h-[44px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium"
+            className="text-xs bg-white border border-[#CBD5E1] rounded-[10px] px-3 py-2 min-h-[44px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 transition-all font-medium"
           >
             <option value="SEMUA">Semua Kategori</option>
             <option value="Pendidikan">Pendidikan</option>
@@ -160,7 +160,7 @@ export const StandarPage: React.FC = () => {
       tableTitle="Daftar Butir Standar SPMI Aktif"
       tableSubtitle={`Menampilkan ${filteredList.length} butir standar terdaftar`}
       tableBadge={
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-bold text-blue-900">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-lpm-blue-50 border border-lpm-blue-200 text-[11px] font-bold text-lpm-blue-900">
           {filteredList.length} data
         </span>
       }
@@ -169,7 +169,7 @@ export const StandarPage: React.FC = () => {
           key: 'kode',
           header: 'KODE',
           headerClassName: 'w-[130px]',
-          render: (item) => <span className="font-mono font-bold text-blue-900">{item.kode}</span>,
+          render: (item) => <span className="font-mono font-bold text-lpm-blue-900">{item.kode}</span>,
         },
         {
           key: 'nama',
@@ -183,7 +183,7 @@ export const StandarPage: React.FC = () => {
           key: 'kategori',
           header: 'KATEGORI',
           headerClassName: 'w-[120px]',
-          render: (item) => <span className="font-semibold text-blue-900">{item.kategori}</span>,
+          render: (item) => <span className="font-semibold text-lpm-blue-900">{item.kategori}</span>,
         },
         {
           key: 'pernyataan',
@@ -240,7 +240,7 @@ export const StandarPage: React.FC = () => {
                 </div>
               )}
               {item.updatedAt && (
-                <div className="text-[10.5px] text-blue-800/80 font-mono">
+                <div className="text-[10.5px] text-lpm-blue-800/80 font-mono">
                   Update: {new Date(item.updatedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </div>
               )}
@@ -257,7 +257,7 @@ export const StandarPage: React.FC = () => {
               <div className="inline-flex items-center gap-2">
                 <Link
                   to={`/admin/standar/edit/${item.id}`}
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] bg-blue-50 text-blue-900 hover:bg-blue-900 hover:text-white border border-blue-200 transition-all shadow-2xs"
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] bg-lpm-blue-50 text-lpm-blue-900 hover:bg-lpm-blue-900 hover:text-white border border-lpm-blue-200 transition-all shadow-2xs"
                   title="Edit Butir Standar"
                 >
                   <PencilSquareIcon className="w-4 h-4" />

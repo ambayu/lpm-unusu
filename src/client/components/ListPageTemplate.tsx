@@ -78,7 +78,7 @@ export interface ListPageTemplateProps<T> {
   /** True bila filter/pencarian sedang aktif (membedakan empty vs no-result). */
   hasActiveFilter?: boolean;
 
-  /** Kelas aksen (palette aplikasi), mis. 'bg-emerald-700 hover:bg-emerald-800'. */
+  /** Kelas aksen (palette aplikasi), mis. 'bg-lpm-blue-700 hover:bg-lpm-blue-800'. */
   accentClassName?: string;
   /** Kelas ikon pada tombol aksi utama. */
   accentIconClassName?: string;
@@ -125,7 +125,7 @@ export const ListActionButton: React.FC<ListActionButtonProps> = ({
   icon,
   variant = 'primary',
   disabled = false,
-  accentClassName = 'bg-emerald-700 hover:bg-emerald-800',
+  accentClassName = 'bg-lpm-blue-700 hover:bg-lpm-blue-800',
   type = 'button',
 }) => {
   const base =

@@ -51,9 +51,9 @@ export const UserAuthorityCard: React.FC<UserAuthorityCardProps> = ({
   ];
 
   return (
-    <div className={`bg-white border border-lpm-green-300 rounded-[16px] overflow-hidden ${className}`}>
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-lpm-green-300">
-        <div className="w-10 h-10 rounded-[10px] bg-lpm-green-50 text-lpm-green flex items-center justify-center shrink-0">
+    <div className={`bg-white border border-lpm-blue-200 rounded-[16px] overflow-hidden ${className}`}>
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-lpm-blue-200">
+        <div className="w-10 h-10 rounded-[10px] bg-lpm-blue-50 text-lpm-blue flex items-center justify-center shrink-0">
           <UserCircleIcon className="w-5 h-5" />
         </div>
         <div className="min-w-0">
@@ -66,10 +66,10 @@ export const UserAuthorityCard: React.FC<UserAuthorityCardProps> = ({
         {rows.map((row) => {
           const Icon = row.icon;
           return (
-            <div key={row.label} className="flex items-start gap-3 px-5 py-3.5 border-b border-lpm-green-300 last:border-b-0">
+            <div key={row.label} className="flex items-start gap-3 px-5 py-3.5 border-b border-lpm-blue-200 last:border-b-0">
               <div
                 className={`w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 ${
-                  row.accent ? 'bg-lpm-green-100 text-lpm-green' : 'bg-slate-100 text-slate-600'
+                  row.accent ? 'bg-lpm-blue-100 text-lpm-blue' : 'bg-slate-100 text-slate-600'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -80,7 +80,7 @@ export const UserAuthorityCard: React.FC<UserAuthorityCardProps> = ({
                   {row.accent ? (
                     <span className="inline-flex items-center gap-1.5">
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                        className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-lpm-blue-700' : 'bg-slate-400'}`}
                         aria-hidden="true"
                       />
                       {row.value}

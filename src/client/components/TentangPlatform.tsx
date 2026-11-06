@@ -37,10 +37,10 @@ export const TentangPlatform: React.FC<TentangPlatformProps> = ({
   portraitSrc,
   fallbackSrc,
   imageAlt = '',
-  accentBg = 'from-emerald-100/90 via-amber-100/60 to-transparent',
-  accentBorder = 'border-emerald-100',
-  bulletBg = 'bg-emerald-800 text-amber-300',
-  eyebrowClass = 'text-emerald-800 bg-emerald-50 border-emerald-200',
+  accentBg = 'from-lpm-blue-100/90 via-lpm-yellow-400/60 to-transparent',
+  accentBorder = 'border-lpm-blue-100',
+  bulletBg = 'bg-lpm-blue-800 text-lpm-yellow-400',
+  eyebrowClass = 'text-lpm-blue-800 border-lpm-blue-800',
 }) => {
   const [usePortrait, setUsePortrait] = useState(Boolean(portraitSrc));
   const base = import.meta.env.BASE_URL || '/';
@@ -51,17 +51,18 @@ export const TentangPlatform: React.FC<TentangPlatformProps> = ({
     <section
       id={id}
       aria-labelledby={`${id}-title`}
-      className="bg-white py-16 sm:py-24 border-b border-slate-200/70"
+      className="bg-lpm-blue-50 py-16 sm:py-24 border-b border-lpm-blue-200"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
         {/* KIRI — teks */}
         <div className="lg:col-span-6">
           <div className="space-y-2">
-            <span
-              className={`inline-block rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-widest ${eyebrowClass}`}
+            {/* Eyebrow: bilah tegak, bukan pil rounded-full. */}
+            <p
+              className={`inline-block border-l-2 pl-3 text-xs font-bold uppercase tracking-widest ${eyebrowClass}`}
             >
               {eyebrow}
-            </span>
+            </p>
             <h2 id={`${id}-title`} className="pt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-4xl">
               {title}
             </h2>

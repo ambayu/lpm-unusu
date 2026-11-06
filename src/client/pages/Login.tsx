@@ -65,14 +65,14 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-white relative selection:bg-amber-400 selection:text-slate-950">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-white relative selection:bg-lpm-yellow-400 selection:text-slate-950">
       {/* ===== SISI KIRI: FORM LOGIN SSO ===== */}
       <div className="w-full lg:w-1/2 flex flex-col justify-between p-6 sm:p-12 lg:p-16 xl:p-20 z-10">
         {/* Nav Kembali */}
         <div>
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-blue-900 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-lpm-blue-900 transition-colors"
           >
             <ChevronLeftIcon className="w-4 h-4" />
             <span>Kembali ke Beranda</span>
@@ -83,13 +83,13 @@ export function LoginPage() {
         <div className="max-w-md w-full mx-auto my-auto py-6 space-y-7 text-center sm:text-left">
           {/* Header */}
           <div className="space-y-2">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-blue-50 text-blue-900 border border-blue-200">
-              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-              <span>Lembaga Penjaminan Mutu</span>
-            </div>
+            {/* Eyebrow: bilah tegak, bukan pil rounded-full. */}
+            <p className="inline-block border-l-2 border-lpm-blue-900 pl-3 text-xs font-semibold uppercase tracking-wider text-lpm-blue-900">
+              Lembaga Penjaminan Mutu
+            </p>
 
             <h1 className="text-3xl sm:text-4xl font-bold text-slate-950 tracking-normal">
-              Masuk ke <span className="text-blue-900">LPM UNUSU</span>
+              Masuk ke <span className="text-lpm-blue-900">LPM UNUSU</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal">
               Akses instrumen Standar SPMI, bank dokumen mutu, dan audit mutu internal melalui gerbang SSO terpadu.
@@ -105,7 +105,7 @@ export function LoginPage() {
             <div className="text-center space-y-1">
               <div className="flex items-center justify-center space-x-1.5">
                 <span className="font-bold text-xl text-slate-950 tracking-normal">ONE</span>
-                <span className="font-bold text-xl text-emerald-800 tracking-normal">UNUSU</span>
+                <span className="font-bold text-xl text-lpm-blue-800 tracking-normal">UNUSU</span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
                 Ekosistem Digital Terpadu Kampus
@@ -175,11 +175,11 @@ export function LoginPage() {
           <button
             type="button"
             onClick={handleSsoLogin}
-            className="w-full flex items-center justify-center space-x-3 py-4 px-6 rounded-2xl bg-blue-900 hover:bg-blue-950 text-white font-semibold text-sm shadow-xl hover:shadow-2xl transition-all transform active:scale-98 cursor-pointer group"
+            className="w-full flex items-center justify-center space-x-3 py-4 px-6 rounded-2xl bg-lpm-blue-900 hover:bg-lpm-blue-950 text-white font-semibold text-sm shadow-xl hover:shadow-2xl transition-all transform active:scale-98 cursor-pointer group"
             aria-label="Masuk dengan akun ONE UNUSU"
           >
             <span>Masuk dengan ONE UNUSU</span>
-            <ArrowRightIcon className="w-4 h-4 text-amber-400 group-hover:translate-x-1.5 transition-transform" />
+            <ArrowRightIcon className="w-4 h-4 text-lpm-yellow-400 group-hover:translate-x-1.5 transition-transform" />
           </button>
         </div>
 
@@ -196,13 +196,13 @@ export function LoginPage() {
           alt="Gedung Kampus UNUSU Gaperta Medan"
           className="absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.82]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-blue-950/95 via-blue-950/40 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-lpm-blue-950/95 via-lpm-blue-950/40 to-transparent pointer-events-none" />
 
         <div className="relative z-10 max-w-lg space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/80 border border-blue-400/40 text-blue-100 text-xs font-medium backdrop-blur-xs">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span>Siklus Mutu PPEPP & Akreditasi</span>
-          </div>
+          {/* Eyebrow di panel gelap: bilah tegak putih agar tetap terbaca. */}
+          <p className="inline-block border-l-2 border-lpm-yellow-400 pl-3 text-xs font-semibold uppercase tracking-wider text-lpm-yellow-400">
+            Siklus Mutu PPEPP &amp; Akreditasi
+          </p>
 
           <h2 className="text-2xl sm:text-4xl font-bold tracking-normal text-white drop-shadow-md leading-tight">
             Penjaminan Mutu Menuju Akreditasi Unggul

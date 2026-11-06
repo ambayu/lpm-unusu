@@ -10,6 +10,43 @@ export default {
         sans: ['"Quicksand"', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
       },
       colors: {
+        // Palet resmi LPM UNUSU: biru, kuning, putih, hitam.
+        // `lpm-blue` menggantikan pemakaian `blue-*` mentah supaya identitas
+        // warna punya satu sumber. `lpm-yellow` hanya dipakai sebagai aksen di
+        // atas latar biru tua atau hitam: sebagai teks di atas putih rasionya
+        // cuma 1.67 sehingga tidak terbaca.
+        'lpm-blue': {
+          DEFAULT: '#1E3A8A',
+          dark: '#172554',
+          light: '#1D4ED8',
+          50: '#EFF6FF',
+          100: '#DBEAFE',
+          200: '#BFDBFE',
+          700: '#1D4ED8',
+          800: '#1E40AF',
+          900: '#1E3A8A',
+          950: '#172554',
+          surface: '#F8FAFC',
+        },
+        'lpm-yellow': {
+          DEFAULT: '#FBBF24',
+          light: '#FCD34D',
+          dark: '#F59E0B',
+          50: '#FFFBEB',
+          100: '#FEF3C7',
+          200: '#FDE68A',
+          400: '#FBBF24',
+          500: '#F59E0B',
+          600: '#D97706',
+          700: '#B45309',
+          800: '#92400E',
+        },
+        // Hitam netral untuk teks dan panel gelap.
+        'lpm-ink': {
+          DEFAULT: '#0F172A',
+          soft: '#1E293B',
+          muted: '#475569',
+        },
         lpm: {
           green: {
             DEFAULT: '#145A32',

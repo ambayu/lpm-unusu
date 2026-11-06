@@ -13,15 +13,15 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
 
   switch (norm) {
     case 'TERLAMPAUI':
-      colorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200/80';
+      colorClasses = 'bg-lpm-blue-50 text-lpm-blue-700 border-lpm-blue-200/80';
       label = 'Terlampaui';
       break;
     case 'SESUAI':
-      colorClasses = 'bg-teal-50 text-teal-700 border-teal-200/80';
+      colorClasses = 'bg-lpm-blue-700 text-lpm-blue-700 border-lpm-blue-700/80';
       label = 'Sesuai Standar';
       break;
     case 'KTS_MINOR':
-      colorClasses = 'bg-amber-50 text-amber-700 border-amber-200/80';
+      colorClasses = 'bg-lpm-yellow-400 text-lpm-blue-900 border-lpm-yellow-400/80';
       label = 'KTS Minor';
       break;
     case 'KTS_MAYOR':
@@ -29,19 +29,19 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       label = 'KTS Mayor';
       break;
     case 'OBSERVASI':
-      colorClasses = 'bg-indigo-50 text-indigo-700 border-indigo-200/80';
+      colorClasses = 'bg-lpm-blue-800 text-lpm-blue-800 border-lpm-blue-800/80';
       label = 'Observasi';
       break;
     case 'PENDIDIKAN':
-      colorClasses = 'bg-blue-50 text-blue-700 border-blue-200/80';
+      colorClasses = 'bg-lpm-blue-50 text-lpm-blue-700 border-lpm-blue-200/80';
       label = 'Pendidikan';
       break;
     case 'PENELITIAN':
-      colorClasses = 'bg-purple-50 text-purple-700 border-purple-200/80';
+      colorClasses = 'bg-lpm-blue-700 text-lpm-blue-700 border-lpm-blue-700/80';
       label = 'Penelitian';
       break;
     case 'PENGABDIAN':
-      colorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200/80';
+      colorClasses = 'bg-lpm-blue-50 text-lpm-blue-700 border-lpm-blue-200/80';
       label = 'Pengabdian';
       break;
     case 'TATA_KELOLA':
@@ -49,21 +49,21 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       label = 'Tata Kelola';
       break;
     case 'KEBIJAKAN':
-      colorClasses = 'bg-purple-50 text-purple-700 border-purple-200';
+      colorClasses = 'bg-lpm-blue-700 text-lpm-blue-700 border-lpm-blue-700';
       label = 'Kebijakan SPMI';
       break;
     case 'MANUAL':
-      colorClasses = 'bg-blue-50 text-blue-700 border-blue-200';
+      colorClasses = 'bg-lpm-blue-50 text-lpm-blue-700 border-lpm-blue-200';
       label = 'Manual Mutu';
       break;
     case 'STANDAR':
-      colorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      colorClasses = 'bg-lpm-blue-50 text-lpm-blue-700 border-lpm-blue-200';
       label = 'Standar Mutu';
       break;
     case 'SOP':
     case 'FORMULIR':
     case 'FORMULIR_SOP':
-      colorClasses = 'bg-amber-50 text-amber-800 border-amber-200';
+      colorClasses = 'bg-lpm-yellow-400 text-lpm-blue-900 border-lpm-yellow-400';
       label = 'SOP / Formulir';
       break;
     // Status periode AMI
@@ -72,11 +72,11 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       label = 'Draft';
       break;
     case 'BERJALAN':
-      colorClasses = 'bg-blue-50 text-blue-700 border-blue-200/80';
+      colorClasses = 'bg-lpm-blue-50 text-lpm-blue-700 border-lpm-blue-200/80';
       label = 'Berjalan';
       break;
     case 'SELESAI':
-      colorClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200/80';
+      colorClasses = 'bg-lpm-blue-50 text-lpm-blue-700 border-lpm-blue-200/80';
       label = 'Selesai';
       break;
     default:

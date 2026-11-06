@@ -73,7 +73,7 @@ export const DokumenPage: React.FC = () => {
       title="Bank Dokumen Mutu & SOP"
       description="Repositori resmi instrumen mutu SPMI: Buku Kebijakan Mutu, Manual Mutu PPEPP, Standar SPMI, serta Standar Operasional Prosedur (SOP)."
       badge={
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-bold text-blue-900">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-lpm-blue-50 border border-lpm-blue-200 text-[11px] font-bold text-lpm-blue-900">
           <BookOpenIcon className="w-3.5 h-3.5" aria-hidden="true" />
           Repositori Mutu
         </span>
@@ -102,7 +102,7 @@ export const DokumenPage: React.FC = () => {
               <p className="text-xs font-medium text-slate-500">Total Arsip Dokumen</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{totalDocs}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-blue-50 border border-blue-200 text-blue-900 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-900 flex items-center justify-center">
               <BookOpenIcon className="w-6 h-6" />
             </div>
           </div>
@@ -110,9 +110,9 @@ export const DokumenPage: React.FC = () => {
           <div className="bg-white p-4 sm:p-5 rounded-[14px] border border-[#CBD5E1] shadow-2xs flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-slate-500">Buku Kebijakan</p>
-              <p className="mt-1 text-2xl font-bold text-blue-900">{countKebijakan}</p>
+              <p className="mt-1 text-2xl font-bold text-lpm-blue-900">{countKebijakan}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-blue-50 border border-blue-200 text-blue-900 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-900 flex items-center justify-center">
               <DocumentTextIcon className="w-6 h-6" />
             </div>
           </div>
@@ -120,9 +120,9 @@ export const DokumenPage: React.FC = () => {
           <div className="bg-white p-4 sm:p-5 rounded-[14px] border border-[#CBD5E1] shadow-2xs flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-slate-500">Manual Mutu PPEPP</p>
-              <p className="mt-1 text-2xl font-bold text-amber-700">{countManual}</p>
+              <p className="mt-1 text-2xl font-bold text-lpm-yellow-400">{countManual}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-yellow-400 border border-lpm-yellow-400 text-lpm-blue-900 flex items-center justify-center">
               <span className="font-bold text-xs">PPEPP</span>
             </div>
           </div>
@@ -130,9 +130,9 @@ export const DokumenPage: React.FC = () => {
           <div className="bg-white p-4 sm:p-5 rounded-[14px] border border-[#CBD5E1] shadow-2xs flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-slate-500">Standar Operasional (SOP)</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-800">{countSop}</p>
+              <p className="mt-1 text-2xl font-bold text-lpm-blue-800">{countSop}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-800 flex items-center justify-center">
               <span className="font-bold text-xs">SOP</span>
             </div>
           </div>
@@ -146,7 +146,7 @@ export const DokumenPage: React.FC = () => {
           value={selectedJenis}
           onChange={(e) => setSelectedJenis(e.target.value)}
           aria-label="Filter jenis instrumen dokumen mutu"
-          className="text-xs bg-white border border-[#CBD5E1] rounded-[10px] px-3 py-2 min-h-[44px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium"
+          className="text-xs bg-white border border-[#CBD5E1] rounded-[10px] px-3 py-2 min-h-[44px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 transition-all font-medium"
         >
           <option value="SEMUA">Semua Jenis Instrumen</option>
           <option value="Kebijakan">Buku Kebijakan SPMI</option>
@@ -159,7 +159,7 @@ export const DokumenPage: React.FC = () => {
       tableTitle="Daftar Dokumen Mutu Terdaftar"
       tableSubtitle={`Menampilkan ${filteredDocs.length} berkas resmi`}
       tableBadge={
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-bold text-blue-900">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-lpm-blue-50 border border-lpm-blue-200 text-[11px] font-bold text-lpm-blue-900">
           {filteredDocs.length} data
         </span>
       }
@@ -168,7 +168,7 @@ export const DokumenPage: React.FC = () => {
           key: 'kodeDokumen',
           header: 'KODE BERKAS',
           headerClassName: 'w-[150px]',
-          render: (item) => <span className="font-mono font-bold text-blue-900">{item.kodeDokumen}</span>,
+          render: (item) => <span className="font-mono font-bold text-lpm-blue-900">{item.kodeDokumen}</span>,
         },
         {
           key: 'judul',
@@ -182,7 +182,7 @@ export const DokumenPage: React.FC = () => {
           key: 'jenis',
           header: 'JENIS',
           headerClassName: 'w-[120px]',
-          render: (item) => <span className="font-semibold text-blue-900">{item.jenis}</span>,
+          render: (item) => <span className="font-semibold text-lpm-blue-900">{item.jenis}</span>,
         },
         {
           key: 'standar',
@@ -192,7 +192,7 @@ export const DokumenPage: React.FC = () => {
           render: (item) =>
             item.standar ? (
               <div className="leading-tight">
-                <span className="font-mono text-[11px] font-bold text-blue-800 block">
+                <span className="font-mono text-[11px] font-bold text-lpm-blue-800 block">
                   {item.standar.kode}
                 </span>
                 <span className="text-slate-600 line-clamp-2 mt-0.5">
@@ -228,7 +228,7 @@ export const DokumenPage: React.FC = () => {
                 href={item.filePath}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-[8px] bg-emerald-50 text-emerald-800 hover:bg-emerald-700 hover:text-white border border-emerald-200 font-bold text-[11px] transition-all shadow-2xs"
+                className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-[8px] bg-lpm-blue-50 text-lpm-blue-800 hover:bg-lpm-blue-700 hover:text-white border border-lpm-blue-200 font-bold text-[11px] transition-all shadow-2xs"
               >
                 <ArrowDownTrayIcon className="w-3.5 h-3.5" />
                 <span>Unduh</span>
@@ -254,7 +254,7 @@ export const DokumenPage: React.FC = () => {
                 </div>
               )}
               {item.updatedAt && (
-                <div className="text-[10.5px] text-blue-800/80 font-mono">
+                <div className="text-[10.5px] text-lpm-blue-800/80 font-mono">
                   Update: {new Date(item.updatedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </div>
               )}
@@ -271,7 +271,7 @@ export const DokumenPage: React.FC = () => {
               <div className="inline-flex items-center gap-2">
                 <Link
                   to={`/admin/dokumen/edit/${item.id}`}
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] bg-blue-50 text-blue-900 hover:bg-blue-900 hover:text-white border border-blue-200 transition-all shadow-2xs"
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] bg-lpm-blue-50 text-lpm-blue-900 hover:bg-lpm-blue-900 hover:text-white border border-lpm-blue-200 transition-all shadow-2xs"
                   title="Edit Dokumen Mutu"
                 >
                   <PencilSquareIcon className="w-4 h-4" />

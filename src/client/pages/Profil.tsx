@@ -38,7 +38,7 @@ export const ProfilPage: React.FC = () => {
             <h1 className="text-xl sm:text-2xl font-bold tracking-normal text-slate-900">
               Profil Pengguna
             </h1>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-900 border border-blue-200 uppercase tracking-wider">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-lpm-blue-50 text-lpm-blue-900 border border-lpm-blue-200 uppercase tracking-wider">
               Akun Saya
             </span>
           </div>
@@ -51,7 +51,7 @@ export const ProfilPage: React.FC = () => {
       <CardContainer>
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-5 rounded-[14px] border border-[#CBD5E1] bg-slate-50/60">
-            <div className="w-16 h-16 shrink-0 rounded-full overflow-hidden bg-blue-900 text-white flex items-center justify-center text-2xl font-bold border border-blue-800 ring-2 ring-blue-100">
+            <div className="w-16 h-16 shrink-0 rounded-full overflow-hidden bg-lpm-blue-900 text-white flex items-center justify-center text-2xl font-bold border border-lpm-blue-800 ring-2 ring-lpm-blue-100">
               {initial}
             </div>
             <div className="min-w-0">
@@ -60,8 +60,8 @@ export const ProfilPage: React.FC = () => {
                 {user?.email || 'lpm@unusu.ac.id'} &middot; {roleLabel}
               </p>
               <div className="flex items-center gap-2 mt-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-[10px] font-bold bg-blue-50 text-blue-900 border border-blue-200 uppercase tracking-wider">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-[10px] font-bold bg-lpm-blue-50 text-lpm-blue-900 border border-lpm-blue-200 uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-lpm-blue-700 animate-pulse" />
                   Sesi LPM Aktif
                 </span>
               </div>
@@ -79,7 +79,7 @@ export const ProfilPage: React.FC = () => {
                 const Icon = row.icon;
                 return (
                   <div key={row.label} className="bg-white p-4 flex items-start gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-[8px] bg-blue-50 text-blue-900 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-8 h-8 rounded-[8px] bg-lpm-blue-50 text-lpm-blue-900 flex items-center justify-center shrink-0 mt-0.5">
                       <Icon className="w-4 h-4" aria-hidden="true" />
                     </div>
                     <div className="min-w-0">

@@ -138,7 +138,7 @@ export const UsersPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-[10px] bg-blue-50 text-blue-800 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-[10px] bg-lpm-blue-50 text-lpm-blue-800 flex items-center justify-center">
                 <UsersIcon className="w-5 h-5" />
               </div>
               <h1 className="text-xl font-bold text-slate-900">Manajemen Pengguna & Auditor</h1>
@@ -150,7 +150,7 @@ export const UsersPage: React.FC = () => {
           {isAdmin && (
             <Link
               to="/admin/pengguna/tambah"
-              className="inline-flex items-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-2 bg-lpm-blue-900 hover:bg-lpm-blue-800 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition shadow-xs cursor-pointer"
             >
               <UserPlusIcon className="w-4 h-4" />
               Tambah Pengguna
@@ -169,7 +169,7 @@ export const UsersPage: React.FC = () => {
               placeholder="Cari nama, NIDN/NIM, atau email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-transparent"
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-lpm-blue-800 focus:border-transparent"
             />
           </div>
           <div className="flex items-center gap-2.5 w-full md:w-auto">
@@ -177,7 +177,7 @@ export const UsersPage: React.FC = () => {
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="border border-slate-200 rounded-xl text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-800 bg-white"
+              className="border border-slate-200 rounded-xl text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-lpm-blue-800 bg-white"
             >
               <option value="">Semua Peran</option>
               <option value="admin">Admin LPM</option>
@@ -222,8 +222,8 @@ export const UsersPage: React.FC = () => {
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                             u.ssoRole === 'SUPERADMIN' || u.ssoRole === 'ADMIN_LPM'
-                              ? 'bg-blue-50 text-blue-900 border border-blue-200'
-                              : 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                              ? 'bg-lpm-blue-50 text-lpm-blue-900 border border-lpm-blue-200'
+                              : 'bg-lpm-blue-50 text-lpm-blue-900 border border-lpm-blue-200'
                           }`}
                         >
                           <ShieldCheckIcon className="w-3.5 h-3.5" />
@@ -236,7 +236,7 @@ export const UsersPage: React.FC = () => {
                         <div className="text-[11px] text-slate-400">{u.prodi || '-'}</div>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-lpm-blue-700">
                           <CheckBadgeIcon className="w-3.5 h-3.5" />
                           {u.status || 'Aktif'}
                         </span>
@@ -246,7 +246,7 @@ export const UsersPage: React.FC = () => {
                           <div className="flex items-center justify-center gap-2">
                             <Link
                               to={`/admin/pengguna/edit/${u.id}`}
-                              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-blue-900 hover:bg-blue-50 transition cursor-pointer"
+                              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-lpm-blue-900 hover:bg-lpm-blue-50 transition cursor-pointer"
                               title="Edit Pengguna"
                             >
                               <PencilSquareIcon className="w-4 h-4" />

@@ -66,7 +66,10 @@ export function SsoCallbackPage() {
         saveSession(response.data.token, response.data.user, response.data.appAccess);
 
         if (!cancelled) {
-          window.location.replace(import.meta.env.BASE_URL);
+          // Setelah login sukses SELALU mendarat di dashboard panel, bukan
+          // halaman publik. BASE_URL dipertahankan untuk deploy di subfolder.
+          const dashboardPath = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/admin`;
+          window.location.replace(dashboardPath);
         }
       } catch (err: any) {
         if (cancelled) return;
@@ -115,7 +118,7 @@ export function SsoCallbackPage() {
                 className={`w-8 h-8 rounded-[10px] border flex items-center justify-center ${
                   denial
                     ? 'bg-rose-50 border-rose-200 text-rose-700'
-                    : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-lpm-blue-50 border-lpm-blue-200 text-lpm-blue-800'
                 }`}
               >
                 {denial ? (
@@ -184,8 +187,8 @@ export function SsoCallbackPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3">
-                  <p className="text-[11px] sm:text-xs text-amber-900 leading-relaxed">
+                <div className="rounded-[12px] border border-lpm-yellow-400 bg-lpm-yellow-400 px-4 py-3">
+                  <p className="text-[11px] sm:text-xs text-lpm-yellow-400 leading-relaxed">
                     Satu akun ONE UNUSU boleh memiliki peran di banyak aplikasi, tetapi setiap panel
                     hanya menerima peran miliknya sendiri. Bila Anda memang bertugas di LPM, minta
                     Superadmin ONE UNUSU menambahkan peran <strong>ADMIN_LPM</strong> pada akun Anda.
@@ -195,7 +198,7 @@ export function SsoCallbackPage() {
                 <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
                   <a
                     href={ONE_UNUSU_URL}
-                    className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-[12px] bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold shadow-xs transition-colors"
+                    className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-[12px] bg-lpm-blue-900 hover:bg-lpm-blue-800 text-white text-xs font-bold shadow-xs transition-colors"
                   >
                     <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                     Buka Portal ONE UNUSU
@@ -219,14 +222,14 @@ export function SsoCallbackPage() {
                 </p>
                 <Link
                   to="/login"
-                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl bg-blue-900 text-white text-xs font-bold hover:bg-blue-800 transition-all shadow-xs"
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl bg-lpm-blue-900 text-white text-xs font-bold hover:bg-lpm-blue-800 transition-all shadow-xs"
                 >
                   Kembali ke Halaman Login
                 </Link>
               </div>
             ) : (
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-800 mb-4 ring-4 ring-emerald-100">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-lpm-blue-50 text-lpm-blue-800 mb-4 ring-4 ring-lpm-blue-100">
                   <ArrowPathIcon className="w-7 h-7 animate-spin" />
                 </div>
                 <h2 className="text-lg font-bold text-slate-900 mb-2">Memverifikasi Sesi SSO</h2>
@@ -234,8 +237,8 @@ export function SsoCallbackPage() {
                   Mohon tunggu, sistem sedang memverifikasi tiket autentikasi dari Portal ONE
                   UNUSU...
                 </p>
-                <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-emerald-800 font-semibold bg-emerald-50/80 py-1.5 px-3 rounded-full border border-emerald-200/60 w-fit mx-auto">
-                  <ShieldCheckIcon className="w-4 h-4 text-emerald-700" />
+                <div className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-lpm-blue-800 font-semibold bg-lpm-blue-50/80 py-1.5 px-3 rounded-full border border-lpm-blue-200/60 w-fit mx-auto">
+                  <ShieldCheckIcon className="w-4 h-4 text-lpm-blue-700" />
                   <span>Tiket single-use aman, berlaku 5 menit</span>
                 </div>
               </div>

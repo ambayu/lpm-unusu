@@ -104,7 +104,7 @@ export const AmiFormPage: React.FC = () => {
       submitting={submitting}
       error={error}
       onSubmit={handleSubmit}
-      accentClassName="bg-blue-900 hover:bg-blue-950"
+      accentClassName="bg-lpm-blue-900 hover:bg-lpm-blue-950"
     >
       {loading ? (
         <div className="py-16 text-center text-xs text-slate-500 font-medium">
@@ -127,7 +127,7 @@ export const AmiFormPage: React.FC = () => {
                   required
                   value={formData.standarId}
                   onChange={(e) => setFormData({ ...formData, standarId: e.target.value })}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-medium text-slate-800"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-medium text-slate-800"
                 >
                   <option value="">-- Pilih Butir Standar SPMI --</option>
                   {standarList.map((s) => (
@@ -149,7 +149,7 @@ export const AmiFormPage: React.FC = () => {
                     placeholder="Contoh: S1 Sistem Informasi / Fakultas Sains"
                     value={formData.auditee}
                     onChange={(e) => setFormData({ ...formData, auditee: e.target.value })}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-semibold text-slate-800"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-semibold text-slate-800"
                   />
                   <p className="text-[11px] text-slate-400 mt-1 font-normal">
                     Nama unit kerja atau program studi yang diaudit.
@@ -166,7 +166,7 @@ export const AmiFormPage: React.FC = () => {
                     placeholder="Nama lengkap dan gelar tim auditor..."
                     value={formData.auditor}
                     onChange={(e) => setFormData({ ...formData, auditor: e.target.value })}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-semibold text-slate-800"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-semibold text-slate-800"
                   />
                   <p className="text-[11px] text-slate-400 mt-1 font-normal">
                     Auditor internal bersertifikat yang ditugaskan LPM.
@@ -189,7 +189,7 @@ export const AmiFormPage: React.FC = () => {
                 <select
                   value={formData.hasil}
                   onChange={(e) => setFormData({ ...formData, hasil: e.target.value })}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-bold text-blue-900"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-bold text-lpm-blue-900"
                 >
                   <option value="TERLAMPAUI">TERLAMPAUI — Melampaui Standar Nasional (Peningkatan Kaizen)</option>
                   <option value="SESUAI">SESUAI — Memenuhi 100% Tolok Ukur Standar SPMI</option>
@@ -209,7 +209,7 @@ export const AmiFormPage: React.FC = () => {
                   placeholder="Deskripsikan fakta lapangan, data instrumen yang diverifikasi, atau bukti fisik dokumen..."
                   value={formData.deskripsi}
                   onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
-                  className="w-full text-xs p-3.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 leading-relaxed font-normal text-slate-800"
+                  className="w-full text-xs p-3.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 leading-relaxed font-normal text-slate-800"
                 />
               </div>
 
@@ -222,7 +222,7 @@ export const AmiFormPage: React.FC = () => {
                   placeholder="Rekomendasi langkah koreksi yang harus dieksekusi auditee untuk dibahas pada forum Rapat Tinjauan Manajemen (RTM)..."
                   value={formData.rekomendasi}
                   onChange={(e) => setFormData({ ...formData, rekomendasi: e.target.value })}
-                  className="w-full text-xs p-3.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 leading-relaxed font-normal text-slate-800"
+                  className="w-full text-xs p-3.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 leading-relaxed font-normal text-slate-800"
                 />
               </div>
             </div>

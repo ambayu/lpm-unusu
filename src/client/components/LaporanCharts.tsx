@@ -73,12 +73,12 @@ export interface MetricTileProps {
 }
 
 const ACCENTS: Record<string, string> = {
-  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-  amber: 'bg-amber-50 text-amber-700 border-amber-100',
-  blue: 'bg-blue-50 text-blue-700 border-blue-100',
+  emerald: 'bg-lpm-blue-50 text-lpm-blue-700 border-lpm-blue-100',
+  amber: 'bg-lpm-yellow-400 text-lpm-blue-900 border-lpm-yellow-400',
+  blue: 'bg-lpm-blue-50 text-lpm-blue-700 border-lpm-blue-100',
   rose: 'bg-rose-50 text-rose-700 border-rose-100',
   slate: 'bg-slate-50 text-slate-700 border-slate-100',
-  violet: 'bg-violet-50 text-violet-700 border-violet-100',
+  violet: 'bg-lpm-blue-700 text-lpm-blue-700 border-lpm-blue-700',
 };
 
 export const MetricTile: React.FC<MetricTileProps> = ({
@@ -516,9 +516,9 @@ export interface ActivityFeedProps {
 }
 
 const TONES: Record<string, string> = {
-  emerald: 'bg-emerald-500',
-  amber: 'bg-amber-500',
-  blue: 'bg-blue-500',
+  emerald: 'bg-lpm-blue-700',
+  amber: 'bg-lpm-yellow-400',
+  blue: 'bg-lpm-blue-700',
   rose: 'bg-rose-500',
   slate: 'bg-slate-400',
 };

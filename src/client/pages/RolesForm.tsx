@@ -120,7 +120,7 @@ export const PeranFormPage: React.FC = () => {
       title={isEdit ? 'Edit Peran RBAC' : 'Buat Peran Baru'}
       description="Peran mengelompokkan hak akses pengguna LPM UNUSU. Kode peran dipakai sistem, label dipakai antarmuka."
       badge={
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-blue-50 border border-blue-200 text-[10px] font-bold uppercase tracking-wider text-blue-900">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-lpm-blue-50 border border-lpm-blue-200 text-[10px] font-bold uppercase tracking-wider text-lpm-blue-900">
           <ShieldCheckIcon className="w-3.5 h-3.5" aria-hidden="true" />
           Tata Kelola
         </span>
@@ -132,12 +132,12 @@ export const PeranFormPage: React.FC = () => {
       submitting={submitting}
       error={error}
       onSubmit={handleSubmit}
-      accentClassName="bg-blue-900 hover:bg-blue-950"
+      accentClassName="bg-lpm-blue-900 hover:bg-lpm-blue-950"
     >
       {sukses && (
         <div
           role="status"
-          className="p-4 rounded-[12px] bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold"
+          className="p-4 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-800 text-xs font-semibold"
         >
           {sukses}
         </div>
@@ -165,7 +165,7 @@ export const PeranFormPage: React.FC = () => {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Contoh: auditor_fakultas"
-                className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] font-mono disabled:bg-slate-100 disabled:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] font-mono disabled:bg-slate-100 disabled:text-slate-500 focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
               />
               {kodeTerkunci && (
                 <p className="text-[11px] text-slate-400 mt-1">
@@ -185,7 +185,7 @@ export const PeranFormPage: React.FC = () => {
                 value={formData.label}
                 onChange={(e) => setFormData({ ...formData, label: e.target.value })}
                 placeholder="Contoh: Auditor Mutu Fakultas"
-                className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
               />
             </div>
 
@@ -199,7 +199,7 @@ export const PeranFormPage: React.FC = () => {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Jelaskan batas wewenang pengguna yang memegang peran ini..."
-                className="w-full px-3 py-2 text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900"
+                className="w-full px-3 py-2 text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
               />
             </div>
           </div>

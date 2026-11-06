@@ -68,8 +68,8 @@ export const FormPageTemplate: React.FC<FormPageTemplateProps> = ({
   badge,
   onSubmit,
   onCancel,
-  accentClassName = 'bg-blue-900 hover:bg-blue-950',
-  submitIconClassName = 'text-amber-400',
+  accentClassName = 'bg-lpm-blue-900 hover:bg-lpm-blue-950',
+  submitIconClassName = 'text-lpm-yellow-400',
   children,
 }) => {
   const finalSubmitLabel =

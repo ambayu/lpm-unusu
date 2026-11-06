@@ -104,7 +104,7 @@ export const DokumenFormPage: React.FC = () => {
       submitting={submitting}
       error={error}
       onSubmit={handleSubmit}
-      accentClassName="bg-blue-900 hover:bg-blue-950"
+      accentClassName="bg-lpm-blue-900 hover:bg-lpm-blue-950"
     >
       {loading ? (
         <div className="py-16 text-center text-xs text-slate-500 font-medium">
@@ -126,7 +126,7 @@ export const DokumenFormPage: React.FC = () => {
                 <select
                   value={formData.jenis}
                   onChange={(e) => setFormData({ ...formData, jenis: e.target.value })}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-medium text-slate-800"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-medium text-slate-800"
                 >
                   <option value="Kebijakan">Buku Kebijakan SPMI</option>
                   <option value="Manual">Manual Mutu Siklus PPEPP</option>
@@ -146,7 +146,7 @@ export const DokumenFormPage: React.FC = () => {
                 <select
                   value={formData.standarId}
                   onChange={(e) => setFormData({ ...formData, standarId: e.target.value })}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-medium text-slate-800"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-medium text-slate-800"
                 >
                   <option value="">-- Tidak Terikat Butir Standar Tertentu --</option>
                   {standarList.map((s) => (
@@ -179,7 +179,7 @@ export const DokumenFormPage: React.FC = () => {
                     placeholder="Contoh: DOC-SOP-001"
                     value={formData.kodeDokumen}
                     onChange={(e) => setFormData({ ...formData, kodeDokumen: e.target.value })}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-mono font-bold text-blue-900"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-mono font-bold text-lpm-blue-900"
                   />
                 </div>
 
@@ -193,7 +193,7 @@ export const DokumenFormPage: React.FC = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, revisi: parseInt(e.target.value) || 0 })
                     }
-                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-mono text-slate-800"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-mono text-slate-800"
                   />
                   <p className="text-[11px] text-slate-400 mt-1 font-normal">
                     0 untuk edisi perdana, bertambah sesuai revisi pengesahan.
@@ -210,7 +210,7 @@ export const DokumenFormPage: React.FC = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, tahun: parseInt(e.target.value) || 2026 })
                     }
-                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 text-slate-800 font-medium"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 text-slate-800 font-medium"
                   />
                 </div>
               </div>
@@ -225,7 +225,7 @@ export const DokumenFormPage: React.FC = () => {
                   placeholder="Contoh: Standar Operasional Prosedur Pelaksanaan Audit Mutu Internal (SOP AMI)"
                   value={formData.judul}
                   onChange={(e) => setFormData({ ...formData, judul: e.target.value })}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-semibold text-slate-900"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-semibold text-slate-900"
                 />
               </div>
 
@@ -238,7 +238,7 @@ export const DokumenFormPage: React.FC = () => {
                   placeholder="https://drive.google.com/... atau https://unusu.ac.id/dokumen/sop-ami.pdf"
                   value={formData.filePath}
                   onChange={(e) => setFormData({ ...formData, filePath: e.target.value })}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 font-normal text-slate-800"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 font-normal text-slate-800"
                 />
                 <p className="text-[11px] text-slate-400 mt-1 font-normal">
                   Sertakan URL publik atau repository cloud agar sivitas dapat langsung mengunduh berkas.

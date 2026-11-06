@@ -98,7 +98,7 @@ export const FullHeroSlider: React.FC = () => {
   return (
     <section
       aria-label="Hero Banner Slider"
-      className="relative isolate w-full overflow-hidden bg-slate-950 text-white md:flex md:h-[calc(100vh-5rem)] md:min-h-[560px] md:flex-col md:justify-end select-none"
+      className="relative isolate w-full overflow-hidden bg-lpm-blue-950 text-white md:flex md:h-[calc(100vh-5rem)] md:min-h-[560px] md:flex-col md:justify-end select-none"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={handleTouchStart}
@@ -131,8 +131,8 @@ export const FullHeroSlider: React.FC = () => {
             </picture>
 
             {/* Gradient Scrim Tipis agar teks terbaca kontras & elegan */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent md:from-slate-950/85 md:via-slate-950/20" />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/25 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-lpm-blue-950/90 via-lpm-blue-900/40 to-transparent md:from-lpm-blue-950/85 md:via-lpm-blue-900/30" />
+            <div className="absolute inset-0 bg-gradient-to-r from-lpm-blue-950/85 via-lpm-blue-900/35 to-transparent" />
           </div>
         ))}
       </div>
@@ -141,7 +141,7 @@ export const FullHeroSlider: React.FC = () => {
       <div className="relative z-20 px-4 sm:px-6 lg:px-8 pb-8 md:pb-12 pt-20 max-w-7xl mx-auto w-full">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl space-y-3.5">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-amber-400 text-slate-950 w-fit">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-lpm-yellow-400 text-slate-950 w-fit">
               <span>{slide.badge}</span>
             </div>
 
@@ -149,7 +149,7 @@ export const FullHeroSlider: React.FC = () => {
               {slide.headline}
             </h2>
 
-            <p className="text-xs sm:text-sm md:text-base text-slate-200 leading-relaxed max-w-xl font-normal">
+            <p className="text-xs sm:text-sm md:text-base text-lpm-blue-100 leading-relaxed max-w-xl font-normal">
               {slide.subheadline}
             </p>
           </div>
@@ -164,7 +164,7 @@ export const FullHeroSlider: React.FC = () => {
                   aria-label={`Slide ${idx + 1}: ${item.title}`}
                   aria-current={idx === currentSlide}
                   className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                    idx === currentSlide ? "w-8 bg-amber-400" : "w-2 bg-white/40 hover:bg-white/70"
+                    idx === currentSlide ? "w-8 bg-lpm-yellow-400" : "w-2 bg-white/40 hover:bg-white/70"
                   }`}
                 />
               ))}
@@ -187,7 +187,7 @@ export const FullHeroSlider: React.FC = () => {
               >
                 <ChevronRightIcon className="w-4 h-4" />
               </button>
-              <span className="text-xs font-semibold text-slate-200 ml-1 font-mono">{counter}</span>
+              <span className="text-xs font-semibold text-lpm-blue-100 ml-1 font-mono">{counter}</span>
             </div>
           </div>
         </div>

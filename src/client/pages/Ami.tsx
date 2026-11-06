@@ -75,7 +75,7 @@ export const AmiPage: React.FC = () => {
       title="Audit Mutu Internal (AMI) & Temuan Lapangan"
       description="Evaluasi kepatuhan butir standar mutu SPMI pada seluruh Program Studi dan Unit Kerja, verifikasi KTS (Ketidaksesuaian), dan penetapan Rekomendasi Tindak Lanjut (RTL)."
       badge={
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-bold text-blue-900">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-lpm-blue-50 border border-lpm-blue-200 text-[11px] font-bold text-lpm-blue-900">
           <ClipboardDocumentCheckIcon className="w-3.5 h-3.5" aria-hidden="true" />
           Siklus AMI
         </span>
@@ -104,7 +104,7 @@ export const AmiPage: React.FC = () => {
               <p className="text-xs font-medium text-slate-500">Total Butir Diaudit</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">{totalAudits}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-blue-50 border border-blue-200 text-blue-900 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-900 flex items-center justify-center">
               <ClipboardDocumentCheckIcon className="w-6 h-6" />
             </div>
           </div>
@@ -112,9 +112,9 @@ export const AmiPage: React.FC = () => {
           <div className="bg-white p-4 sm:p-5 rounded-[14px] border border-[#CBD5E1] shadow-2xs flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-slate-500">Terlampaui (Unggul)</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-800">{statTerlampaui}</p>
+              <p className="mt-1 text-2xl font-bold text-lpm-blue-800">{statTerlampaui}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-800 flex items-center justify-center">
               <CheckCircleIcon className="w-6 h-6" />
             </div>
           </div>
@@ -122,9 +122,9 @@ export const AmiPage: React.FC = () => {
           <div className="bg-white p-4 sm:p-5 rounded-[14px] border border-[#CBD5E1] shadow-2xs flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-slate-500">Sesuai Target</p>
-              <p className="mt-1 text-2xl font-bold text-blue-900">{statSesuai}</p>
+              <p className="mt-1 text-2xl font-bold text-lpm-blue-900">{statSesuai}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-blue-50 border border-blue-200 text-blue-900 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-blue-50 border border-lpm-blue-200 text-lpm-blue-900 flex items-center justify-center">
               <span className="font-bold text-xs">SESUAI</span>
             </div>
           </div>
@@ -132,9 +132,9 @@ export const AmiPage: React.FC = () => {
           <div className="bg-white p-4 sm:p-5 rounded-[14px] border border-[#CBD5E1] shadow-2xs flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-slate-500">Temuan KTS / Observasi</p>
-              <p className="mt-1 text-2xl font-bold text-amber-700">{statKts}</p>
+              <p className="mt-1 text-2xl font-bold text-lpm-yellow-400">{statKts}</p>
             </div>
-            <div className="w-12 h-12 rounded-[12px] bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-[12px] bg-lpm-yellow-400 border border-lpm-yellow-400 text-lpm-blue-900 flex items-center justify-center">
               <ExclamationTriangleIcon className="w-6 h-6" />
             </div>
           </div>
@@ -148,7 +148,7 @@ export const AmiPage: React.FC = () => {
           value={selectedHasil}
           onChange={(e) => setSelectedHasil(e.target.value)}
           aria-label="Filter status hasil audit mutu internal"
-          className="text-xs bg-white border border-[#CBD5E1] rounded-[10px] px-3 py-2 min-h-[44px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all font-medium"
+          className="text-xs bg-white border border-[#CBD5E1] rounded-[10px] px-3 py-2 min-h-[44px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 transition-all font-medium"
         >
           <option value="SEMUA">Semua Status Hasil AMI</option>
           <option value="TERLAMPAUI">Terlampaui (Kaizen)</option>
@@ -161,7 +161,7 @@ export const AmiPage: React.FC = () => {
       tableTitle="Daftar Temuan Lapangan & Evaluasi Mutu"
       tableSubtitle={`Menampilkan ${filteredAudits.length} catatan audit`}
       tableBadge={
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-bold text-blue-900">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-lpm-blue-50 border border-lpm-blue-200 text-[11px] font-bold text-lpm-blue-900">
           {filteredAudits.length} data
         </span>
       }
@@ -170,7 +170,7 @@ export const AmiPage: React.FC = () => {
           key: 'hasil',
           header: 'HASIL TEMUAN',
           headerClassName: 'w-[120px]',
-          render: (item) => <span className="font-bold text-xs uppercase text-blue-900">{item.hasil}</span>,
+          render: (item) => <span className="font-bold text-xs uppercase text-lpm-blue-900">{item.hasil}</span>,
         },
         {
           key: 'standar',
@@ -215,7 +215,7 @@ export const AmiPage: React.FC = () => {
                 </p>
               )}
               {item.rekomendasi && (
-                <div className="text-[11px] text-blue-900 font-medium line-clamp-2 border-l-2 border-blue-400 pl-2 mt-1">
+                <div className="text-[11px] text-lpm-blue-900 font-medium line-clamp-2 border-l-2 border-lpm-blue-400 pl-2 mt-1">
                   RTL: {item.rekomendasi}
                 </div>
               )}
@@ -239,7 +239,7 @@ export const AmiPage: React.FC = () => {
                 </div>
               )}
               {item.updatedAt && (
-                <div className="text-[10.5px] text-blue-800/80 font-mono">
+                <div className="text-[10.5px] text-lpm-blue-800/80 font-mono">
                   Update: {new Date(item.updatedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </div>
               )}
@@ -256,7 +256,7 @@ export const AmiPage: React.FC = () => {
               <div className="inline-flex items-center gap-2">
                 <Link
                   to={`/admin/ami/edit/${item.id}`}
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] bg-blue-50 text-blue-900 hover:bg-blue-900 hover:text-white border border-blue-200 transition-all shadow-2xs"
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] bg-lpm-blue-50 text-lpm-blue-900 hover:bg-lpm-blue-900 hover:text-white border border-lpm-blue-200 transition-all shadow-2xs"
                   title="Edit Catatan AMI"
                 >
                   <PencilSquareIcon className="w-4 h-4" />

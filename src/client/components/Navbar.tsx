@@ -90,10 +90,10 @@ export const Navbar: React.FC = () => {
   const isActive = (item: NavLinkItem) => item.match(location.pathname, hash);
 
   const linkClass = (active: boolean) =>
-    `inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-900 ${
+    `inline-flex items-center gap-1.5 px-3 py-2 rounded-[8px] text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-lpm-yellow-400 ${
       active
-        ? 'text-blue-900 bg-blue-50'
-        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        ? 'text-lpm-blue-900 bg-lpm-yellow-400'
+        : 'text-white hover:text-lpm-yellow-400 hover:bg-white/10'
     }`;
 
   /** Menu dirender sebagai Link (rute) atau <a> (jangkar landing). */
@@ -116,7 +116,7 @@ export const Navbar: React.FC = () => {
       variant === 'desktop'
         ? linkClass(active)
         : `flex items-center gap-2 min-h-[44px] px-3 rounded-[8px] text-sm font-semibold ${
-            active ? 'bg-blue-50 text-blue-900' : 'text-slate-700 hover:bg-slate-100'
+            active ? 'bg-lpm-yellow-400 text-lpm-blue-900' : 'text-white hover:bg-white/10'
           }`;
 
     const commonProps = {
@@ -148,20 +148,20 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-[#CBD5E1]">
+    <header className="sticky top-0 z-50 bg-lpm-blue-900 border-b-2 border-lpm-yellow-400">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* ---------- KIRI: BRAND ---------- */}
           <Link to="/" className="flex items-center gap-2.5 shrink-0" aria-label="LPM UNUSU — Beranda">
-            <div className="w-9 h-9 rounded-[10px] bg-blue-900 flex items-center justify-center">
-              <ShieldCheckIcon className="w-5 h-5 text-amber-400" aria-hidden="true" />
+            <div className="w-9 h-9 rounded-[10px] bg-lpm-yellow-400 flex items-center justify-center">
+              <ShieldCheckIcon className="w-5 h-5 text-lpm-blue-900" aria-hidden="true" />
             </div>
             <div className="leading-tight">
               <div className="flex items-baseline gap-1">
-                <span className="font-extrabold text-[15px] tracking-tight text-slate-900">LPM</span>
-                <span className="font-extrabold text-[15px] tracking-tight text-blue-900">UNUSU</span>
+                <span className="font-extrabold text-[15px] tracking-tight text-white">LPM</span>
+                <span className="font-extrabold text-[15px] tracking-tight text-lpm-yellow-400">UNUSU</span>
               </div>
-              <p className="text-[10px] font-medium text-slate-500">Penjaminan Mutu Internal</p>
+              <p className="text-[10px] font-medium text-lpm-blue-200">Penjaminan Mutu Internal</p>
             </div>
           </Link>
 
@@ -181,16 +181,16 @@ export const Navbar: React.FC = () => {
                   to="/admin"
                   aria-label="Buka panel manajemen"
                   title="Buka panel manajemen"
-                  className="group hidden lg:inline-flex items-center gap-2 h-[44px] px-3 text-slate-700 transition-all hover:text-blue-900 hover:shadow-[inset_2px_0_0_0_#CBD5E1,inset_-2px_0_0_0_#CBD5E1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2"
+                  className="group hidden lg:inline-flex items-center gap-2 h-[44px] px-3 text-white transition-all hover:text-lpm-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lpm-yellow-400 focus-visible:ring-offset-2 focus-visible:ring-offset-lpm-blue-900"
                 >
-                  <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-900 border border-blue-200 flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-lpm-yellow-400 text-lpm-blue-900 flex items-center justify-center font-bold text-xs uppercase shrink-0">
                     {user.nama?.charAt(0) || <UserCircleIcon className="w-4 h-4" aria-hidden="true" />}
                   </div>
                   <div className="flex flex-col leading-tight min-w-0 text-left">
-                    <span className="text-xs font-bold text-slate-800 max-w-[140px] truncate">
+                    <span className="text-xs font-bold text-white max-w-[140px] truncate">
                       {user.nama}
                     </span>
-                    <span className="text-[10px] font-semibold uppercase text-blue-900 truncate max-w-[140px]">
+                    <span className="text-[10px] font-semibold uppercase text-lpm-yellow-400 truncate max-w-[140px]">
                       {roleLabel}
                     </span>
                   </div>
@@ -201,7 +201,7 @@ export const Navbar: React.FC = () => {
                   to="/admin"
                   aria-label="Buka panel manajemen"
                   title="Buka panel manajemen"
-                  className="lg:hidden min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-[8px] text-slate-600 hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700"
+                  className="lg:hidden min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-[8px] text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lpm-yellow-400"
                 >
                   <Squares2X2Icon className="w-4 h-4" aria-hidden="true" />
                 </Link>
@@ -209,7 +209,7 @@ export const Navbar: React.FC = () => {
                 <button
                   type="button"
                   onClick={logout}
-                  className="min-h-[44px] inline-flex items-center gap-1.5 px-3 rounded-[8px] text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 cursor-pointer"
+                  className="min-h-[44px] inline-flex items-center gap-1.5 px-3 rounded-[8px] text-xs font-semibold text-rose-300 hover:bg-rose-500/20 border border-transparent hover:border-rose-400/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 cursor-pointer"
                 >
                   <ArrowRightStartOnRectangleIcon className="w-3.5 h-3.5" aria-hidden="true" />
                   <span className="hidden sm:inline">Keluar</span>
@@ -221,17 +221,17 @@ export const Navbar: React.FC = () => {
                   href={WEBSITE_KAMPUS}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="hidden lg:inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-[8px] text-xs font-semibold text-slate-600 hover:text-blue-900 hover:bg-blue-50 transition-colors"
+                  className="hidden lg:inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-[8px] text-xs font-semibold text-lpm-blue-100 hover:text-lpm-yellow-400 hover:bg-white/10 transition-colors"
                 >
                   <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>Website Kampus</span>
                 </a>
                 <Link
                   to="/login"
-                  className="min-h-[44px] inline-flex items-center gap-1.5 px-4 rounded-[8px] text-xs font-bold bg-blue-900 hover:bg-blue-950 text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                  className="min-h-[44px] inline-flex items-center gap-1.5 px-4 rounded-[8px] text-xs font-bold bg-lpm-yellow-400 hover:bg-lpm-yellow-500 text-lpm-blue-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-lpm-blue-900"
                 >
                   <span>Masuk SSO</span>
-                  <ArrowRightIcon className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
+                  <ArrowRightIcon className="w-3.5 h-3.5 text-lpm-yellow-400" aria-hidden="true" />
                 </Link>
               </>
             )}
@@ -241,7 +241,7 @@ export const Navbar: React.FC = () => {
               onClick={() => setMobileOpen((v) => !v)}
               aria-label={mobileOpen ? 'Tutup menu' : 'Buka menu'}
               aria-expanded={mobileOpen}
-              className="md:hidden min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-[8px] border border-[#CBD5E1] text-slate-600"
+              className="md:hidden min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-[8px] border border-white/30 text-white"
             >
               {mobileOpen ? (
                 <XMarkIcon className="w-5 h-5" aria-hidden="true" />
@@ -255,7 +255,7 @@ export const Navbar: React.FC = () => {
 
       {/* ---------- MENU MOBILE ---------- */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-[#CBD5E1] bg-white px-4 py-3 space-y-1">
+        <div className="md:hidden border-t border-white/20 bg-lpm-blue-900 px-4 py-3 space-y-1">
           {links.map((item) => renderItem(item, 'mobile'))}
 
           <div className="pt-2 mt-1 border-t border-slate-100 space-y-1">
@@ -263,7 +263,7 @@ export const Navbar: React.FC = () => {
               href={WEBSITE_KAMPUS}
               target="_blank"
               rel="noreferrer noopener"
-              className="flex items-center gap-2 min-h-[44px] px-3 rounded-[8px] text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              className="flex items-center gap-2 min-h-[44px] px-3 rounded-[8px] text-sm font-semibold text-white hover:bg-white/10"
             >
               <ArrowTopRightOnSquareIcon className="w-4 h-4" aria-hidden="true" />
               <span>Website Kampus</span>
@@ -272,7 +272,7 @@ export const Navbar: React.FC = () => {
               <Link
                 to="/admin"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 min-h-[44px] px-3 rounded-[8px] text-sm font-semibold text-blue-900 bg-blue-50"
+                className="flex items-center gap-2 min-h-[44px] px-3 rounded-[8px] text-sm font-semibold text-lpm-blue-900 bg-lpm-blue-50"
               >
                 <ArrowRightIcon className="w-4 h-4" aria-hidden="true" />
                 <span>Panel Manajemen</span>
