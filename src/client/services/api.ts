@@ -87,13 +87,35 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Rute publik yang boleh dibuka tanpa sesi. Respons 401 TIDAK boleh melempar
+ * pengguna ke /login dari halaman-halaman ini.
+ *
+ * Cara lama membandingkan `window.location.pathname` dengan `BASE_URL + 'login'`.
+ * Perbandingan itu rapuh: bila BASE_URL bukan '/' atau pathname berakhir garis
+ * miring, hasilnya tidak cocok sehingga halaman publik seperti '/' ikut
+ * terlempar ke /login. Sekarang pathname dinormalisasi lalu dicocokkan ke
+ * daftar rute publik yang eksplisit.
+ */
+const PUBLIC_PATHS = ['/', '/login', '/sso/callback', '/akses-ditolak'];
+
+const isPublicPath = (pathname: string) => {
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+  let path = pathname;
+  if (base && path.startsWith(base)) {
+    path = path.slice(base.length);
+  }
+  path = path.replace(/\/+$/, '').replace(/\/index\.html$/, '');
+  return PUBLIC_PATHS.includes(path || '/');
+};
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
     const code = error.response?.data?.code;
     const path = window.location.pathname;
-    if (status === 401 && path !== import.meta.env.BASE_URL + 'login' && path !== import.meta.env.BASE_URL + 'sso/callback') {
+    if (status === 401 && !isPublicPath(path)) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
       window.location.replace(import.meta.env.BASE_URL + 'login');
@@ -217,5 +239,41 @@ export const fetchAuditDetail = (id: number | string) => api.get<{ success: bool
 export const createAudit = (data: Partial<AuditItem>) => api.post<{ success: boolean; data: AuditItem }>('/audit', data);
 export const updateAudit = (id: number | string, data: Partial<AuditItem>) => api.put<{ success: boolean; data: AuditItem }>(`/audit/${id}`, data);
 export const deleteAudit = (id: number | string) => api.delete<{ success: boolean; message: string }>(`/audit/${id}`);
+
+// ==========================================
+// RINGKASAN DASHBOARD (`GET /api/dashboard/stats`)
+// ==========================================
+export interface DashboardStats {
+  totalStandar: number;
+  totalDokumen: number;
+  totalAudit: number;
+  totalUsers: number;
+  totalRoles: number;
+  totalPermissions: number;
+  auditMayor: number;
+  auditMinor: number;
+  auditSesuai: number;
+  /** Modul PPEPP — dihitung server (GROUP BY status indikator). */
+  indikatorTotal: number;
+  indikatorTercapai: number;
+  tindakLanjutTerbuka: number;
+  /** Rincian jumlah indikator per status ketercapaian. */
+  indikatorStatus: { status: string; jumlah: number }[];
+  /** Rincian jumlah tindak lanjut per status. */
+  tindakLanjutStatus: { status: string; jumlah: number }[];
+}
+
+export interface DashboardPayload {
+  stats: DashboardStats;
+  /** 5 butir audit terakhir (include periode & standar). */
+  recentAudits: AuditItem[];
+  /** 5 standar SPMI terbaru. */
+  recentStandar: StandarItem[];
+  /** 5 dokumen mutu terbaru. */
+  recentDokumen: DokumenMutuItem[];
+}
+
+export const fetchDashboardStats = () =>
+  api.get<{ success: boolean; data: DashboardPayload }>('/dashboard/stats');
 
 export default api;

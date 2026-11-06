@@ -16,6 +16,7 @@ import {
   Squares2X2Icon,
   UsersIcon,
   KeyIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline';
 
 interface SidebarLayoutProps {
@@ -29,24 +30,90 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileMenuRef = React.useRef<HTMLDivElement | null>(null);
 
-  const isActive = (path: string) =>
-    location.pathname === path ||
-    (path === '/admin' && (location.pathname === '/admin' || location.pathname === '/admin/dashboard')) ||
-    (path === '/admin/standar' && location.pathname.startsWith('/admin/standar/')) ||
-    (path === '/admin/dokumen' && location.pathname.startsWith('/admin/dokumen/')) ||
-    (path === '/admin/ami' && location.pathname.startsWith('/admin/ami/')) ||
-    (path === '/admin/pengguna' && (location.pathname === '/admin/users' || location.pathname.startsWith('/admin/pengguna/'))) ||
-    (path === '/admin/peran' && (location.pathname === '/admin/roles' || location.pathname.startsWith('/admin/peran/'))) ||
-    (path === '/admin/izin' && (location.pathname === '/admin/permissions' || location.pathname.startsWith('/admin/izin/')));
+  /** Tutup dropdown akun saat klik di luar, tekan Escape, atau pindah rute. */
+  React.useEffect(() => {
+    const onDocClick = (event: MouseEvent) => {
+      if (!profileMenuRef.current) return;
+      if (!profileMenuRef.current.contains(event.target as Node)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setProfileDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
 
-  const navItems = [
+  React.useEffect(() => {
+    setProfileDropdownOpen(false);
+  }, [location.pathname]);
+
+  /**
+   * isActive — hanya SATU menu yang boleh aktif.
+   *
+   * Versi lama memakai `startsWith` tanpa batas segmen pada beberapa path
+   * sehingga rute bertumpuk bisa menyalakan dua menu sekaligus. Varian ini
+   * memakai batas segmen ("/") dan memilih kecocokan TERPANJANG.
+   */
+  const isActive = (path: string) => {
+    const current = location.pathname;
+
+    if (path === '/admin') {
+      // Dashboard hanya aktif untuk '/admin' dan '/admin/dashboard'.
+      if (current === '/admin' || current === '/admin/dashboard') return true;
+      return false;
+    }
+
+    // Alias rute lama (users/roles/permissions) tetap dihormati.
+    const aliases: Record<string, string[]> = {
+      '/admin/pengguna': ['/admin/users'],
+      '/admin/peran': ['/admin/roles'],
+      '/admin/izin': ['/admin/permissions'],
+    };
+    if (aliases[path]?.includes(current)) return true;
+
+    if (current === path) return true;
+    if (!current.startsWith(`${path}/`)) return false;
+
+    const allPaths = [
+      '/admin/standar',
+      '/admin/dokumen',
+      '/admin/ami',
+      '/admin/pengguna',
+      '/admin/peran',
+      '/admin/izin',
+    ];
+    const longerMatch = allPaths.find(
+      (p) => p.length > path.length && (current === p || current.startsWith(`${p}/`))
+    );
+
+    return !longerMatch;
+  };
+
+  /** Menu umum: Dashboard + Profil (selalu tampil, tanpa guard RBAC). */
+  const utamaItems = [
     {
       path: '/admin',
       label: 'Dashboard',
       icon: Squares2X2Icon,
       desc: 'Ikhtisar Capaian & Metrik',
     },
+    {
+      path: '/admin/profil',
+      label: 'Profil',
+      icon: UserCircleIcon,
+      desc: 'Biodata akun yang sedang aktif',
+    },
+  ];
+
+  const navItems = [
     {
       path: '/admin/standar',
       label: 'Standar SPMI',
@@ -68,23 +135,25 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
   ];
 
   const rbacItems = [
+    // Tiga menu Tata Kelola ditempatkan paling bawah sidebar karena mengatur
+    // akses, bukan pekerjaan konten harian. Urutan baku: pengguna -> peran -> izin.
     {
       path: '/admin/pengguna',
-      label: 'Pengguna',
+      label: 'Manajemen Pengguna',
       icon: UsersIcon,
-      desc: 'Akun & Penugasan Mutu',
+      desc: 'Akun pengguna & status aktif',
     },
     {
       path: '/admin/peran',
       label: 'Peran',
       icon: ShieldCheckIcon,
-      desc: 'Level Otoritas & Akses',
+      desc: 'Daftar peran & jumlah pemegang',
     },
     {
       path: '/admin/izin',
       label: 'Izin',
       icon: KeyIcon,
-      desc: 'Matriks Guard Perizinan',
+      desc: 'Katalog permission per peran',
     },
   ];
 
@@ -100,8 +169,9 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
     if (path === '/admin/ami/tambah') return 'Catat Temuan Audit AMI Baru';
     if (path.startsWith('/admin/ami/edit/')) return 'Edit Temuan Audit AMI';
     if (path === '/admin/pengguna' || path === '/admin/users') return 'Manajemen Pengguna LPM';
-    if (path === '/admin/peran' || path === '/admin/roles') return 'Manajemen Peran & Wewenang RBAC';
-    if (path === '/admin/izin' || path === '/admin/permissions') return 'Matriks Izin & Hak Akses';
+    if (path === '/admin/peran' || path === '/admin/roles') return 'Peran';
+    if (path === '/admin/izin' || path === '/admin/permissions') return 'Izin';
+    if (path === '/admin/profil') return 'Profil Pengguna';
     return 'Lembaga Penjaminan Mutu';
   };
 
@@ -138,6 +208,55 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
 
         {/* Navigation Section */}
         <div className="flex-1 py-5 px-3 space-y-6 overflow-y-auto">
+          {/* Menu umum: Dashboard + Profil (selalu tampil, tanpa guard peran) */}
+          <div>
+            {!isCollapsed && (
+              <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                UTAMA
+              </p>
+            )}
+            <nav className="space-y-1.5" role="navigation" aria-label="Menu utama akun">
+              {utamaItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileOpen(false)}
+                    title={isCollapsed ? item.label : undefined}
+                    aria-current={active ? 'page' : undefined}
+                    className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-semibold transition-all ${
+                      isCollapsed ? 'justify-center p-2.5' : 'px-3.5 py-2.5 gap-3'
+                    } ${
+                      active
+                        ? 'bg-[#DBEAFE] text-blue-900 font-bold shadow-2xs'
+                        : 'text-slate-600 hover:bg-[#E2EDFB] hover:text-blue-900'
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0 transition-colors ${
+                        active
+                          ? 'bg-blue-900 text-white shadow-2xs'
+                          : 'bg-[#DBEAFE] text-blue-700'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" aria-hidden="true" />
+                    </div>
+                    {!isCollapsed && (
+                      <div className="truncate">
+                        <div className="leading-tight">{item.label}</div>
+                        <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
+                          {item.desc}
+                        </div>
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
           <div>
             {!isCollapsed && (
               <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
@@ -155,7 +274,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                     onClick={() => setMobileOpen(false)}
                     title={isCollapsed ? item.label : undefined}
                     aria-current={active ? 'page' : undefined}
-                    className={`w-full flex items-center rounded-[12px] text-[13.5px] font-semibold transition-all ${
+                    className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-semibold transition-all ${
                       isCollapsed ? 'justify-center p-2.5' : 'px-3.5 py-2.5 gap-3'
                     } ${
                       active
@@ -170,7 +289,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                           : 'bg-[#DBEAFE] text-blue-700'
                       }`}
                     >
-                      <Icon className="w-4 h-4" />
+                      <Icon className="w-4 h-4" aria-hidden="true" />
                     </div>
                     {!isCollapsed && (
                       <div className="truncate">
@@ -190,7 +309,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             <div>
               {!isCollapsed && (
                 <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                  KONTROL AKSES & RBAC
+                  TATA KELOLA
                 </p>
               )}
               <nav className="space-y-1.5" role="navigation" aria-label="Menu RBAC">
@@ -204,7 +323,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                       onClick={() => setMobileOpen(false)}
                       title={isCollapsed ? item.label : undefined}
                       aria-current={active ? 'page' : undefined}
-                      className={`w-full flex items-center rounded-[12px] text-[13.5px] font-semibold transition-all ${
+                      className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-semibold transition-all ${
                         isCollapsed ? 'justify-center p-2.5' : 'px-3.5 py-2.5 gap-3'
                       } ${
                         active
@@ -219,7 +338,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                             : 'bg-[#DBEAFE] text-blue-700'
                         }`}
                       >
-                        <Icon className="w-4 h-4" />
+                        <Icon className="w-4 h-4" aria-hidden="true" />
                       </div>
                       {!isCollapsed && (
                         <div className="truncate">
@@ -245,13 +364,13 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             <div className="space-y-1.5">
               <Link
                 to="/"
-                className={`w-full flex items-center rounded-[12px] text-[13.5px] font-medium transition-all ${
+                className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-medium transition-all ${
                   isCollapsed ? 'justify-center p-2.5' : 'px-3.5 py-2.5 gap-3'
                 } text-slate-600 hover:bg-[#E2EDFB] hover:text-blue-900`}
                 title={isCollapsed ? 'Halaman Depan LPM' : undefined}
               >
                 <div className="w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0 bg-[#DBEAFE] text-blue-700">
-                  <HomeIcon className="w-4 h-4" />
+                  <HomeIcon className="w-4 h-4" aria-hidden="true" />
                 </div>
                 {!isCollapsed && (
                   <div className="truncate">
@@ -284,9 +403,9 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
               {/* Logout button */}
               <button
                 onClick={logout}
-                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-[12px] bg-white hover:bg-rose-50 border border-[#CBD5E1] hover:border-rose-200 text-xs font-semibold text-slate-700 hover:text-rose-700 shadow-2xs transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 min-h-[44px] py-2 px-3 rounded-[12px] bg-white hover:bg-rose-50 border border-[#CBD5E1] hover:border-rose-200 text-xs font-semibold text-slate-700 hover:text-rose-700 shadow-2xs transition-colors cursor-pointer"
               >
-                <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                <ArrowRightOnRectangleIcon className="w-4 h-4" aria-hidden="true" />
                 <span>Keluar Akun</span>
               </button>
             </>
@@ -295,9 +414,9 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
               onClick={logout}
               title="Keluar dari LPM UNUSU"
               aria-label="Keluar dari LPM UNUSU"
-              className="p-2.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-[12px] transition-colors mx-auto cursor-pointer block border border-[#CBD5E1] bg-white shadow-2xs"
+              className="min-h-[44px] min-w-[44px] p-2.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-[12px] transition-colors mx-auto cursor-pointer flex items-center justify-center border border-[#CBD5E1] bg-white shadow-2xs"
             >
-              <ArrowRightOnRectangleIcon className="w-4 h-4" />
+              <ArrowRightOnRectangleIcon className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -312,10 +431,10 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
         <div className="flex items-center space-x-2.5">
           <button
             onClick={() => setMobileOpen(true)}
-            className="p-2 rounded-[10px] border border-[#CBD5E1] text-slate-600 hover:bg-slate-100 focus:outline-none"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-[10px] border border-[#CBD5E1] text-slate-600 hover:bg-slate-100 focus:outline-none"
             aria-label="Buka menu navigasi"
           >
-            <Bars3Icon className="w-6 h-6" />
+            <Bars3Icon className="w-6 h-6" aria-hidden="true" />
           </button>
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 rounded-[10px] bg-blue-900 flex items-center justify-center text-white ring-1 ring-blue-800">
@@ -330,7 +449,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
 
         <Link
           to="/"
-          className="text-xs font-semibold text-blue-900 bg-blue-50 px-3 py-1.5 rounded-[10px] border border-blue-200"
+          className="min-h-[44px] inline-flex items-center text-xs font-semibold text-blue-900 bg-blue-50 px-3 py-1.5 rounded-[10px] border border-blue-200"
         >
           Beranda
         </Link>
@@ -347,10 +466,10 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             <div className="absolute top-3 right-3 z-20">
               <button
                 onClick={() => setMobileOpen(false)}
-                className="p-1.5 rounded-[10px] bg-white/90 text-slate-600 hover:bg-white shadow-xs border border-[#CBD5E1]"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center p-1.5 rounded-[10px] bg-white/90 text-slate-600 hover:bg-white shadow-xs border border-[#CBD5E1]"
                 aria-label="Tutup menu navigasi"
               >
-                <XMarkIcon className="w-5 h-5" />
+                <XMarkIcon className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
             {renderSidebar(false)}
@@ -376,13 +495,14 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="p-2 rounded-[10px] border border-[#CBD5E1] text-slate-600 hover:bg-[#E2EDFB] hover:text-blue-900 transition-colors cursor-pointer"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-[10px] border border-[#CBD5E1] text-slate-600 hover:bg-[#E2EDFB] hover:text-blue-900 transition-colors cursor-pointer"
               title={collapsed ? 'Perluas Sidebar' : 'Ciutkan Sidebar'}
+              aria-label={collapsed ? 'Perluas Sidebar' : 'Ciutkan Sidebar'}
             >
               {collapsed ? (
-                <ChevronDoubleRightIcon className="w-4 h-4" />
+                <ChevronDoubleRightIcon className="w-4 h-4" aria-hidden="true" />
               ) : (
-                <ChevronDoubleLeftIcon className="w-4 h-4" />
+                <ChevronDoubleLeftIcon className="w-4 h-4" aria-hidden="true" />
               )}
             </button>
 
@@ -399,10 +519,13 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           {/* Right Controls: User Profile Dropdown */}
           <div className="flex items-center gap-3 relative">
             {/* User Profile Pill */}
-            <div className="relative">
+            <div className="relative" ref={profileMenuRef}>
               <button
+                type="button"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="flex items-center gap-2.5 p-1.5 pr-3 rounded-full border border-[#CBD5E1] bg-white hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+                aria-haspopup="menu"
+                aria-expanded={profileDropdownOpen}
+                className="flex items-center gap-2.5 p-1.5 pr-3 min-h-[44px] rounded-full border border-[#CBD5E1] bg-white hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
               >
                 <div className="w-8 h-8 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-xs ring-1 ring-blue-800">
                   {user?.nama ? user.nama.charAt(0).toUpperCase() : 'A'}
@@ -413,14 +536,15 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                   </div>
                   <div className="text-[10px] text-blue-900 font-semibold">{roleLabel}</div>
                 </div>
-                <ChevronDownIcon className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronDownIcon className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
               </button>
 
               {/* Profile Dropdown Popup */}
               {profileDropdownOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-56 rounded-[14px] bg-white shadow-md border border-[#CBD5E1] py-1.5 z-50 text-xs"
-                  onMouseLeave={() => setProfileDropdownOpen(false)}
+                  role="menu"
+                  aria-label="Menu akun panel LPM"
+                  className="absolute right-0 mt-2 w-60 rounded-[14px] bg-white shadow-md border border-[#CBD5E1] py-1.5 z-50 text-xs"
                 >
                   <div className="px-4 py-2 border-b border-slate-100">
                     <p className="font-bold text-slate-900">{user?.nama || 'Auditor Mutu'}</p>
@@ -435,19 +559,27 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                   <Link
                     to="/"
                     onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
+                    className="flex items-center gap-2 px-4 min-h-[44px] text-slate-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
                   >
-                    <HomeIcon className="w-4 h-4 text-slate-400" />
+                    <HomeIcon className="w-4 h-4 text-slate-400" aria-hidden="true" />
                     <span>Halaman Depan LPM</span>
+                  </Link>
+                  <Link
+                    to="/admin/profil"
+                    onClick={() => setProfileDropdownOpen(false)}
+                    className="flex items-center gap-2 px-4 min-h-[44px] text-slate-700 hover:bg-blue-50 hover:text-blue-900 transition-colors"
+                  >
+                    <UserCircleIcon className="w-4 h-4 text-slate-400" aria-hidden="true" />
+                    <span>Profil</span>
                   </Link>
                   <button
                     onClick={() => {
                       setProfileDropdownOpen(false);
                       logout();
                     }}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-rose-700 hover:bg-rose-50 transition-colors text-left font-semibold cursor-pointer border-t border-slate-100"
+                    className="w-full flex items-center gap-2 px-4 min-h-[44px] text-rose-700 hover:bg-rose-50 transition-colors text-left font-semibold cursor-pointer border-t border-slate-100"
                   >
-                    <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                    <ArrowRightOnRectangleIcon className="w-4 h-4" aria-hidden="true" />
                     <span>Keluar Akun</span>
                   </button>
                 </div>

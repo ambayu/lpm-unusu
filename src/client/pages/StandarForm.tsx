@@ -5,13 +5,9 @@ import {
   createStandar,
   updateStandar,
 } from '../services/api';
-import { AdminPanelTemplate } from '../components/AdminPanelTemplate';
+import { FormPageTemplate } from '../components/FormPageTemplate';
 import { CardContainer } from '../components/CardContainer';
-import {
-  AcademicCapIcon,
-  ArrowLeftIcon,
-  CheckIcon,
-} from '@heroicons/react/24/outline';
+import { AcademicCapIcon } from '@heroicons/react/24/outline';
 
 export const StandarFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -80,37 +76,27 @@ export const StandarFormPage: React.FC = () => {
   };
 
   return (
-    <AdminPanelTemplate
+    <FormPageTemplate
       title={isEdit ? 'Edit Butir Standar SPMI' : 'Tambah Standar SPMI Baru'}
       description={
         isEdit
           ? `Perbarui formulasi butir komitmen mutu dan kriteria penilaian untuk kode ${formData.kode || ''}.`
           : 'Formulir penetapan butir standar penjaminan mutu baru pada siklus mutu PPEPP UNUSU.'
       }
-      actions={
-        <Link
-          to="/admin/standar"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 h-[42px] rounded-[12px] border border-[#CBD5E1] bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold shadow-2xs transition-all active:scale-98"
-        >
-          <ArrowLeftIcon className="w-4 h-4 text-slate-500" />
-          <span>Kembali</span>
-        </Link>
-      }
+      backTo="/admin/standar"
+      isEdit={isEdit}
+      submitLabel={isEdit ? 'Simpan Perubahan' : 'Buat Standar SPMI'}
+      submitting={submitting}
+      error={error}
+      onSubmit={handleSubmit}
+      accentClassName="bg-blue-900 hover:bg-blue-950"
     >
       {loading ? (
-        <CardContainer>
-          <div className="py-16 text-center text-xs text-slate-500 font-medium">
-            Memuat detail data standar SPMI...
-          </div>
-        </CardContainer>
+        <div className="py-16 text-center text-xs text-slate-500 font-medium">
+          Memuat detail data standar SPMI...
+        </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="p-4 rounded-[12px] bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
-              {error}
-            </div>
-          )}
-
+        <div className="space-y-6">
           {/* Form Section 1: Identitas Standar */}
           <CardContainer
             title="Identitas & Klasifikasi Standar"
@@ -241,27 +227,8 @@ export const StandarFormPage: React.FC = () => {
               </div>
             </div>
           </CardContainer>
-
-          {/* Form Actions */}
-          <div className="flex items-center justify-between pt-2">
-            <Link
-              to="/admin/standar"
-              className="inline-flex items-center justify-center px-5 py-2.5 h-[42px] rounded-[12px] border border-[#CBD5E1] bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold transition-all shadow-2xs active:scale-98"
-            >
-              Batal
-            </Link>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center justify-center gap-2.5 px-6 py-2.5 h-[42px] rounded-[12px] bg-blue-900 hover:bg-blue-950 text-white text-sm font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 cursor-pointer active:scale-98"
-            >
-              <CheckIcon className="w-5 h-5 text-amber-400" />
-              <span>{submitting ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Buat Standar SPMI'}</span>
-            </button>
-          </div>
-        </form>
+        </div>
       )}
-    </AdminPanelTemplate>
+    </FormPageTemplate>
   );
 };

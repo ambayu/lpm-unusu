@@ -10,8 +10,11 @@ import { DokumenFormPage } from './pages/DokumenForm';
 import { AmiPage } from './pages/Ami';
 import { AmiFormPage } from './pages/AmiForm';
 import { UsersPage } from './pages/Users';
+import { PenggunaFormPage } from './pages/PenggunaForm';
+import { PeranFormPage } from './pages/RolesForm';
 import { RolesPage } from './pages/Roles';
 import { PermissionsPage } from './pages/Permissions';
+import { ProfilPage } from './pages/Profil';
 import { LoginPage } from './pages/Login';
 import { SsoCallbackPage } from './pages/SsoCallback';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -87,6 +90,16 @@ export function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Profil Pengguna */}
+          <Route
+            path="/admin/profil"
+            element={
+              <ProtectedRoute>
+                <ProfilPage />
               </ProtectedRoute>
             }
           />
@@ -187,6 +200,22 @@ export function App() {
             }
           />
           <Route
+            path="/admin/pengguna/tambah"
+            element={
+              <ProtectedRoute adminOnly>
+                <PenggunaFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/pengguna/edit/:id"
+            element={
+              <ProtectedRoute adminOnly>
+                <PenggunaFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/peran"
             element={
               <ProtectedRoute adminOnly>
@@ -199,6 +228,22 @@ export function App() {
             element={
               <ProtectedRoute adminOnly>
                 <RolesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/peran/tambah"
+            element={
+              <ProtectedRoute adminOnly>
+                <PeranFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/peran/edit/:id"
+            element={
+              <ProtectedRoute adminOnly>
+                <PeranFormPage />
               </ProtectedRoute>
             }
           />
@@ -218,6 +263,10 @@ export function App() {
               </ProtectedRoute>
             }
           />
+          {/* Kompatibilitas tautan lama: menu gabungan "Peran & Izin" sudah
+              dipecah menjadi /admin/peran dan /admin/izin. */}
+          <Route path="/admin/peran-izin" element={<Navigate to="/admin/peran" replace />} />
+          <Route path="/admin/rbac" element={<Navigate to="/admin/peran" replace />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

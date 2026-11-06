@@ -1331,12 +1331,28 @@ const rbacPermissions = [
 // 4. Dashboard Stats
 // Sebelumnya seluruh baris lpm_audit_butir ditarik ke memori lalu difilter di JS
 // (O(n) transfer + O(n) scan). Sekarang agregasi dilakukan di database:
-//   - GROUP BY hasil  -> memakai lpm_audit_butir_hasil_idx
-//   - count()         -> memakai index PK
-//   - take: 5         -> memakai lpm_audit_butir_createdAt_idx (DESC)
+//   - GROUP BY hasil   -> memakai lpm_audit_butir_hasil_idx
+//   - GROUP BY status  -> lpm_indikator_spmi_tahun_status_idx / lpm_tindak_lanjut_status_tenggat_idx
+//   - count()          -> memakai index PK
+//   - take: 5          -> memakai index createdAt (DESC) masing-masing tabel
+// Payload lengkap dipakai dashboard: kartu metrik (12 angka), donut hasil audit,
+// bar volume repositori, gauge capaian PPEPP, stacked bar status RTL, serta dua
+// daftar terbaru (audit + dokumen) dan daftar standar terbaru.
 app.get("/api/dashboard/stats", async (req: Request, res: Response) => {
   try {
-    const [totalStandar, totalDokumen, hasilGroups, recentAudits, indikatorGroups, tindakLanjutTerbuka] = await Promise.all([
+    const [
+      totalStandar,
+      totalDokumen,
+      hasilGroups,
+      recentAudits,
+      indikatorGroups,
+      tindakLanjutTerbuka,
+      // Tambahan untuk laporan dashboard: komposisi status tindak lanjut
+      // (StackedBar) dan daftar terbaru tiap modul (5 baris terakhir).
+      tindakLanjutGroups,
+      recentStandar,
+      recentDokumen,
+    ] = await Promise.all([
       prisma.standarSpmi.count(),
       prisma.dokumenMutu.count(),
       prisma.auditButir.groupBy({
@@ -1358,6 +1374,22 @@ app.get("/api/dashboard/stats", async (req: Request, res: Response) => {
       prisma.tindakLanjut.count({
         where: { status: { in: ["Terbuka", "Dikerjakan"] } },
       }),
+      // Komposisi status RTL (GROUP BY status) — index lpm_tindak_lanjut_status_tenggat_idx.
+      prisma.tindakLanjut.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+      }),
+      // 5 standar SPMI terbaru — index lpm_standar_spmi_createdAt_idx (DESC).
+      prisma.standarSpmi.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+      // 5 dokumen mutu terbaru — index lpm_dokumen_mutu_createdAt_idx (DESC).
+      prisma.dokumenMutu.findMany({
+        include: { standar: { select: { kode: true, nama: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
     ]);
 
     const countByHasil = (label: string) =>
@@ -1372,6 +1404,19 @@ app.get("/api/dashboard/stats", async (req: Request, res: Response) => {
     const indikatorTercapai = indikatorGroups
       .filter((group) => group.status === "Tercapai" || group.status === "Melebihi Target")
       .reduce((sum, group) => sum + group._count._all, 0);
+
+    // Rincian status indikator (Belum Dinilai / Belum Tercapai / Tercapai /
+    // Melebihi Target) untuk laporan proporsi siklus PPEPP.
+    const indikatorStatus = indikatorGroups.map((group) => ({
+      status: group.status,
+      jumlah: group._count._all,
+    }));
+
+    // Komposisi status tindak lanjut (Terbuka / Dikerjakan / Selesai / Dibatalkan).
+    const tindakLanjutStatus = tindakLanjutGroups.map((group) => ({
+      status: group.status,
+      jumlah: group._count._all,
+    }));
 
     res.json({
       success: true,
@@ -1390,8 +1435,12 @@ app.get("/api/dashboard/stats", async (req: Request, res: Response) => {
           indikatorTotal,
           indikatorTercapai,
           tindakLanjutTerbuka,
+          indikatorStatus,
+          tindakLanjutStatus,
         },
         recentAudits,
+        recentStandar,
+        recentDokumen,
       },
     });
   } catch (error: any) {

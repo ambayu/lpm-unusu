@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   UsersIcon,
   UserPlusIcon,
@@ -11,7 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { CardContainer } from '../components/CardContainer';
 import { ErrorState } from '../components/ErrorState';
-import { LPM_APP_ROLES, SSO_ROLE_LABEL, FOREIGN_APP_ROLES, fetchAppRoles } from '../services/api';
+import { LPM_APP_ROLES, SSO_ROLE_LABEL, fetchAppRoles } from '../services/api';
 
 interface UserItem {
   id: number;
@@ -35,30 +36,12 @@ export const UsersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserItem | null>(null);
 
   // Peran sah versi server (`GET /api/auth/app-roles`). Fallback ke konstanta
   // lokal agar dropdown tetap berfungsi bila endpoint tidak tersedia.
   const [roleOptions, setRoleOptions] = useState<{ code: string; label: string }[]>(
     LPM_APP_ROLES.map((code) => ({ code, label: SSO_ROLE_LABEL[code] || code }))
   );
-  const [deniedRoleLabels, setDeniedRoleLabels] = useState<string[]>(
-    FOREIGN_APP_ROLES.map((code) => SSO_ROLE_LABEL[code] || code)
-  );
-  const [rolesFromServer, setRolesFromServer] = useState(false);
-
-  // Form State
-  const [formData, setFormData] = useState({
-    username: '',
-    nama: '',
-    email: '',
-    role: 'dosen',
-    ssoRole: 'DOSEN',
-    fakultas: '',
-    prodi: '',
-    status: 'Aktif',
-  });
 
   const fetchData = async () => {
     try {
@@ -103,14 +86,9 @@ export const UsersPage: React.FC = () => {
       .then((res) => {
         if (!active || !res.data?.success) return;
         const allowed = res.data.data ?? [];
-        const denied = res.data.deniedRoles ?? [];
 
         if (allowed.length > 0) {
           setRoleOptions(allowed.map((item) => ({ code: item.code, label: item.label })));
-          setRolesFromServer(true);
-        }
-        if (denied.length > 0) {
-          setDeniedRoleLabels(denied.map((item) => item.label));
         }
       })
       .catch(() => {
@@ -121,67 +99,6 @@ export const UsersPage: React.FC = () => {
       active = false;
     };
   }, []);
-
-  const openAddModal = () => {
-    setEditingUser(null);
-    setFormData({
-      username: '',
-      nama: '',
-      email: '',
-      role: 'dosen',
-      ssoRole: 'DOSEN',
-      fakultas: 'Fakultas Sains dan Teknologi',
-      prodi: 'Sistem Informasi',
-      status: 'Aktif',
-    });
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (item: UserItem) => {
-    setEditingUser(item);
-    setFormData({
-      username: item.username,
-      nama: item.nama,
-      email: item.email || '',
-      role: item.role,
-      ssoRole: item.ssoRole || 'DOSEN',
-      fakultas: item.fakultas || '',
-      prodi: item.prodi || '',
-      status: item.status || 'Aktif',
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('lpm_unusu_token') || localStorage.getItem('lpm_token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
-
-      const url = editingUser ? `/api/users/${editingUser.id}` : '/api/users';
-      const method = editingUser ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers,
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
-
-      if (res.ok) {
-        setIsModalOpen(false);
-        fetchData();
-      } else {
-        const err = await res.json();
-        alert(err.message || 'Gagal menyimpan pengguna');
-      }
-    } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan sistem');
-    }
-  };
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('Yakin ingin menghapus akses pengguna ini dari LPM?')) return;
@@ -231,13 +148,13 @@ export const UsersPage: React.FC = () => {
             </p>
           </div>
           {isAdmin && (
-            <button
-              onClick={openAddModal}
+            <Link
+              to="/admin/pengguna/tambah"
               className="inline-flex items-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition shadow-xs cursor-pointer"
             >
               <UserPlusIcon className="w-4 h-4" />
               Tambah Pengguna
-            </button>
+            </Link>
           )}
         </div>
       </CardContainer>
@@ -298,7 +215,7 @@ export const UsersPage: React.FC = () => {
                       <td className="py-3 px-4">
                         <div className="font-bold text-slate-900">{u.nama}</div>
                         <div className="text-[11px] text-slate-400">
-                          {u.username} • {u.email || 'tanpa email'}
+                          {u.username} Ã¢â‚¬Â¢ {u.email || 'tanpa email'}
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -312,7 +229,7 @@ export const UsersPage: React.FC = () => {
                           <ShieldCheckIcon className="w-3.5 h-3.5" />
                           {SSO_ROLE_LABEL[u.ssoRole] || (u.role === 'admin' ? 'Admin SPMI' : 'Auditor Mutu')}
                         </span>
-                        <div className="text-[10px] text-slate-400 mt-1 font-mono">{u.ssoRole || '—'}</div>
+                        <div className="text-[10px] text-slate-400 mt-1 font-mono">{u.ssoRole || 'Ã¢â‚¬â€'}</div>
                       </td>
                       <td className="py-3 px-4 text-slate-600">
                         <div>{u.fakultas || '-'}</div>
@@ -327,13 +244,13 @@ export const UsersPage: React.FC = () => {
                       <td className="py-3 px-4 text-center">
                         {isAdmin ? (
                           <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => openEditModal(u)}
+                            <Link
+                              to={`/admin/pengguna/edit/${u.id}`}
                               className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-blue-900 hover:bg-blue-50 transition cursor-pointer"
                               title="Edit Pengguna"
                             >
                               <PencilSquareIcon className="w-4 h-4" />
-                            </button>
+                            </Link>
                             <button
                               onClick={() => handleDelete(u.id)}
                               className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
@@ -355,139 +272,7 @@ export const UsersPage: React.FC = () => {
         </CardContainer>
       )}
 
-      {/* Modal Add / Edit User */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-            <h2 className="text-base font-bold text-slate-900 mb-4">
-              {editingUser ? 'Edit Pengguna LPM' : 'Tambah Pengguna Baru'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Username / NIDN / NIM</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  placeholder="Contoh: 0102030405"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Nama Lengkap & Gelar</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.nama}
-                  onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                  placeholder="Contoh: Dr. H. Ahmad Farhan, M.Kom."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Email Institusi</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Contoh: dosen@unusu.ac.id"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Peran SSO (Cakupan LPM)</label>
-                  <select
-                    value={formData.ssoRole}
-                    onChange={(e) => {
-                      const ssoRole = e.target.value;
-                      setFormData({
-                        ...formData,
-                        ssoRole,
-                        role: ssoRole === 'DOSEN' ? 'dosen' : 'admin',
-                      });
-                    }}
-                    className="w-full px-3 py-2 min-h-[44px] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800 bg-white"
-                  >
-                    {roleOptions.map((option) => (
-                      <option key={option.code} value={option.code}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Status Akun</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3 py-2 min-h-[44px] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800 bg-white"
-                  >
-                    <option value="Aktif">Aktif</option>
-                    <option value="Nonaktif">Nonaktif</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
-                <p className="text-[11px] text-amber-900 leading-relaxed">
-                  <strong>Pemisahan admin per aplikasi.</strong> Panel LPM hanya menerima peran
-                  Administrator LPM, Superadmin, dan Dosen/Auditor. Peran admin aplikasi lain
-                  ({deniedRoleLabels.join(', ')}) ditolak server bila ditugaskan di sini.
-                </p>
-                <p className="text-[10px] text-amber-800/80 mt-1.5">
-                  {rolesFromServer
-                    ? 'Daftar peran tersinkron dengan /api/auth/app-roles.'
-                    : 'Daftar peran memakai konstanta lokal (endpoint peran belum merespons).'}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Fakultas</label>
-                  <input
-                    type="text"
-                    value={formData.fakultas}
-                    onChange={(e) => setFormData({ ...formData, fakultas: e.target.value })}
-                    placeholder="Fakultas Sains dan Teknologi"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Program Studi</label>
-                  <input
-                    type="text"
-                    value={formData.prodi}
-                    onChange={(e) => setFormData({ ...formData, prodi: e.target.value })}
-                    placeholder="Sistem Informasi"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-800"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end gap-2.5 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-semibold cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl font-semibold shadow-xs cursor-pointer"
-                >
-                  {editingUser ? 'Simpan Perubahan' : 'Buat Pengguna'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Form tambah/ubah pengguna kini halaman penuh: /admin/pengguna/tambah & /admin/pengguna/edit/:id */}
+   </div>
   );
 };

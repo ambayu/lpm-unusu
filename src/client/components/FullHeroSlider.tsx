@@ -53,23 +53,57 @@ const defaultHeroSlides: HeroSlideItem[] = [
 
 export const FullHeroSlider: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const touchStartX = React.useRef<number | null>(null);
+  const touchEndX = React.useRef<number | null>(null);
 
   useEffect(() => {
+    if (isPaused) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % defaultHeroSlides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isPaused]);
 
+  const goTo = (index: number) => setCurrentSlide(index);
   const prevSlide = () =>
     setCurrentSlide((prev) => (prev === 0 ? defaultHeroSlides.length - 1 : prev - 1));
   const nextSlide = () =>
     setCurrentSlide((prev) => (prev + 1) % defaultHeroSlides.length);
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLElement>) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+    touchEndX.current = null;
+    setIsPaused(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLElement>) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current !== null && touchEndX.current !== null) {
+      const distance = touchStartX.current - touchEndX.current;
+      if (distance > 50) nextSlide();
+      else if (distance < -50) prevSlide();
+    }
+    touchStartX.current = null;
+    touchEndX.current = null;
+    setIsPaused(false);
+  };
+
+  const slide = defaultHeroSlides[currentSlide];
+  const counter = `${String(currentSlide + 1).padStart(2, '0')} / ${String(defaultHeroSlides.length).padStart(2, '0')}`;
+
   return (
     <section
       aria-label="Hero Banner Slider"
-      className="relative isolate w-full overflow-hidden bg-slate-950 text-white md:flex md:h-[calc(100vh-5rem)] md:min-h-[560px] md:flex-col md:justify-end"
+      className="relative isolate w-full overflow-hidden bg-slate-950 text-white md:flex md:h-[calc(100vh-5rem)] md:min-h-[560px] md:flex-col md:justify-end select-none"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {/* 
         Mobile: Aspek 1:1 memakai aset khusus mobile agar visual utuh.
@@ -88,66 +122,73 @@ export const FullHeroSlider: React.FC = () => {
               <img
                 src={item.image}
                 alt={item.title}
+                width={1280}
+                height={720}
                 className="h-full w-full object-cover object-center"
                 loading={index === 0 ? "eager" : "lazy"}
+                decoding="async"
               />
             </picture>
 
             {/* Gradient Scrim Tipis agar teks terbaca kontras & elegan */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent md:from-slate-950/85 md:via-slate-950/20" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/25 to-transparent" />
           </div>
         ))}
       </div>
 
-      {/* Konten Kata-Kata Dikit Elegan di Bagian Bawah Hero */}
-      <div className="relative z-20 px-4 sm:px-6 lg:px-8 py-8 md:py-12 max-w-7xl mx-auto w-full">
-        <div className="max-w-2xl space-y-3">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-amber-400 text-slate-950 shadow-md">
-            <span>{defaultHeroSlides[currentSlide].badge}</span>
+      {/* Konten di kiri-bawah, kontrol slider di kanan-bawah */}
+      <div className="relative z-20 px-4 sm:px-6 lg:px-8 pb-8 md:pb-12 pt-20 max-w-7xl mx-auto w-full">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl space-y-3.5">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-amber-400 text-slate-950 w-fit">
+              <span>{slide.badge}</span>
+            </div>
+
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight leading-[1.1] drop-shadow-md">
+              {slide.headline}
+            </h2>
+
+            <p className="text-xs sm:text-sm md:text-base text-slate-200 leading-relaxed max-w-xl font-normal">
+              {slide.subheadline}
+            </p>
           </div>
 
-          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white tracking-normal leading-tight drop-shadow-md">
-            {defaultHeroSlides[currentSlide].headline}
-          </h2>
+          <div className="flex items-center justify-between gap-4 shrink-0 lg:flex-col lg:items-end lg:gap-3">
+            <div className="flex items-center gap-2">
+              {defaultHeroSlides.map((item, idx) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => goTo(idx)}
+                  aria-label={`Slide ${idx + 1}: ${item.title}`}
+                  aria-current={idx === currentSlide}
+                  className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                    idx === currentSlide ? "w-8 bg-amber-400" : "w-2 bg-white/40 hover:bg-white/70"
+                  }`}
+                />
+              ))}
+            </div>
 
-          <p className="text-xs sm:text-sm text-slate-200 leading-relaxed max-w-xl drop-shadow-xs font-normal">
-            {defaultHeroSlides[currentSlide].subheadline}
-          </p>
-        </div>
-
-        {/* Bar Navigasi Slider & Dots */}
-        <div className="mt-6 pt-4 border-t border-white/20 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            {defaultHeroSlides.map((item, idx) => (
+            <div className="flex items-center gap-2">
               <button
-                key={item.id}
                 type="button"
-                onClick={() => setCurrentSlide(idx)}
-                aria-label={`Slide ${idx + 1}: ${item.title}`}
-                className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                  idx === currentSlide ? "w-8 bg-amber-400" : "w-2 bg-white/40 hover:bg-white/70"
-                }`}
-              />
-            ))}
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={prevSlide}
-              aria-label="Slide Sebelumnya"
-              className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center backdrop-blur-xs border border-white/20 transition-all cursor-pointer"
-            >
-              <ChevronLeftIcon className="w-4 h-4 text-amber-300" />
-            </button>
-            <button
-              type="button"
-              onClick={nextSlide}
-              aria-label="Slide Berikutnya"
-              className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center backdrop-blur-xs border border-white/20 transition-all cursor-pointer"
-            >
-              <ChevronRightIcon className="w-4 h-4 text-amber-300" />
-            </button>
+                onClick={prevSlide}
+                aria-label="Slide Sebelumnya"
+                className="min-h-[44px] w-11 h-11 rounded-[8px] bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border border-white/25 transition-colors cursor-pointer"
+              >
+                <ChevronLeftIcon className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={nextSlide}
+                aria-label="Slide Berikutnya"
+                className="min-h-[44px] w-11 h-11 rounded-[8px] bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border border-white/25 transition-colors cursor-pointer"
+              >
+                <ChevronRightIcon className="w-4 h-4" />
+              </button>
+              <span className="text-xs font-semibold text-slate-200 ml-1 font-mono">{counter}</span>
+            </div>
           </div>
         </div>
       </div>

@@ -1,25 +1,15 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React from 'react';
 import {
   ShieldCheckIcon,
   AcademicCapIcon,
   BookOpenIcon,
   ClipboardDocumentCheckIcon,
-  ArrowRightIcon,
-  ArrowTopRightOnSquareIcon,
-  Bars3Icon,
-  XMarkIcon,
 } from '@heroicons/react/24/outline';
-import { useAuth } from '../context/AuthContext';
+import { Navbar } from '../components/Navbar';
 import { FullHeroSlider } from '../components/FullHeroSlider';
-import { assetUrl } from '../lib/assets';
-
-const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
+import { TentangPlatform } from '../components/TentangPlatform';
 
 export const LandingPage: React.FC = () => {
-  const { user } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   const ppeppSteps = [
     {
       num: 'P1',
@@ -55,189 +45,53 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans selection:bg-amber-400 selection:text-slate-950">
-      {/* 1. TOP ANNOUNCEMENT STRIP (KUNING EMAS & ROYAL BLUE) */}
+      {/* 1. TOP ANNOUNCEMENT STRIP — identitas aplikasi LPM UNUSU saja
+          (tanpa emblem "Portal Resmi" & tanpa tautan portal lain). */}
       <div className="bg-amber-400 text-slate-950 px-4 py-2 text-xs font-semibold border-b border-amber-500/30">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2 truncate">
-            <span className="bg-blue-950 text-amber-300 text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider font-bold">
-              Portal Resmi
+        <div className="max-w-7xl mx-auto flex items-center justify-center sm:justify-start">
+          <p className="truncate text-center sm:text-left">
+            <span className="font-bold">LPM UNUSU</span>
+            <span className="mx-1.5 text-blue-900" aria-hidden="true">
+              &middot;
             </span>
-            <span className="truncate">Lembaga Penjaminan Mutu — Universitas Nahdlatul Ulama Sumatera Utara</span>
-          </div>
-          <div className="hidden sm:flex items-center space-x-4 text-[11px] font-medium">
-            <a
-              href={`${ONE_UNUSU_URL}/dashboard`}
-              className="flex items-center space-x-1 hover:text-blue-950 transition-colors"
-            >
-              <span>Portal Terpadu ONE UNUSU</span>
-              <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
-            </a>
-          </div>
+            <span>Sistem Penjaminan Mutu Internal</span>
+            <span className="hidden sm:inline">
+              <span className="mx-1.5 text-blue-900" aria-hidden="true">
+                &middot;
+              </span>
+              Universitas Nahdlatul Ulama Sumatera Utara
+            </span>
+          </p>
         </div>
       </div>
 
-      {/* 2. NAVBAR BERSIH (ROYAL BLUE) */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          {/* Logo Brand */}
-          <Link to="/" className="flex items-center space-x-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-blue-900 flex items-center justify-center text-white shadow-md ring-2 ring-blue-800">
-              <ShieldCheckIcon className="w-7 h-7 text-amber-400" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-1.5">
-                <span className="font-bold text-xl text-slate-950 tracking-normal">LPM</span>
-                <span className="font-bold text-xl text-blue-900 tracking-normal">UNUSU</span>
-              </div>
-              <p className="text-[10px] text-slate-500 font-medium tracking-widest uppercase">
-                Penjaminan Mutu Internal
-              </p>
-            </div>
-          </Link>
-
-          {/* Navigasi Utama */}
-          <nav className="hidden md:flex items-center space-x-1 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/60" aria-label="Navigasi utama">
-            <a
-              href="#profil"
-              className="px-4 py-2 text-xs font-medium text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl transition-all"
-            >
-              Profil Lembaga
-            </a>
-            <a
-              href="#spmi"
-              className="px-4 py-2 text-xs font-medium text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl transition-all"
-            >
-              Standar SPMI
-            </a>
-            <a
-              href="#dokumen"
-              className="px-4 py-2 text-xs font-medium text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl transition-all"
-            >
-              Buku Dokumen & SOP
-            </a>
-            <a
-              href="#ami"
-              className="px-4 py-2 text-xs font-medium text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl transition-all"
-            >
-              Audit AMI
-            </a>
-            <a
-              href="#ppepp"
-              className="px-4 py-2 text-xs font-medium text-slate-700 hover:text-blue-900 hover:bg-white rounded-xl transition-all"
-            >
-              Siklus PPEPP
-            </a>
-          </nav>
-
-          {/* Right Action */}
-          <div className="hidden sm:flex items-center space-x-3">
-            {user ? (
-              <Link
-                to="/admin"
-                className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-semibold shadow-md hover:shadow-lg transition-all"
-              >
-                <span>Panel Manajemen</span>
-                <ArrowRightIcon className="w-3.5 h-3.5 text-amber-400" />
-              </Link>
-            ) : (
-              <Link
-                to="/login"
-                className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-semibold shadow-md hover:shadow-lg transition-all"
-              >
-                <span>Masuk</span>
-                <ArrowRightIcon className="w-3.5 h-3.5 text-amber-400" />
-              </Link>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100"
-            aria-label={mobileMenuOpen ? 'Tutup menu' : 'Buka menu'}
-          >
-            {mobileMenuOpen ? <XMarkIcon className="w-6 h-6" /> : <Bars3Icon className="w-6 h-6" />}
-          </button>
-        </div>
-
-        {/* Mobile Dropdown Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-3">
-            <a href="#profil" onClick={() => setMobileMenuOpen(false)} className="block text-xs font-medium text-slate-700 py-1.5">Profil Lembaga</a>
-            <a href="#spmi" onClick={() => setMobileMenuOpen(false)} className="block text-xs font-medium text-slate-700 py-1.5">Standar SPMI</a>
-            <a href="#dokumen" onClick={() => setMobileMenuOpen(false)} className="block text-xs font-medium text-slate-700 py-1.5">Buku Dokumen & SOP</a>
-            <a href="#ami" onClick={() => setMobileMenuOpen(false)} className="block text-xs font-medium text-slate-700 py-1.5">Audit AMI</a>
-            <a href="#ppepp" onClick={() => setMobileMenuOpen(false)} className="block text-xs font-medium text-slate-700 py-1.5">Siklus PPEPP</a>
-            <div className="pt-2 border-t border-slate-100">
-              {user ? (
-                <Link to="/admin" className="w-full text-center block px-4 py-2.5 rounded-xl bg-blue-900 text-white text-xs font-semibold">
-                  Panel Manajemen
-                </Link>
-              ) : (
-                <Link to="/login" className="w-full text-center block px-4 py-2.5 rounded-xl bg-blue-900 text-white text-xs font-semibold">
-                  Masuk
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
-      </header>
+      {/* 2. NAVBAR PUBLIK (komponen baku: brand kiri · menu tengah · aksi kanan)
+          Navbar lama di dalam file ini sudah dihapus agar tidak tampil ganda. */}
+      <Navbar />
 
       {/* 3. HERO FULL SLIDER */}
       <FullHeroSlider />
 
-      {/* 3.5 TENTANG LPM UNUSU (DESAIN SEPERTI PROFIL ONE UNUSU) */}
-      <section id="profil" aria-labelledby="profil-lpm-title" className="bg-white py-16 sm:py-24 border-b border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
-          <div className="lg:col-span-6">
-            <div className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-widest text-blue-900 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full inline-block">
-                Tentang Lembaga
-              </span>
-              <h2 id="profil-lpm-title" className="text-2xl sm:text-4xl font-bold text-slate-950 tracking-tight pt-2">
-                Mengenal LPM UNUSU
-              </h2>
-            </div>
-
-            <div className="mt-6 space-y-4 text-sm sm:text-base leading-relaxed text-slate-600">
-              <p>
-                Lembaga Penjaminan Mutu (LPM) adalah unit pengawal standar mutu akademik dan tata kelola di lingkungan Universitas Nahdlatul Ulama Sumatera Utara, memastikan setiap program studi dan unit kerja bergerak selaras dengan visi institusi.
-              </p>
-              <p>
-                Bukan sekadar pencatatan administratif, LPM UNUSU mengawal implementasi siklus PPEPP secara menyeluruh—mulai dari penetapan standar mutu, pelaksanaan SOP, audit mutu internal (AMI) berbasis data, hingga perumusan tindakan korektif dan peningkatan berkelanjutan.
-              </p>
-            </div>
-
-            <ul className="mt-6 space-y-3">
-              {[
-                'Standar SPMI terintegrasi dengan 24 indikator mutu nasional',
-                'Audit Mutu Internal (AMI) berkala dengan penugasan auditor tersertifikasi',
-                'Repositori digital buku kebijakan, manual mutu, dan SOP resmi',
-              ].map((item, idx) => (
-                <li key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-slate-700">
-                  <span className="mt-0.5 grid size-5 flex-shrink-0 place-items-center rounded-full bg-blue-900 text-amber-400">
-                    <ShieldCheckIcon className="size-3.5" />
-                  </span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Visual Auditor Setengah Badan (Ukuran Lebih Besar & Menawan) */}
-          <div className="lg:col-span-6">
-            <div className="relative mx-auto flex max-w-lg items-end justify-center">
-              <div className="absolute inset-x-2 bottom-0 h-[86%] rounded-[40px] bg-gradient-to-tr from-blue-100/90 via-amber-100/70 to-transparent border border-blue-100" />
-              <img
-                src={assetUrl("/assets/profil-auditor.png")}
-                alt="Auditor Penjaminan Mutu Internal LPM UNUSU"
-                className="relative z-10 block w-full max-w-[480px] sm:max-w-[500px] h-auto object-contain drop-shadow-[0_25px_50px_rgba(30,58,138,0.22)] transition-transform duration-300 hover:scale-[1.02]"
-                loading="lazy"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* 3.5 TENTANG PLATFORM (teks kiri, foto kanan — pola baku ONE UNUSU) */}
+      <TentangPlatform
+        title="Mengenal LPM UNUSU"
+        paragraphs={[
+          'Lembaga Penjaminan Mutu (LPM) adalah unit pengawal standar mutu akademik dan tata kelola di lingkungan Universitas Nahdlatul Ulama Sumatera Utara, memastikan setiap program studi dan unit kerja bergerak selaras dengan visi institusi.',
+          'Bukan sekadar pencatatan administratif, LPM UNUSU mengawal implementasi siklus PPEPP secara menyeluruh—mulai dari penetapan standar mutu, pelaksanaan SOP, audit mutu internal (AMI) berbasis data, hingga perumusan tindakan korektif dan peningkatan berkelanjutan.',
+        ]}
+        bullets={[
+          'Standar SPMI terintegrasi dengan 24 indikator mutu nasional',
+          'Audit Mutu Internal (AMI) berkala dengan penugasan auditor tersertifikasi',
+          'Repositori digital buku kebijakan, manual mutu, dan SOP resmi',
+        ]}
+        portraitSrc="/assets/profil-auditor.png"
+        fallbackSrc="/assets/hero/lpm-hero-1.png"
+        imageAlt="Auditor Penjaminan Mutu Internal LPM UNUSU"
+        accentBg="from-blue-100/90 via-amber-100/70 to-transparent"
+        accentBorder="border-blue-100"
+        bulletBg="bg-blue-900 text-amber-400"
+        eyebrowClass="text-blue-900 bg-blue-50 border-blue-200"
+      />
 
       {/* 4. TIGA PILAR UTAMA */}
       <section id="spmi" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">

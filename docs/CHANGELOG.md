@@ -1,5 +1,23 @@
 # Changelog — LPM UNUSU
 
+## [2026-11-06] — Dashboard Laporan & Template Formulir Seragam
+
+### Changed
+- **Dashboard** (`src/client/pages/Dashboard.tsx`): tombol aksi cepat pada banner ("Tambah Standar", "Catat Temuan AMI") diganti lencana informasi. Enam kartu metrik lama diganti `MetricTile`, dan blok ringkasan audit diganti empat `ReportCard` berisi grafik: donut hasil audit mutu, bar repositori mutu, tiga `GaugeRing` tata kelola akses, serta tabel catatan temuan audit terakhir.
+- **Halaman formulir** (`StandarForm.tsx`, `DokumenForm.tsx`, `AmiForm.tsx`): seluruhnya dimigrasikan ke `FormPageTemplate` sehingga kerangka header, galat, dan baris aksi identik.
+- **Sidebar** (`src/client/components/SidebarLayout.tsx`): `isActive` ditulis ulang dengan batas segmen + kecocokan terpanjang, tetap menghormati alias rute lama (`/admin/users`, `/admin/roles`, `/admin/permissions`). Label grup menu manajemen diseragamkan menjadi **TATA KELOLA** dengan item **Manajemen Pengguna** di paling bawah.
+- **Seksi Tentang Platform** (`src/client/pages/Landing.tsx`): blok "Mengenal LPM UNUSU" yang sebelumnya ditulis inline kini memakai komponen bersama `TentangPlatform` (teks kiri, foto kanan) dan anchor-nya berpindah dari `#profil` ke **`#tentang`**, seragam dengan aplikasi cabang lain. Foto auditor tetap `public/assets/profil-auditor.png`, dengan cadangan `public/assets/hero/lpm-hero-1.png` bila aset potret tidak ditemukan.
+
+### Added
+- `src/client/components/LaporanCharts.tsx`, `src/client/components/FormPageTemplate.tsx`, `src/client/components/TentangPlatform.tsx`.
+
+### Documentation
+- `docs/design-system/COMPONENTS.md` dan `PAGE_TEMPLATES.md` diperbarui (LaporanCharts, TentangPlatform, aturan `isActive`).
+
+### Verification
+- `tsc --noEmit` — bersih. `vite build` — berhasil.
+
+
 Semua perubahan penting pada aplikasi satelit LPM UNUSU didokumentasikan di file ini.
 Format mengikuti standar ISO `[YYYY-MM-DD]`.
 
@@ -127,3 +145,16 @@ Format mengikuti standar ISO `[YYYY-MM-DD]`.
     3. *Core Badge*: Squircle flat navy blue dengan border gembok emas dan angka '1' tegas dengan denyut lembut (pulse).
     4. *Ambient Glow*: Efek pendaran cahaya lembut yang hidup.
 - Mengintegrasikan logo animasi tersebut tepat di atas tombol SSO pada halaman `/login`.
+## [2026-11-06]
+
+### Changed
+- **Hero slider landing** (`src/client/components/FullHeroSlider.tsx`): tata letak dipindah ke pola referensi — teks kiri-bawah, indikator titik di kiri-bawah, tombol panah + penghitung slide `01 / 04` di kanan-bawah (kini tampil di semua ukuran layar, sebelumnya tersembunyi di mobile). Ditambah jeda autoplay saat hover, swipe sentuh, `aria-current` pada titik aktif, serta atribut `width`/`height`/`decoding` pada gambar slide.
+- **Aset hero diganti** (`public/assets/hero/lpm-hero-1..4.png`): empat foto khusus bertema rapat audit mutu, penilaian instrumen, ruang kendali dokumen SPMI, dan briefing AMI. Gambar lama (visual kampus umum) tidak dipakai lagi.
+- **Navbar landing** (`src/client/pages/Landing.tsx`): struktur disamakan dengan ekosistem — brand kiri (logo + LPM UNUSU + subteks), menu tengah, aksi kanan tunggal (`Masuk SSO` / `Panel Manajemen`). Warna `blue-900`/`amber-400` diganti token `lpm-green`/`lpm-gold`; tinggi bar 80px menjadi 64px; menu mobile memakai target 44px.
+- **Welcome banner & kartu profil** (`src/client/pages/Dashboard.tsx`): banner gradien biru-indigo diganti `bg-lpm-green` solid dengan aksen `lpm-gold`, lalu ditambahkan `UserAuthorityCard`.
+
+### Added
+- `src/client/components/UserAuthorityCard.tsx` — kartu otoritas pengguna (`USERNAME`, `HAK AKSES`, `UNIT KERJA`, `STATUS AKUN`) berbasis Heroicons.
+
+### Documentation
+- `docs/design-system/COMPONENTS.md`: registri `UserAuthorityCard`.

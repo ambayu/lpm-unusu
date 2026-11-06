@@ -3,8 +3,6 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowRightIcon,
   ChevronLeftIcon,
-  ShieldExclamationIcon,
-  ArrowTopRightOnSquareIcon,
   XMarkIcon,
   LockClosedIcon,
 } from '@heroicons/react/24/outline';
@@ -15,8 +13,6 @@ import { SSO_ROLE_LABEL } from '../services/api';
 
 const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
 const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || 'lpm-unusu';
-/** Panel LPPM UNUSU — aplikasi cabang terpisah (admin LPPM tidak dapat masuk LPM). */
-const LPPM_PANEL_URL = import.meta.env.VITE_LPPM_URL || 'http://localhost:5178';
 
 /** Ditulis oleh halaman callback SSO ketika server menolak cakupan aplikasi. */
 const DENIED_FLAG_KEY = 'lpm_sso_denied';
@@ -104,7 +100,7 @@ export function LoginPage() {
           <div className="flex flex-col items-center space-y-3">
             <AnimatedFlatSsoLogo
               size={210}
-              onClick={() => { window.location.href = ONE_UNUSU_URL; }}
+              onClick={handleSsoLogin}
             />
             <div className="text-center space-y-1">
               <div className="flex items-center justify-center space-x-1.5">
@@ -160,13 +156,6 @@ export function LoginPage() {
                     )}
                   </p>
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                    <a
-                      href={LPPM_PANEL_URL}
-                      className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-white border border-rose-300 text-[11px] font-bold text-rose-900 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 transition-colors"
-                    >
-                      <span>Masuk ke panel aplikasi Anda</span>
-                      <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" aria-hidden="true" />
-                    </a>
                     <button
                       type="button"
                       onClick={() => setDeniedNotice(null)}
@@ -192,27 +181,6 @@ export function LoginPage() {
             <span>Masuk dengan ONE UNUSU</span>
             <ArrowRightIcon className="w-4 h-4 text-amber-400 group-hover:translate-x-1.5 transition-transform" />
           </button>
-
-          {/* Pemisahan admin per aplikasi — transparan sejak halaman login */}
-          <div className="rounded-2xl border border-[#CBD5E1] bg-slate-50/80 p-4 text-left">
-            <div className="flex items-start gap-2.5">
-              <ShieldExclamationIcon className="w-4 h-4 text-blue-900 flex-shrink-0 mt-0.5" aria-hidden="true" />
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-800">Panel ini khusus LPM UNUSU</p>
-                <p className="mt-1 text-[11px] text-slate-600 leading-relaxed">
-                  Akun administrator LPPM, E-Surat, Sarpras, Akreditasi, dan LMS tidak dapat masuk ke panel
-                  ini. Hak akses diverifikasi ulang oleh server pada setiap permintaan API.
-                </p>
-                <a
-                  href={LPPM_PANEL_URL}
-                  className="mt-2.5 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-white border border-[#CBD5E1] text-[11px] font-bold text-blue-900 hover:bg-blue-50 hover:border-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 transition-colors"
-                >
-                  <span>Buka panel LPPM UNUSU</span>
-                  <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" aria-hidden="true" />
-                </a>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
