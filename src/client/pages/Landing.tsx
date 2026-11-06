@@ -85,11 +85,12 @@ export const LandingPage: React.FC = () => {
           'Audit Mutu Internal (AMI) berkala dengan penugasan auditor tersertifikasi',
           'Repositori digital buku kebijakan, manual mutu, dan SOP resmi',
         ]}
-        portraitSrc="/assets/profil-auditor.png"
+        portraitSrc="/assets/profil-mahasiswa-lpm.png"
         fallbackSrc="/assets/hero/lpm-hero-1.png"
-        imageAlt="Auditor Penjaminan Mutu Internal LPM UNUSU"
-        accentBg="from-lpm-blue-100/90 via-lpm-yellow-400/70 to-transparent"
-        accentBorder="border-lpm-blue-100"
+        imageAlt="Mahasiswa UNUSU membawa laptop dan tas ransel di lingkungan kampus"
+        fotoTransparan
+        panelBg="from-lpm-blue-200 via-lpm-yellow-400 to-lpm-yellow-600"
+        accentBorder="border-lpm-yellow-500"
         bulletBg="bg-lpm-blue-900 text-lpm-yellow-400"
         eyebrowClass="text-lpm-blue-900 border-lpm-blue-900"
       />

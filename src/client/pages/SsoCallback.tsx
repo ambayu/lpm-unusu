@@ -1,25 +1,85 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import {
-  ShieldCheckIcon,
-  ExclamationTriangleIcon,
-  LockClosedIcon,
-  ArrowTopRightOnSquareIcon,
-  UserCircleIcon,
-} from '@heroicons/react/24/outline';
+import { useSearchParams } from 'react-router-dom';
 import { ssoLogin } from '../services/api';
 import type { AppAccessInfo } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { SsoLoadingScreen } from '../components/SsoLoadingScreen';
+import { SsoProblemScreen } from '../components/SsoProblemScreen';
 
 type SsoExchangeResult = Awaited<ReturnType<typeof ssoLogin>>;
 
 const exchangeRequests = new Map<string, Promise<SsoExchangeResult>>();
 
-const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'https://unusu.bpp-developer.com/sso';
-
-/** Penanda sesi ditolak karena peran milik aplikasi lain — dibaca halaman Login. */
+/** Penanda sesi ditolak karena peran milik aplikasi lain, dibaca halaman Login. */
 const DENIED_FLAG_KEY = 'lpm_sso_denied';
+
+/** Alamat bantuan yang ditampilkan pada layar kegagalan masuk. */
+const ALAMAT_BANTUAN = import.meta.env.VITE_BANTUAN_EMAIL || 'lpm@unusu.ac.id';
+
+type Masalah = {
+  jenis: 'kosong' | 'token' | 'jaringan' | 'umum';
+  judul: string;
+  penjelasan: string;
+  langkah: string[];
+  catatan?: string;
+};
+
+/**
+ * Pesan kegagalan yang dibaca pengguna.
+ *
+ * Server mengirim keterangan berbahasa mesin, misalnya "Client ID tidak cocok
+ * dengan aplikasi ini" atau "Verifikasi token SSO gagal". Kalimat seperti itu
+ * tidak memberi tahu pembaca apa yang harus dilakukan, dan justru membuatnya
+ * mengira akunnya bermasalah. Fungsi ini menerjemahkannya menjadi penjelasan
+ * yang menjawab tiga pertanyaan: apa yang terjadi, mengapa, dan apa langkah
+ * berikutnya. Tidak ada nama parameter atau kode internal yang ikut tampil.
+ */
+export function terjemahkanGagalSso(err: any, payload: any): Masalah {
+  const status = err?.response?.status;
+  const pesanServer = String(payload?.message || '').toLowerCase();
+
+  if (status === 401 || pesanServer.includes('token')) {
+    return {
+      jenis: 'token',
+      judul: 'Waktu masuk Anda sudah berakhir',
+      penjelasan:
+        'Tautan masuk yang dipakai hanya berlaku sekali dan dalam waktu singkat. Tautan yang sudah terpakai, terbuka di dua tab, atau didiamkan terlalu lama tidak bisa dipakai lagi.',
+      langkah: [
+        'Tutup tab ini, lalu buka kembali halaman masuk LPM.',
+        'Masuk ulang dari awal agar Anda menerima tautan yang baru.',
+        'Hindari membuka tautan masuk di beberapa tab sekaligus.',
+      ],
+      catatan: 'Akun Anda tidak terkunci. Yang berakhir hanya tautan masuknya.',
+    };
+  }
+
+  if (!err?.response) {
+    return {
+      jenis: 'jaringan',
+      judul: 'Koneksi ke portal kampus terputus',
+      penjelasan:
+        'Perangkat Anda tidak berhasil menghubungi layanan masuk kampus. Ini biasanya terjadi karena jaringan yang tidak stabil atau halaman yang dibuka terlalu lama tanpa aktivitas.',
+      langkah: [
+        'Periksa apakah perangkat Anda masih terhubung ke internet.',
+        'Muat ulang halaman ini, lalu coba masuk kembali.',
+        'Bila memakai jaringan kampus, coba jaringan lain untuk memastikan.',
+      ],
+    };
+  }
+
+  return {
+    jenis: 'umum',
+    judul: 'Proses masuk belum berhasil diselesaikan',
+    penjelasan:
+      'Portal kampus tidak mengembalikan konfirmasi yang dibutuhkan aplikasi, sehingga sesi Anda belum dapat dibuka. Kejadian seperti ini umumnya bersifat sementara dan tidak berkaitan dengan isi akun Anda.',
+    langkah: [
+      'Tutup tab ini, lalu buka kembali halaman masuk LPM.',
+      'Masuk ulang dengan akun ONE UNUSU Anda.',
+      'Bila masih terhenti, hubungi administrator LPM dengan menyebutkan waktu kejadiannya.',
+    ],
+    catatan: 'Tidak ada data yang berubah selama proses ini.',
+  };
+}
 
 function exchangeSsoToken(clientId: string, token: string): Promise<SsoExchangeResult> {
   const key = `${clientId}:${token}`;
@@ -42,15 +102,28 @@ function exchangeSsoToken(clientId: string, token: string): Promise<SsoExchangeR
 export function SsoCallbackPage() {
   const [params] = useSearchParams();
   const { saveSession } = useAuth();
-  const [error, setError] = useState('');
+  const [masalah, setMasalah] = useState<Masalah | null>(null);
   const [denial, setDenial] = useState<AppAccessInfo | null>(null);
 
   useEffect(() => {
     const clientId = params.get('client_id');
     const token = params.get('token');
 
+    // Portal mengirim balik pengguna tanpa tiket bila permintaan izin tidak
+    // selesai. Ini keadaan normal, bukan kerusakan, jadi penjelasannya dibuat
+    // ringan dan tidak menuduh pengguna melakukan kesalahan.
     if (!clientId || !token) {
-      setError('Parameter SSO tidak lengkap. Silakan login ulang dari Portal ONE UNUSU.');
+      setMasalah({
+        jenis: 'kosong',
+        judul: 'Permintaan masuk belum selesai',
+        penjelasan:
+          'Halaman ini terbuka tanpa menyelesaikan langkah persetujuan di portal kampus. Biasanya ini terjadi karena proses sebelumnya dibatalkan atau halaman dimuat ulang di tengah jalan.',
+        langkah: [
+          'Buka halaman masuk LPM dan tekan tombol masuk.',
+          'Selesaikan seluruh langkah di portal kampus tanpa menutup tab.',
+          'Anda akan kembali ke sini secara otomatis setelah persetujuan selesai.',
+        ],
+      });
       return;
     }
 
@@ -60,14 +133,14 @@ export function SsoCallbackPage() {
       try {
         const response = await exchangeSsoToken(clientId, token);
         if (!response.data?.success) {
-          throw new Error(response.data?.message || 'Login SSO gagal');
+          throw new Error('Respons masuk tidak dapat dibaca');
         }
 
         saveSession(response.data.token, response.data.user, response.data.appAccess);
 
         if (!cancelled) {
-          // Setelah login sukses SELALU mendarat di dashboard panel, bukan
-          // halaman publik. BASE_URL dipertahankan untuk deploy di subfolder.
+          // Setelah login sukses SELALU mendarat di panel, bukan halaman publik.
+          // BASE_URL dipertahankan untuk deploy di subfolder.
           const dashboardPath = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/admin`;
           window.location.replace(dashboardPath);
         }
@@ -78,7 +151,8 @@ export function SsoCallbackPage() {
         const access: AppAccessInfo | undefined = payload?.appAccess;
 
         // Token sah di ekosistem, tetapi peran bukan milik aplikasi LPM
-        // (mis. ADMIN_LPPM). Tampilkan penolakan terstruktur, bukan error generik.
+        // (mis. ADMIN_LPPM). Penolakan ditampilkan sebagai rincian peran,
+        // bukan pesan galat umum, karena akunnya sendiri tidak bermasalah.
         if (access && access.allowed === false) {
           setDenial(access);
           try {
@@ -92,11 +166,7 @@ export function SsoCallbackPage() {
           return;
         }
 
-        setError(
-          payload?.message ||
-            err.message ||
-            'Gagal memverifikasi token SSO. Token mungkin sudah kedaluwarsa atau telah digunakan.'
-        );
+        setMasalah(terjemahkanGagalSso(err, payload));
       }
     })();
 
@@ -105,14 +175,11 @@ export function SsoCallbackPage() {
     };
   }, [params, saveSession]);
 
-  const isForeignAdmin = denial?.reason === 'foreign_app_admin';
-
   // Verifikasi tiket menunggu request jaringan nyata (server-to-server), jadi
   // layar tunggu penuh memang pantas ditampilkan. Gayanya disamakan dengan
   // layar tunggu di halaman login supaya seluruh rangkaian masuk terasa satu
-  // alur, bukan beberapa halaman berbeda. Penolakan akses (`denial`) dan gagal
-  // verifikasi (`error`) tetap memakai kartu penjelasan di bawah.
-  if (!error && !denial) {
+  // alur, bukan beberapa halaman berbeda.
+  if (!masalah && !denial) {
     return (
       <SsoLoadingScreen
         title="Memverifikasi tiket masuk"
@@ -121,134 +188,19 @@ export function SsoCallbackPage() {
     );
   }
 
+  // Penolakan peran tidak diulang lewat tombol, karena menukar ulang tiket pasti
+  // berakhir sama. Yang ditawarkan adalah membuka portal agar peran diperbaiki.
+  const bolehUlangi =
+    !denial &&
+    masalah !== null &&
+    (masalah.jenis === 'token' || masalah.jenis === 'jaringan' || masalah.jenis === 'umum');
+
   return (
-    <div className="min-h-screen bg-[#F1F5F2] flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-xl">
-        <div className="bg-white rounded-[14px] border border-[#CBD5E1] shadow-2xs overflow-hidden">
-          {/* Header card — pola CardContainer Part 10.8 */}
-          <div className="px-5 py-3.5 border-b border-[#CBD5E1] bg-[#F8FAFC] flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span
-                className={`w-8 h-8 rounded-[10px] border flex items-center justify-center ${
-                  denial
-                    ? 'bg-rose-50 border-rose-200 text-rose-700'
-                    : 'bg-lpm-blue-50 border-lpm-blue-200 text-lpm-blue-800'
-                }`}
-              >
-                {denial ? (
-                  <LockClosedIcon className="w-4 h-4" />
-                ) : (
-                  <ShieldCheckIcon className="w-4 h-4" />
-                )}
-              </span>
-              <div>
-                <h1 className="text-sm sm:text-base font-bold text-slate-900">
-                  {denial ? 'Akses Panel Ditolak' : error ? 'Login SSO Gagal' : 'Memverifikasi Sesi SSO'}
-                </h1>
-                <p className="text-xs text-slate-500">
-                  {denial ? 'Pemisahan administrator per aplikasi' : 'Portal ONE UNUSU ke LPM UNUSU'}
-                </p>
-              </div>
-            </div>
-            {denial && (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-[11px] font-bold text-rose-700">
-                403
-              </span>
-            )}
-          </div>
-
-          <div className="p-5 sm:p-6 space-y-4">
-            {denial ? (
-              <>
-                <div className="flex items-start gap-3">
-                  <div className="w-11 h-11 rounded-[12px] bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center flex-shrink-0">
-                    <ExclamationTriangleIcon className="w-6 h-6" />
-                  </div>
-                  <div className="min-w-0">
-                    <h2 className="text-base font-bold text-slate-900 leading-snug">
-                      {isForeignAdmin
-                        ? 'Akun Anda adalah administrator aplikasi lain'
-                        : 'Peran Anda tidak memiliki akses ke LPM UNUSU'}
-                    </h2>
-                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-1.5">
-                      {denial.message}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-[12px] border border-[#CBD5E1] bg-[#F8FAFC] divide-y divide-[#E2E8F0]">
-                  <div className="px-4 py-3 flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                      <UserCircleIcon className="w-4 h-4" /> Peran SSO
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-[11px] font-bold text-rose-700">
-                      {denial.ssoRole || '—'}
-                    </span>
-                  </div>
-                  <div className="px-4 py-3 flex items-center justify-between gap-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                      Panel Tujuan
-                    </span>
-                    <span className="text-xs font-semibold text-slate-900">{denial.appName}</span>
-                  </div>
-                  <div className="px-4 py-3 flex items-center justify-between gap-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                      Peran Milik
-                    </span>
-                    <span className="text-xs font-semibold text-slate-900">
-                      {denial.foreignApp?.name || 'Aplikasi lain di ekosistem ONE UNUSU'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-[12px] border border-lpm-yellow-400 bg-lpm-yellow-400 px-4 py-3">
-                  <p className="text-[11px] sm:text-xs text-lpm-yellow-400 leading-relaxed">
-                    Satu akun ONE UNUSU boleh memiliki peran di banyak aplikasi, tetapi setiap panel
-                    hanya menerima peran miliknya sendiri. Bila Anda memang bertugas di LPM, minta
-                    Superadmin ONE UNUSU menambahkan peran <strong>ADMIN_LPM</strong> pada akun Anda.
-                  </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
-                  <a
-                    href={ONE_UNUSU_URL}
-                    className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-[12px] bg-lpm-blue-900 hover:bg-lpm-blue-800 text-white text-xs font-bold shadow-xs transition-colors"
-                  >
-                    <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-                    Buka Portal ONE UNUSU
-                  </a>
-                  <Link
-                    to="/login"
-                    className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-[12px] bg-white border border-[#CBD5E1] hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-colors"
-                  >
-                    Kembali ke Halaman Login
-                  </Link>
-                </div>
-              </>
-            ) : (
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 mb-4 ring-4 ring-rose-100">
-                  <ExclamationTriangleIcon className="w-7 h-7" />
-                </div>
-                <h2 className="text-lg font-bold text-slate-900 mb-2">Login SSO Gagal</h2>
-                <p className="text-xs text-slate-600 mb-6 leading-relaxed" role="alert">
-                  {error}
-                </p>
-                <Link
-                  to="/login"
-                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl bg-lpm-blue-900 text-white text-xs font-bold hover:bg-lpm-blue-800 transition-all shadow-xs"
-                >
-                  Kembali ke Halaman Login
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <p className="text-center text-[11px] text-slate-500 mt-4">
-          LPM UNUSU · Otorisasi berbasis cakupan aplikasi (app-scoped role)
-        </p>
-      </div>
-    </div>
+    <SsoProblemScreen
+      masalah={masalah}
+      denial={denial}
+      alamatBantuan={ALAMAT_BANTUAN}
+      onCobaLagi={bolehUlangi ? () => window.location.reload() : undefined}
+    />
   );
 }

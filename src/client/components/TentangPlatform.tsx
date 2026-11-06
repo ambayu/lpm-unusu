@@ -12,14 +12,26 @@ interface TentangPlatformProps {
   /** Path gambar cadangan bila potret belum tersedia. */
   fallbackSrc?: string;
   imageAlt?: string;
-  accentBg?: string;
+  /**
+   * Panel aksen di belakang foto. Hanya satu warna, bukan gradasi biru-kuning,
+   * mengikuti komposisi seksi "Mengenal" di ONE UNUSU.
+   */
+  panelBg?: string;
   accentBorder?: string;
   bulletBg?: string;
   eyebrowClass?: string;
+  /**
+   * `true` untuk foto PNG transparan (subjek sudah dipotong dari latarnya).
+   * Foto seperti ini tidak boleh dipotong `object-cover`, karena pemotongan
+   * hanya memakan ruang kosong transparan sementara subjeknya tetap utuh.
+   * Cukup dikunci dengan `object-contain` dan diberi bayangan lembut supaya
+   * menyatu dengan panel di belakangnya.
+   */
+  fotoTransparan?: boolean;
 }
 
 /**
- * TentangPlatform — seksi "Tentang Platform" dengan pola baku ONE UNUSU:
+ * TentangPlatform - seksi "Tentang Platform" dengan pola baku ONE UNUSU:
  * teks di kiri (eyebrow + judul + paragraf + poin centang), gambar di kanan.
  *
  * Gambar potret (`portraitSrc`) adalah aset utama. Bila aset potret belum
@@ -37,10 +49,11 @@ export const TentangPlatform: React.FC<TentangPlatformProps> = ({
   portraitSrc,
   fallbackSrc,
   imageAlt = '',
-  accentBg = 'from-lpm-blue-100/90 via-lpm-yellow-400/60 to-transparent',
-  accentBorder = 'border-lpm-blue-100',
+  panelBg = 'from-lpm-blue-200 via-lpm-yellow-400 to-lpm-yellow-600',
+  accentBorder = 'border-lpm-yellow-500',
   bulletBg = 'bg-lpm-blue-800 text-lpm-yellow-400',
   eyebrowClass = 'text-lpm-blue-800 border-lpm-blue-800',
+  fotoTransparan = false,
 }) => {
   const [usePortrait, setUsePortrait] = useState(Boolean(portraitSrc));
   const base = import.meta.env.BASE_URL || '/';
@@ -51,7 +64,7 @@ export const TentangPlatform: React.FC<TentangPlatformProps> = ({
     <section
       id={id}
       aria-labelledby={`${id}-title`}
-      className="bg-lpm-blue-50 py-16 sm:py-24 border-b border-lpm-blue-200"
+      className="bg-white py-16 sm:py-24 border-b border-lpm-blue-200"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
         {/* KIRI — teks */}
@@ -97,9 +110,19 @@ export const TentangPlatform: React.FC<TentangPlatformProps> = ({
 
         {/* KANAN — gambar */}
         <div className="lg:col-span-6">
-          <div className="relative mx-auto flex max-w-lg items-end justify-center">
+          <div className="relative mx-auto flex w-full max-w-2xl items-end justify-center">
+            {/* Panel aksen: gradasi diagonal dari biru muda di sudut kiri bawah
+                ke kuning LPM, mengikuti komposisi seksi "Mengenal" di ONE
+                UNUSU. Biru hanya menyentuh satu sudut sebagai aksen, bukan
+                menyebar ke seluruh panel, sehingga kuning tetap menjadi warna
+                utama. Arah diagonal memberi bidang ini arah cahaya, tidak
+                seperti kotak warna datar. Tanpa garis tepi agar panel menyatu
+                dengan latar putih. Bila foto transparan, panel dibuat lebih
+                pendek agar subjek terlihat berdiri di atasnya. */}
             <div
-              className={`absolute inset-x-2 bottom-0 h-[86%] rounded-[40px] border bg-gradient-to-tr ${accentBg} ${accentBorder}`}
+              className={`absolute inset-x-2 bottom-0 rounded-[32px] bg-gradient-to-tr ${panelBg} ${
+                fotoTransparan ? 'h-[74%]' : 'h-[86%]'
+              }`}
               aria-hidden="true"
             />
             {src && (
@@ -111,7 +134,11 @@ export const TentangPlatform: React.FC<TentangPlatformProps> = ({
                 onError={() => {
                   if (usePortrait && fallbackSrc) setUsePortrait(false);
                 }}
-                className="relative z-10 w-full rounded-[28px] object-cover shadow-[0_24px_60px_-24px_rgba(15,23,42,0.35)]"
+                className={
+                  fotoTransparan
+                    ? 'relative z-10 block h-auto w-full max-w-[560px] object-contain drop-shadow-[0_20px_40px_rgba(15,23,42,0.18)]'
+                    : 'relative z-10 w-full rounded-[28px] object-cover shadow-[0_24px_60px_-24px_rgba(15,23,42,0.35)]'
+                }
               />
             )}
           </div>
