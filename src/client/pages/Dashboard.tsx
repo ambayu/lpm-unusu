@@ -8,7 +8,6 @@ import {
   ShieldCheckIcon,
   KeyIcon,
   ArrowRightIcon,
-  ArrowPathIcon,
   ArrowTrendingUpIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -17,7 +16,6 @@ import {
   DocumentCheckIcon,
   LockClosedIcon,
   ClipboardDocumentListIcon,
-  Squares2X2Icon,
 } from '@heroicons/react/24/outline';
 import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
@@ -289,58 +287,6 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       </section>
-
-      {/* 2. KARTU RINGKASAN */}
-      <div className="w-full min-w-0 bg-white border border-[#CBD5E1] rounded-[16px] shadow-xs overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 sm:p-6">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
-                Ringkasan Mutu LPM UNUSU
-              </h2>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-lpm-blue-50 border border-lpm-blue-200 text-[11px] font-bold text-lpm-blue-900">
-                <Squares2X2Icon className="w-3.5 h-3.5" aria-hidden="true" />
-                Siklus PPEPP
-              </span>
-            </div>
-            <p className="mt-1.5 text-xs sm:text-sm text-slate-500 leading-relaxed">
-              Rekap Standar SPMI, Dokumen Mutu, temuan AMI, dan tata kelola akses panel LPM UNUSU.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <button
-              type="button"
-              onClick={loadData}
-              disabled={loading}
-              aria-label="Segarkan data statistik LPM"
-              title="Muat ulang data"
-              className="inline-flex items-center px-3.5 py-2.5 rounded-[12px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-lpm-blue-700 disabled:opacity-60 cursor-pointer"
-            >
-              <ArrowPathIcon
-                className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`}
-                aria-hidden="true"
-              />
-              <span>Segarkan</span>
-            </button>
-            <Link
-              to="/admin/standar"
-              aria-label="Buka pangkalan Standar SPMI"
-              className="inline-flex items-center px-4 py-2.5 rounded-[12px] bg-lpm-blue-900 hover:bg-lpm-blue-950 text-white font-bold text-xs shadow-xs transition min-h-[44px] focus:outline-none focus:ring-2 focus:ring-lpm-blue-700"
-            >
-              <AcademicCapIcon className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
-              <span>Standar SPMI</span>
-            </Link>
-          </div>
-        </div>
-        <div className="px-5 sm:px-6 py-4 border-t border-[#CBD5E1]">
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Seluruh angka di bawah dihitung langsung dari basis data penjaminan mutu (Standar SPMI,
-            Dokumen Mutu, Indikator, Audit Butir, dan Tindak Lanjut). Bila data modul lain baru
-            berubah, gunakan tombol <span className="font-semibold text-slate-800">Segarkan</span>{' '}
-            untuk mengambil kondisi terbaru.
-          </p>
-        </div>
-      </div>
 
       {/* 3. ERROR STATE */}
       {error && (
