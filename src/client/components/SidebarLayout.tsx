@@ -17,6 +17,8 @@ import {
   UsersIcon,
   KeyIcon,
   UserCircleIcon,
+  GlobeAltIcon,
+  IdentificationIcon,
 } from '@heroicons/react/24/outline';
 
 interface SidebarLayoutProps {
@@ -525,7 +527,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 aria-haspopup="menu"
                 aria-expanded={profileDropdownOpen}
-                className="flex items-center gap-2.5 p-1.5 pr-3 min-h-[44px] rounded-full border border-[#CBD5E1] bg-white hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+                className="flex items-center gap-2.5 px-3 py-1.5 min-h-[44px] border-x border-[#CBD5E1] bg-transparent hover:bg-slate-50 transition-colors cursor-pointer focus:outline-none"
               >
                 <div className="w-8 h-8 rounded-full bg-lpm-blue-900 text-white flex items-center justify-center font-bold text-xs ring-1 ring-lpm-blue-800">
                   {user?.nama ? user.nama.charAt(0).toUpperCase() : 'A'}
@@ -536,7 +538,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                   </div>
                   <div className="text-[10px] text-lpm-blue-900 font-semibold">{roleLabel}</div>
                 </div>
-                <ChevronDownIcon className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
+                <ChevronDownIcon className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${profileDropdownOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
               </button>
 
               {/* Profile Dropdown Popup */}
@@ -556,32 +558,37 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                       Cakupan akses: <span className="font-semibold text-slate-600">Panel LPM UNUSU</span>
                     </p>
                   </div>
-                  <Link
-                    to="/"
-                    onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-2 px-4 min-h-[44px] text-slate-700 hover:bg-lpm-blue-50 hover:text-lpm-blue-900 transition-colors"
-                  >
-                    <HomeIcon className="w-4 h-4 text-slate-400" aria-hidden="true" />
-                    <span>Halaman Depan LPM</span>
-                  </Link>
-                  <Link
-                    to="/admin/profil"
-                    onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-2 px-4 min-h-[44px] text-slate-700 hover:bg-lpm-blue-50 hover:text-lpm-blue-900 transition-colors"
-                  >
-                    <UserCircleIcon className="w-4 h-4 text-slate-400" aria-hidden="true" />
-                    <span>Profil</span>
-                  </Link>
-                  <button
-                    onClick={() => {
-                      setProfileDropdownOpen(false);
-                      logout();
-                    }}
-                    className="w-full flex items-center gap-2 px-4 min-h-[44px] text-rose-700 hover:bg-rose-50 transition-colors text-left font-semibold cursor-pointer border-t border-slate-100"
-                  >
-                    <ArrowRightOnRectangleIcon className="w-4 h-4" aria-hidden="true" />
-                    <span>Keluar Akun</span>
-                  </button>
+                  <div className="py-1">
+                    <Link
+                      to="/"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-lpm-blue-50 hover:text-lpm-blue-900 transition-colors font-medium"
+                    >
+                      <GlobeAltIcon className="w-4 h-4 text-lpm-blue-900" aria-hidden="true" />
+                      <span>Halaman Depan</span>
+                    </Link>
+                    <Link
+                      to="/admin/profil"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-lpm-blue-50 hover:text-lpm-blue-900 transition-colors font-medium"
+                    >
+                      <IdentificationIcon className="w-4 h-4 text-lpm-blue-900" aria-hidden="true" />
+                      <span>Biodata Saya</span>
+                    </Link>
+                  </div>
+                  <div className="pt-1 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        logout();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-rose-700 hover:bg-rose-50 transition-colors text-left font-semibold cursor-pointer"
+                    >
+                      <ArrowRightOnRectangleIcon className="w-4 h-4 text-rose-700" aria-hidden="true" />
+                      <span>Keluar dari Akun</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

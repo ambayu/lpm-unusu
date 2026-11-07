@@ -40,7 +40,7 @@ import type { AppAccessInfo } from '../services/api';
  * kontrasnya tidak memadai.
  */
 
-const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'https://unusu.bpp-developer.com/sso';
+const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
 
 type Masalah = {
   judul: string;
