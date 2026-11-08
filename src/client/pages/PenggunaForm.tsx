@@ -3,176 +3,171 @@ import { useParams } from 'react-router-dom';
 import { FormPageTemplate } from '../components/FormPageTemplate';
 import { CardContainer } from '../components/CardContainer';
 import { useAuth } from '../context/AuthContext';
-import { SSO_ROLE_LABEL, LPM_APP_ROLES, fetchAppRoles } from '../services/api';
+import {
+  fetchRbacPengguna,
+  fetchRbacPeran,
+  createRbacPengguna,
+  updateRbacPengguna,
+  type RbacPeran,
+} from '../services/api';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
-
-interface UserDetail {
-  id: number | string;
-  username: string;
-  nama: string;
-  email?: string;
-  role: string;
-  ssoRole?: string;
-  fakultas?: string;
-  prodi?: string;
-  status?: string;
-}
 
 /**
  * PenggunaFormPage — halaman penuh tambah/ubah pengguna LPM.
  *
- * Menggantikan modal `Modal Add / Edit User` pada `Users.tsx`.
  * Rute: `/admin/pengguna/tambah` dan `/admin/pengguna/edit/:id`.
- * Setelah berhasil menyimpan, pengguna tetap di halaman formulir.
+ *
+ * Peran yang dipilih di sini adalah PERAN LPM (admin / dosen / mahasiswa),
+ * bukan peran SSO mentah. Izin pengguna diturunkan dari peran tersebut —
+ * itulah sebabnya formulir memakai `peran: string[]`, bukan `ssoRole`.
  */
 export const PenggunaFormPage: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
-  const { user: currentUser } = useAuth();
+  const { bisa } = useAuth();
+  const bolehSimpan = isEdit ? bisa('pengguna:update') : bisa('pengguna:create');
 
-  const [loading, setLoading] = useState(isEdit);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sukses, setSukses] = useState<string | null>(null);
-
-  // Peran sah versi server; fallback konstanta lokal bila endpoint tak tersedia.
-  const [roleOptions, setRoleOptions] = useState<{ code: string; label: string }[]>(
-    LPM_APP_ROLES.map((code) => ({ code, label: SSO_ROLE_LABEL[code] || code }))
-  );
+  const [opsiPeran, setOpsiPeran] = useState<RbacPeran[]>([]);
 
   const [formData, setFormData] = useState({
+    userId: '' as string,
     username: '',
     nama: '',
     email: '',
-    role: 'dosen',
-    ssoRole: 'DOSEN',
-    fakultas: 'Fakultas Sains dan Teknologi',
-    prodi: 'Sistem Informasi',
+    ssoRole: '',
     status: 'Aktif',
+    peran: [] as string[],
   });
 
-  const authHeaders = (): HeadersInit => {
-    const token =
-      localStorage.getItem('lpm_unusu_token') || localStorage.getItem('lpm_token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
-
-  // Cakupan peran dari server.
+  // Muat daftar peran (sumber: tabel lpm_roles via API).
   useEffect(() => {
     let aktif = true;
-    fetchAppRoles()
+    fetchRbacPeran()
       .then((res) => {
         if (!aktif || !res.data?.success) return;
-        const allowed = res.data.data ?? [];
-        if (allowed.length > 0) {
-          setRoleOptions(allowed.map((item) => ({ code: item.code, label: item.label })));
-        }
+        setOpsiPeran(res.data.data);
       })
       .catch(() => {
-        /* fallback konstanta lokal sudah terpasang */
+        /* dibiarkan kosong — peringatan ditampilkan bila tidak ada peran */
       });
     return () => {
       aktif = false;
     };
   }, []);
 
-  // Mode ubah: muat detail pengguna.
+  // Mode ubah: muat detail pengguna dari API RBAC.
   useEffect(() => {
-    if (!isEdit || !id) return;
     let aktif = true;
     setLoading(true);
-    fetch('/api/users', { credentials: 'include', headers: authHeaders() })
-      .then((res) => {
-        if (!res.ok) throw new Error('Gagal memuat daftar pengguna.');
-        return res.json();
-      })
-      .then((json) => {
+
+    const muat = async () => {
+      if (!isEdit || !id) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await fetchRbacPengguna();
         if (!aktif) return;
-        const daftar: UserDetail[] = json.data || [];
+        const daftar = res.data?.data ?? [];
         const pengguna = daftar.find((u) => String(u.id) === String(id));
         if (!pengguna) {
           setError('Pengguna tidak ditemukan. Mungkin sudah dihapus.');
           return;
         }
         setFormData({
+          userId: String(pengguna.userId ?? ''),
           username: pengguna.username,
           nama: pengguna.nama,
           email: pengguna.email || '',
-          role: pengguna.role,
-          ssoRole: pengguna.ssoRole || 'DOSEN',
-          fakultas: pengguna.fakultas || '',
-          prodi: pengguna.prodi || '',
+          ssoRole: pengguna.ssoRole || '',
           status: pengguna.status || 'Aktif',
+          peran: pengguna.peran,
         });
-      })
-      .catch((err: any) => {
-        if (aktif) setError(err.message || 'Gagal memuat detail pengguna.');
-      })
-      .finally(() => {
+      } catch (err: any) {
+        if (aktif) {
+          setError(err?.response?.data?.message || err.message || 'Gagal memuat detail pengguna.');
+        }
+      } finally {
         if (aktif) setLoading(false);
-      });
+      }
+    };
+
+    muat();
     return () => {
       aktif = false;
     };
   }, [id, isEdit]);
 
+  const togglePeran = (kode: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      peran: prev.peran.includes(kode)
+        ? prev.peran.filter((p) => p !== kode)
+        : [...prev.peran, kode],
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSukses(null);
-    setSubmitting(true);
     setError(null);
 
+    if (formData.peran.length === 0) {
+      setError('Pilih minimal satu peran. Izin pengguna diturunkan dari peran yang diberikan.');
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...authHeaders(),
-      };
-
-      const url = isEdit && id ? `/api/users/${id}` : '/api/users';
-      const method = isEdit ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers,
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Gagal menyimpan pengguna.');
-      }
-
-      if (isEdit) {
+      if (isEdit && id) {
+        await updateRbacPengguna(id, {
+          nama: formData.nama,
+          email: formData.email || null,
+          ssoRole: formData.ssoRole || null,
+          status: formData.status,
+          peran: formData.peran,
+        });
         setSukses(`Perubahan data pengguna "${formData.nama}" berhasil disimpan.`);
       } else {
+        const userIdNum = Number(formData.userId);
+        if (!Number.isFinite(userIdNum) || userIdNum <= 0) {
+          throw new Error('ID pengguna ONE UNUSU wajib berupa angka positif.');
+        }
+        await createRbacPengguna({
+          userId: userIdNum,
+          username: formData.username,
+          nama: formData.nama,
+          email: formData.email || null,
+          ssoRole: formData.ssoRole || null,
+          status: formData.status,
+          peran: formData.peran,
+        });
         setSukses(`Pengguna "${formData.nama}" berhasil ditambahkan.`);
         setFormData({
+          userId: '',
           username: '',
           nama: '',
           email: '',
-          role: 'dosen',
-          ssoRole: 'DOSEN',
-          fakultas: 'Fakultas Sains dan Teknologi',
-          prodi: 'Sistem Informasi',
+          ssoRole: '',
           status: 'Aktif',
+          peran: [],
         });
       }
     } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan sistem.');
+      setError(err?.response?.data?.message || err.message || 'Terjadi kesalahan sistem.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const isAdmin =
-    currentUser?.ssoRole === 'SUPERADMIN' ||
-    currentUser?.ssoRole === 'ADMIN_LPM';
-
   return (
     <FormPageTemplate
       title={isEdit ? 'Edit Pengguna LPM' : 'Tambah Pengguna Baru'}
-      description="Akun pengguna LPM UNUSU terhubung langsung dengan ONE UNUSU SSO. Peran menentukan cakupan modul yang dapat diakses."
+      description="Akun pengguna LPM UNUSU terhubung langsung dengan ONE UNUSU SSO. Izin akses diturunkan dari peran yang dipilih."
       badge={
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-lpm-blue-50 border border-lpm-blue-200 text-[10px] font-bold uppercase tracking-wider text-lpm-blue-900">
           <UserCircleIcon className="w-3.5 h-3.5" aria-hidden="true" />
@@ -197,9 +192,9 @@ export const PenggunaFormPage: React.FC = () => {
         </div>
       )}
 
-      {!isAdmin && (
+      {!bolehSimpan && (
         <div className="p-4 rounded-[12px] bg-lpm-yellow-400 border border-lpm-yellow-400 text-lpm-blue-900 text-xs font-semibold">
-          Hanya Administrator LPM yang boleh menambah atau mengubah pengguna.
+          Anda tidak memiliki izin untuk menambah atau mengubah pengguna LPM.
         </div>
       )}
 
@@ -211,21 +206,39 @@ export const PenggunaFormPage: React.FC = () => {
         <>
           <CardContainer
             title="Identitas Pengguna"
-            subtitle="Username biasanya berupa NIDN atau NIM yang dipakai pada SSO kampus."
+            subtitle="Data ini mengikuti akun ONE UNUSU — username biasanya NIDN atau NIM."
           >
             <div className="space-y-3.5">
               <div>
+                <label htmlFor="pengguna-userid" className="block text-xs font-semibold text-slate-700 mb-1">
+                  ID Pengguna ONE UNUSU {!isEdit && <span className="text-rose-500">*</span>}
+                </label>
+                <input
+                  id="pengguna-userid"
+                  type="number"
+                  required={!isEdit}
+                  disabled={isEdit}
+                  min={1}
+                  value={formData.userId}
+                  onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                  placeholder="Contoh: 12"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 disabled:bg-slate-100 disabled:text-slate-500"
+                />
+              </div>
+
+              <div>
                 <label htmlFor="pengguna-username" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Username / NIDN / NIM <span className="text-rose-500">*</span>
+                  Username / NIDN / NIM {!isEdit && <span className="text-rose-500">*</span>}
                 </label>
                 <input
                   id="pengguna-username"
                   type="text"
-                  required
+                  required={!isEdit}
+                  disabled={isEdit}
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   placeholder="Contoh: 0102030405"
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 disabled:bg-slate-100 disabled:text-slate-500"
                 />
               </div>
 
@@ -261,76 +274,82 @@ export const PenggunaFormPage: React.FC = () => {
           </CardContainer>
 
           <CardContainer
-            title="Peran & Status"
-            subtitle="Peran menentukan modul LPM yang dapat diakses pengguna ini."
+            title="Peran LPM & Status"
+            subtitle="Izin akses pengguna mengikuti peran yang dipilih. Satu pengguna boleh memiliki lebih dari satu peran."
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="pengguna-sso-role" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Peran SSO (Cakupan LPM)
-                </label>
-                <select
-                  id="pengguna-sso-role"
-                  value={formData.ssoRole}
-                  onChange={(e) => {
-                    const ssoRole = e.target.value;
-                    setFormData({
-                      ...formData,
-                      ssoRole,
-                      role: ssoRole === 'DOSEN' ? 'dosen' : 'admin',
-                    });
-                  }}
-                  className="w-full px-3 py-2 min-h-[44px] text-xs border border-[#CBD5E1] rounded-[10px] bg-white focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
-                >
-                  {roleOptions.map((option) => (
-                    <option key={option.code} value={option.code}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="space-y-3.5">
+              <fieldset>
+                <legend className="block text-xs font-semibold text-slate-700 mb-2">
+                  Peran <span className="text-rose-500">*</span>
+                </legend>
+                {opsiPeran.length === 0 ? (
+                  <p className="text-[11px] text-slate-400 italic">
+                    Daftar peran belum tersedia. Pastikan migrasi & seeder RBAC sudah dijalankan.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {opsiPeran.map((p) => {
+                      const dipilih = formData.peran.includes(p.kode);
+                      return (
+                        <label
+                          key={p.kode}
+                          className={`flex items-start gap-2.5 p-3 rounded-[10px] border cursor-pointer transition ${
+                            dipilih
+                              ? 'border-lpm-blue-900 bg-lpm-blue-50'
+                              : 'border-[#CBD5E1] bg-white hover:bg-slate-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={dipilih}
+                            onChange={() => togglePeran(p.kode)}
+                            className="mt-0.5 w-4 h-4 accent-lpm-blue-900"
+                          />
+                          <span>
+                            <span className="block text-xs font-bold text-slate-900">{p.nama || p.label}</span>
+                            <span className="block text-[11px] text-slate-500 leading-snug">
+                              {p.deskripsi || p.description || `${p.permissionsCount} izin`}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </fieldset>
 
-              <div>
-                <label htmlFor="pengguna-status" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Status Akun
-                </label>
-                <select
-                  id="pengguna-status"
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3 py-2 min-h-[44px] text-xs border border-[#CBD5E1] rounded-[10px] bg-white focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
-                >
-                  <option value="Aktif">Aktif</option>
-                  <option value="Nonaktif">Nonaktif</option>
-                </select>
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="pengguna-sso-role" className="block text-xs font-semibold text-slate-700 mb-1">
+                    Peran SSO (metadata)
+                  </label>
+                  <input
+                    id="pengguna-sso-role"
+                    type="text"
+                    value={formData.ssoRole}
+                    onChange={(e) => setFormData({ ...formData, ssoRole: e.target.value.toUpperCase() })}
+                    placeholder="SUPERADMIN / ADMIN_LPM / DOSEN / MAHASISWA"
+                    className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Hanya untuk pencocokan otomatis. Otorisasi tetap memakai izin.
+                  </p>
+                </div>
 
-              <div>
-                <label htmlFor="pengguna-fakultas" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Fakultas
-                </label>
-                <input
-                  id="pengguna-fakultas"
-                  type="text"
-                  value={formData.fakultas}
-                  onChange={(e) => setFormData({ ...formData, fakultas: e.target.value })}
-                  placeholder="Fakultas Sains dan Teknologi"
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="pengguna-prodi" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Program Studi
-                </label>
-                <input
-                  id="pengguna-prodi"
-                  type="text"
-                  value={formData.prodi}
-                  onChange={(e) => setFormData({ ...formData, prodi: e.target.value })}
-                  placeholder="Sistem Informasi"
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
-                />
+                <div>
+                  <label htmlFor="pengguna-status" className="block text-xs font-semibold text-slate-700 mb-1">
+                    Status Akun
+                  </label>
+                  <select
+                    id="pengguna-status"
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full px-3 py-2 min-h-[44px] text-xs border border-[#CBD5E1] rounded-[10px] bg-white focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
+                  >
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                  </select>
+                </div>
               </div>
             </div>
           </CardContainer>

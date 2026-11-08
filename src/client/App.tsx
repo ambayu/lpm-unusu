@@ -19,21 +19,28 @@ import { LoginPage } from './pages/Login';
 import { SsoCallbackPage } from './pages/SsoCallback';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccessDeniedPage } from './pages/AccessDenied';
+import { ForbiddenPage } from './pages/Forbidden';
+import { NotFoundPage } from './pages/NotFound';
 
 /**
- * Penjaga rute panel admin.
- * - Belum login  -> /login
- * - Peran bukan milik aplikasi LPM (mis. ADMIN_LPPM) -> halaman Akses Ditolak
- * - Rute khusus admin & bukan Administrator LPM -> dialihkan ke dashboard
+ * Penjaga rute panel.
+ *
+ * Tiga lapis pemeriksaan:
+ * 1. Belum login            -> /login
+ * 2. Tanpa izin masuk panel -> /akses-ditolak (403 masuk)
+ * 3. Tanpa izin fitur       -> halaman 403 fitur (`izin` diisi)
+ *
+ * Otorisasi SELALU lewat daftar `izin`, tidak pernah lewat nama peran.
  */
 function ProtectedRoute({
   children,
-  adminOnly = false,
+  izin,
 }: {
   children: React.ReactElement;
-  adminOnly?: boolean;
+  /** Kunci izin yang harus dimiliki untuk membuka rute ini. */
+  izin?: string[];
 }) {
-  const { user, loading, accessDenied, isAppAdmin } = useAuth();
+  const { user, loading, accessDenied, bisa } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -49,10 +56,14 @@ function ProtectedRoute({
   if (accessDenied) {
     return <Navigate to="/akses-ditolak" replace />;
   }
-  if (adminOnly && !isAppAdmin) {
-    return <Navigate to="/admin/dashboard" replace />;
+
+  const halaman = <SidebarLayout>{children}</SidebarLayout>;
+
+  if (izin && izin.length > 0 && !bisa(...izin)) {
+    return <SidebarLayout><ForbiddenPage /></SidebarLayout>;
   }
-  return <SidebarLayout>{children}</SidebarLayout>;
+
+  return halaman;
 }
 
 const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -73,10 +84,10 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/sso/callback" element={<SsoCallbackPage />} />
 
-          {/* Penolakan akses lintas aplikasi (mis. admin LPPM membuka panel LPM) */}
+          {/* Penolakan akses: tanpa izin masuk panel */}
           <Route path="/akses-ditolak" element={<AccessDeniedPage />} />
 
-          {/* Panel Manajemen Admin Ber-Sidebar */}
+          {/* Panel dengan sidebar */}
           <Route
             path="/admin"
             element={
@@ -108,7 +119,7 @@ export function App() {
           <Route
             path="/admin/standar"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute izin={['standar:view']}>
                 <StandarPage />
               </ProtectedRoute>
             }
@@ -116,7 +127,7 @@ export function App() {
           <Route
             path="/admin/standar/tambah"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute izin={['standar:create']}>
                 <StandarFormPage />
               </ProtectedRoute>
             }
@@ -124,7 +135,7 @@ export function App() {
           <Route
             path="/admin/standar/edit/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute izin={['standar:update']}>
                 <StandarFormPage />
               </ProtectedRoute>
             }
@@ -134,7 +145,7 @@ export function App() {
           <Route
             path="/admin/dokumen"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute izin={['dokumen:view']}>
                 <DokumenPage />
               </ProtectedRoute>
             }
@@ -142,7 +153,7 @@ export function App() {
           <Route
             path="/admin/dokumen/tambah"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute izin={['dokumen:create']}>
                 <DokumenFormPage />
               </ProtectedRoute>
             }
@@ -150,7 +161,7 @@ export function App() {
           <Route
             path="/admin/dokumen/edit/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute izin={['dokumen:update']}>
                 <DokumenFormPage />
               </ProtectedRoute>
             }
@@ -160,7 +171,7 @@ export function App() {
           <Route
             path="/admin/ami"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute izin={['audit:view']}>
                 <AmiPage />
               </ProtectedRoute>
             }
@@ -168,7 +179,7 @@ export function App() {
           <Route
             path="/admin/ami/tambah"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute izin={['audit:create']}>
                 <AmiFormPage />
               </ProtectedRoute>
             }
@@ -176,17 +187,17 @@ export function App() {
           <Route
             path="/admin/ami/edit/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute izin={['audit:update']}>
                 <AmiFormPage />
               </ProtectedRoute>
             }
           />
 
-          {/* Manajemen Pengguna & Hak Akses (RBAC) — khusus Administrator LPM */}
+          {/* Manajemen Pengguna & Hak Akses (RBAC) */}
           <Route
             path="/admin/pengguna"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute izin={['pengguna:view']}>
                 <UsersPage />
               </ProtectedRoute>
             }
@@ -194,7 +205,7 @@ export function App() {
           <Route
             path="/admin/users"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute izin={['pengguna:view']}>
                 <UsersPage />
               </ProtectedRoute>
             }
@@ -202,7 +213,7 @@ export function App() {
           <Route
             path="/admin/pengguna/tambah"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute izin={['pengguna:create']}>
                 <PenggunaFormPage />
               </ProtectedRoute>
             }
@@ -210,7 +221,7 @@ export function App() {
           <Route
             path="/admin/pengguna/edit/:id"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute izin={['pengguna:update']}>
                 <PenggunaFormPage />
               </ProtectedRoute>
             }
@@ -218,7 +229,7 @@ export function App() {
           <Route
             path="/admin/peran"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute izin={['peran:view']}>
                 <RolesPage />
               </ProtectedRoute>
             }
@@ -226,7 +237,7 @@ export function App() {
           <Route
             path="/admin/roles"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute izin={['peran:view']}>
                 <RolesPage />
               </ProtectedRoute>
             }
@@ -234,7 +245,7 @@ export function App() {
           <Route
             path="/admin/peran/tambah"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute izin={['peran:create']}>
                 <PeranFormPage />
               </ProtectedRoute>
             }
@@ -242,7 +253,7 @@ export function App() {
           <Route
             path="/admin/peran/edit/:id"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute izin={['peran:update']}>
                 <PeranFormPage />
               </ProtectedRoute>
             }
@@ -250,7 +261,7 @@ export function App() {
           <Route
             path="/admin/izin"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute izin={['izin:view']}>
                 <PermissionsPage />
               </ProtectedRoute>
             }
@@ -258,7 +269,7 @@ export function App() {
           <Route
             path="/admin/permissions"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute izin={['izin:view']}>
                 <PermissionsPage />
               </ProtectedRoute>
             }
@@ -268,7 +279,9 @@ export function App() {
           <Route path="/admin/peran-izin" element={<Navigate to="/admin/peran" replace />} />
           <Route path="/admin/rbac" element={<Navigate to="/admin/peran" replace />} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* 403 fitur & 404 alamat tidak dikenal */}
+          <Route path="/akses-ditolak-fitur" element={<ForbiddenPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
     </AuthProvider>

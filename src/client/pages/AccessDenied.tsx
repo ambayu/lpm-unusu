@@ -24,7 +24,7 @@ export function AccessDeniedPage() {
   const navigate = useNavigate();
 
   const isForeignAdmin = appAccess?.reason === 'foreign_app_admin';
-  const foreignAppName = appAccess?.foreignApp?.name;
+  const ssoRoleLabel = appAccess?.ssoRoleLabel || appAccess?.ssoRole || '';
   const alreadyAllowed = !!appAccess?.allowed;
 
   const handleSwitchAccount = () => {
@@ -106,7 +106,7 @@ export function AccessDeniedPage() {
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Cakupan Aplikasi</span>
                 <span className="text-xs font-semibold text-slate-900">
                   {appAccess?.appName || 'LPM UNUSU'}
-                  {foreignAppName ? <span className="text-slate-500 font-normal"> (peran milik {foreignAppName})</span> : null}
+                  {ssoRoleLabel ? <span className="text-slate-500 font-normal"> (peran {ssoRoleLabel})</span> : null}
                 </span>
               </div>
             </div>

@@ -276,7 +276,175 @@ async function main() {
   }
   console.log(`Siklus PPEPP seeded: ${tahapPpepp.length} tahap.`);
 
-  console.log('LPM UNUSU Seeder complete! ✨');
+  console.log('LPM UNUSU Seeder complete!');
+
+  await seedRbacLpm();
+}
+
+// ===========================================================================
+// RBAC PANEL LPM — izin masuk + izin fitur, melekat pada peran ONE UNUSU
+//
+// Panel LPM TIDAK memeriksa peran mentah. Yang diperiksa adalah IZIN:
+//   1. Izin masuk  -> <clientId>:masuk_admin | masuk_dosen | masuk_mahasiswa
+//   2. Izin fitur  -> <resource>:<action>, mis. standar:create
+// Keduanya melekat pada peran (lpm_role_permissions), dan peran melekat pada
+// pengguna (lpm_user_roles). Sumber pemetaan peran ONE UNUSU -> izin adalah
+// tabel role_permissions di database ONE UNUSU.
+// ===========================================================================
+
+const CLIENT_ID = 'lpm-unusu';
+
+/** Tiga tingkat izin masuk panel LPM. */
+const IZIN_MASUK = [
+  { kunci: `${CLIENT_ID}:masuk_admin`, nama: 'Masuk Panel sebagai Administrator LPM' },
+  { kunci: `${CLIENT_ID}:masuk_dosen`, nama: 'Masuk Panel sebagai Dosen / Auditor Mutu' },
+  { kunci: `${CLIENT_ID}:masuk_mahasiswa`, nama: 'Masuk Panel sebagai Mahasiswa / Observer' },
+] as const;
+
+/** Izin fitur per sub-menu panel LPM. */
+const IZIN_FITUR = [
+  { kunci: 'lpm:dashboard', nama: 'Melihat Dashboard Mutu', grup: 'utama' },
+  { kunci: 'standar:view', nama: 'Melihat Pangkalan Standar SPMI', grup: 'standar' },
+  { kunci: 'standar:create', nama: 'Menambah Standar SPMI', grup: 'standar' },
+  { kunci: 'standar:update', nama: 'Mengubah Standar SPMI', grup: 'standar' },
+  { kunci: 'standar:delete', nama: 'Menghapus Standar SPMI', grup: 'standar' },
+  { kunci: 'dokumen:view', nama: 'Melihat Bank Dokumen & SOP', grup: 'dokumen' },
+  { kunci: 'dokumen:create', nama: 'Mengunggah Dokumen Mutu', grup: 'dokumen' },
+  { kunci: 'dokumen:update', nama: 'Mengubah Dokumen Mutu', grup: 'dokumen' },
+  { kunci: 'dokumen:delete', nama: 'Menghapus Dokumen Mutu', grup: 'dokumen' },
+  { kunci: 'audit:view', nama: 'Melihat Instrumen & Temuan AMI', grup: 'audit' },
+  { kunci: 'audit:create', nama: 'Mencatat Butir Audit AMI', grup: 'audit' },
+  { kunci: 'audit:update', nama: 'Mengevaluasi Butir Audit AMI', grup: 'audit' },
+  { kunci: 'audit:delete', nama: 'Menghapus Butir Audit AMI', grup: 'audit' },
+  { kunci: 'indikator:view', nama: 'Melihat Indikator SPMI', grup: 'ppepp' },
+  { kunci: 'indikator:create', nama: 'Menambah Indikator SPMI', grup: 'ppepp' },
+  { kunci: 'indikator:update', nama: 'Mengubah Indikator SPMI', grup: 'ppepp' },
+  { kunci: 'indikator:delete', nama: 'Menghapus Indikator SPMI', grup: 'ppepp' },
+  { kunci: 'ppepp:view', nama: 'Melihat Siklus PPEPP', grup: 'ppepp' },
+  { kunci: 'ppepp:create', nama: 'Menambah Tahap PPEPP', grup: 'ppepp' },
+  { kunci: 'ppepp:update', nama: 'Mengubah Tahap PPEPP', grup: 'ppepp' },
+  { kunci: 'tindaklanjut:view', nama: 'Melihat Tindak Lanjut', grup: 'tindak-lanjut' },
+  { kunci: 'tindaklanjut:create', nama: 'Menambah Tindak Lanjut', grup: 'tindak-lanjut' },
+  { kunci: 'tindaklanjut:update', nama: 'Memperbarui Tindak Lanjut', grup: 'tindak-lanjut' },
+  { kunci: 'pengguna:view', nama: 'Melihat Daftar Pengguna LPM', grup: 'tata-kelola' },
+  { kunci: 'pengguna:create', nama: 'Menambah Pengguna LPM', grup: 'tata-kelola' },
+  { kunci: 'pengguna:update', nama: 'Mengubah Pengguna LPM', grup: 'tata-kelola' },
+  { kunci: 'pengguna:delete', nama: 'Menghapus Pengguna LPM', grup: 'tata-kelola' },
+  { kunci: 'peran:view', nama: 'Melihat Peran & Wewenang', grup: 'tata-kelola' },
+  { kunci: 'peran:create', nama: 'Membuat Peran Baru', grup: 'tata-kelola' },
+  { kunci: 'peran:update', nama: 'Mengubah Peran', grup: 'tata-kelola' },
+  { kunci: 'peran:delete', nama: 'Menghapus Peran', grup: 'tata-kelola' },
+  { kunci: 'izin:view', nama: 'Melihat Matriks Izin Akses', grup: 'tata-kelola' },
+  { kunci: 'izin:update', nama: 'Mengubah Matriks Izin Akses', grup: 'tata-kelola' },
+  { kunci: 'keamanan:view', nama: 'Melihat Jejak Penolakan Akses', grup: 'tata-kelola' },
+] as const;
+
+/** Matriks izin bawaan: peran lokal -> daftar kunci izin. */
+const MATRIKS_IZIN: Record<string, string[]> = {
+  // Admin LPM hanya memegang izin masuk TINGKAT ADMIN. Bila sebuah peran
+  // memegang beberapa tingkat sekaligus, server selalu memilih tingkat
+  // tertinggi — jadi menambahkan masuk_dosen/masuk_mahasiswa di sini hanya
+  // akan menyamarkan arti peran tanpa menambah kemampuan apa pun.
+  admin: [`${CLIENT_ID}:masuk_admin`, ...IZIN_FITUR.map((i) => i.kunci)],
+  dosen: [
+    `${CLIENT_ID}:masuk_dosen`,
+    'lpm:dashboard',
+    'standar:view',
+    'dokumen:view',
+    'audit:view',
+    'audit:create',
+    'audit:update',
+    'indikator:view',
+    'ppepp:view',
+    'tindaklanjut:view',
+    'tindaklanjut:create',
+    'tindaklanjut:update',
+  ],
+  mahasiswa: [
+    `${CLIENT_ID}:masuk_mahasiswa`,
+    'lpm:dashboard',
+    'standar:view',
+    'dokumen:view',
+    'audit:view',
+    'indikator:view',
+    'ppepp:view',
+  ],
+};
+
+const PERAN_BAWAAN = [
+  {
+    kode: 'admin',
+    nama: 'Administrator LPM',
+    deskripsi:
+      'Akses penuh konfigurasi standar SPMI, bank dokumen, periode AMI, serta manajemen pengguna dan peran LPM.',
+  },
+  {
+    kode: 'dosen',
+    nama: 'Auditor Mutu Internal (Dosen)',
+    deskripsi:
+      'Meninjau butir standar, mengisi instrumen audit lapangan, dan menindaklanjuti rekomendasi perbaikan mutu.',
+  },
+  {
+    kode: 'mahasiswa',
+    nama: 'Observer Mutu (Mahasiswa)',
+    deskripsi: 'Melihat pangkalan data mutu, arsip dokumen, dan status capaian PPEPP.',
+  },
+];
+
+async function seedRbacLpm() {
+  for (const p of PERAN_BAWAAN) {
+    await prisma.lpmRole.upsert({
+      where: { kode: p.kode },
+      update: { nama: p.nama, deskripsi: p.deskripsi },
+      create: { ...p, sistem: true },
+    });
+  }
+
+  const semuaIzin = [
+    ...IZIN_MASUK.map((i) => ({ kunci: i.kunci, nama: i.nama, grup: 'izin-masuk' })),
+    ...IZIN_FITUR.map((i) => ({ kunci: i.kunci, nama: i.nama, grup: i.grup })),
+  ];
+  for (const izin of semuaIzin) {
+    await prisma.lpmPermission.upsert({
+      where: { kunci: izin.kunci },
+      update: { nama: izin.nama, grup: izin.grup },
+      create: izin,
+    });
+  }
+
+  for (const [kodePeran, daftarKunci] of Object.entries(MATRIKS_IZIN)) {
+    const peran = await prisma.lpmRole.findUnique({ where: { kode: kodePeran } });
+    if (!peran) continue;
+
+    // Peran sistem mencerminkan MATRIKS_IZIN persis. Tanpa pembersihan ini,
+    // izin yang dulu pernah ditanam (mis. admin memegang masuk_dosen) akan
+    // terus menempel karena upsert hanya menambah, tidak pernah menghapus.
+    // Peran buatan administrator tidak disentuh — perubahan manual mereka aman.
+    if (PERAN_BAWAAN.some((p) => p.kode === kodePeran)) {
+      const izinSah = await prisma.lpmPermission.findMany({
+        where: { kunci: { in: daftarKunci } },
+        select: { id: true },
+      });
+      await prisma.lpmRolePermission.deleteMany({
+        where: { roleId: peran.id, permissionId: { notIn: izinSah.map((i) => i.id) } },
+      });
+    }
+
+    for (const kunci of daftarKunci) {
+      const izin = await prisma.lpmPermission.findUnique({ where: { kunci } });
+      if (!izin) continue;
+      await prisma.lpmRolePermission.upsert({
+        where: { roleId_permissionId: { roleId: peran.id, permissionId: izin.id } },
+        update: {},
+        create: { roleId: peran.id, permissionId: izin.id },
+      });
+    }
+  }
+
+  console.log(
+    `RBAC LPM seeded: ${PERAN_BAWAAN.length} peran, ${semuaIzin.length} izin (${IZIN_MASUK.length} izin masuk).`,
+  );
+  console.log('Petakan peran ONE UNUSU -> izin masuk lewat panel ONE UNUSU (role_permissions).');
 }
 
 main()

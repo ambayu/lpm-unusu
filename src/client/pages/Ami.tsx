@@ -14,8 +14,9 @@ import {
 } from '@heroicons/react/24/outline';
 
 export const AmiPage: React.FC = () => {
-  const { user: currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.ssoRole === 'SUPERADMIN' || currentUser?.ssoRole === 'ADMIN_LPM';
+  const { bisa } = useAuth();
+  // Tombol aksi ditentukan oleh IZIN, bukan nama peran.
+  const bolehMenulis = bisa('audit:create');
   const [audits, setAudits] = useState<AuditItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +91,7 @@ export const AmiPage: React.FC = () => {
           >
             Segarkan
           </ListActionButton>
-          {isAdmin && (
+          {bolehMenulis && (
             <ListActionButton to="/admin/ami/tambah" icon={<PlusIcon className="h-4 w-4" />}>
               Catat Temuan Audit AMI
             </ListActionButton>
@@ -252,7 +253,7 @@ export const AmiPage: React.FC = () => {
           headerClassName: 'w-[95px] text-center',
           cellClassName: 'text-center',
           render: (item) =>
-            isAdmin ? (
+            bolehMenulis ? (
               <div className="inline-flex items-center gap-2">
                 <Link
                   to={`/admin/ami/edit/${item.id}`}

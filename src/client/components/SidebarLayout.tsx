@@ -28,7 +28,7 @@ interface SidebarLayoutProps {
 export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, roleLabel, isAppAdmin } = useAuth();
+  const { user, logout, roleLabel, bisa } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -307,7 +307,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             </nav>
           </div>
 
-          {isAppAdmin && (
+          {rbacItems.length > 0 && (
             <div>
               {!isCollapsed && (
                 <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">

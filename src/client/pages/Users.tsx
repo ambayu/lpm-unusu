@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   UsersIcon,
@@ -12,62 +12,39 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { CardContainer } from '../components/CardContainer';
 import { ErrorState } from '../components/ErrorState';
-import { LPM_APP_ROLES, SSO_ROLE_LABEL, fetchAppRoles } from '../services/api';
-
-interface UserItem {
-  id: number;
-  username: string;
-  nama: string;
-  email: string | null;
-  role: string;
-  ssoRole: string;
-  fakultas: string | null;
-  prodi: string | null;
-  status: string;
-  createdAt: string;
-}
+import {
+  SSO_ROLE_LABEL,
+  fetchRbacPengguna,
+  deleteRbacPengguna,
+  type RbacPengguna,
+} from '../services/api';
 
 export const UsersPage: React.FC = () => {
-  const { user: currentUser, isAppAdmin } = useAuth();
-  const isAdmin = isAppAdmin || currentUser?.ssoRole === 'SUPERADMIN' || currentUser?.ssoRole === 'ADMIN_LPM';
-  const [users, setUsers] = useState<UserItem[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
+  // Tombol & aksi ditentukan oleh IZIN, bukan nama peran.
+  const { bisa } = useAuth();
+  const bolehTambah = bisa('pengguna:create');
+  const bolehUbah = bisa('pengguna:update');
+  const bolehHapus = bisa('pengguna:delete');
+
+  const [users, setUsers] = useState<RbacPengguna[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
-  // Peran sah versi server (`GET /api/auth/app-roles`). Fallback ke konstanta
-  // lokal agar dropdown tetap berfungsi bila endpoint tidak tersedia.
-  const [roleOptions, setRoleOptions] = useState<{ code: string; label: string }[]>(
-    LPM_APP_ROLES.map((code) => ({ code, label: SSO_ROLE_LABEL[code] || code }))
-  );
-
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('lpm_unusu_token') || localStorage.getItem('lpm_token');
-      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
-
-      const [usersRes, rolesRes] = await Promise.all([
-        fetch('/api/users', { credentials: 'include', headers }),
-        fetch('/api/roles', { credentials: 'include', headers }),
-      ]);
-
-      if (usersRes.ok) {
-        const uJson = await usersRes.json();
-        if (uJson.success) setUsers(uJson.data);
-      } else {
-        throw new Error('Gagal memuat daftar pengguna.');
-      }
-      if (rolesRes.ok) {
-        const rJson = await rolesRes.json();
-        if (rJson.success) setRoles(rJson.data);
-      }
+      const res = await fetchRbacPengguna();
+      if (res.data?.success) setUsers(res.data.data);
     } catch (err: any) {
       console.error('Gagal mengambil data pengguna', err);
-      setError(err.message || 'Terjadi kesalahan saat memuat data pengguna.');
+      setError(
+        err?.response?.data?.message ||
+          err.message ||
+          'Terjadi kesalahan saat memuat data pengguna.'
+      );
     } finally {
       setLoading(false);
     }
@@ -77,59 +54,34 @@ export const UsersPage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Ambil cakupan peran dari server agar dropdown tidak pernah menawarkan peran
-  // aplikasi lain (satu sumber kebenaran dengan guard `resolveAppAccess`).
-  useEffect(() => {
-    let active = true;
-
-    fetchAppRoles()
-      .then((res) => {
-        if (!active || !res.data?.success) return;
-        const allowed = res.data.data ?? [];
-
-        if (allowed.length > 0) {
-          setRoleOptions(allowed.map((item) => ({ code: item.code, label: item.label })));
-        }
-      })
-      .catch(() => {
-        /* fallback konstanta lokal sudah terpasang pada state awal */
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const handleDelete = async (id: number) => {
     if (!window.confirm('Yakin ingin menghapus akses pengguna ini dari LPM?')) return;
     try {
-      const token = localStorage.getItem('lpm_unusu_token') || localStorage.getItem('lpm_token');
-      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
-
-      const res = await fetch(`/api/users/${id}`, {
-        method: 'DELETE',
-        headers,
-        credentials: 'include',
-      });
-      if (res.ok) {
-        fetchData();
-      } else {
-        const err = await res.json();
-        alert(err.message || 'Gagal menghapus pengguna');
-      }
+      await deleteRbacPengguna(id);
+      fetchData();
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan sistem');
+      alert(err?.response?.data?.message || err.message || 'Terjadi kesalahan sistem');
     }
   };
 
+  /** Daftar peran unik untuk dropdown filter (diambil dari data pengguna). */
+  const opsiPeran = useMemo(() => {
+    const set = new Set<string>();
+    users.forEach((u) => u.peran.forEach((p) => set.add(p)));
+    return Array.from(set).sort();
+  }, [users]);
+
   const filteredUsers = users.filter((u) => {
+    const q = search.toLowerCase();
     const matchSearch =
-      u.nama.toLowerCase().includes(search.toLowerCase()) ||
-      u.username.toLowerCase().includes(search.toLowerCase()) ||
-      (u.email && u.email.toLowerCase().includes(search.toLowerCase()));
-    const matchRole = !roleFilter || u.role === roleFilter;
+      u.nama.toLowerCase().includes(q) ||
+      u.username.toLowerCase().includes(q) ||
+      (u.email ? u.email.toLowerCase().includes(q) : false);
+    const matchRole = !roleFilter || u.peran.includes(roleFilter);
     return matchSearch && matchRole;
   });
+
+  const adaAksi = bolehUbah || bolehHapus;
 
   return (
     <div className="space-y-6">
@@ -147,7 +99,7 @@ export const UsersPage: React.FC = () => {
               Daftar pengguna dengan hak akses terhadap audit, dokumen mutu, dan standar SPMI UNUSU.
             </p>
           </div>
-          {isAdmin && (
+          {bolehTambah && (
             <Link
               to="/admin/pengguna/tambah"
               className="inline-flex items-center gap-2 bg-lpm-blue-900 hover:bg-lpm-blue-800 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition shadow-xs cursor-pointer"
@@ -166,7 +118,7 @@ export const UsersPage: React.FC = () => {
             <MagnifyingGlassIcon className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input
               type="text"
-              placeholder="Cari nama, NIDN/NIM, atau email..."
+              placeholder="Cari nama, username, atau email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-lpm-blue-800 focus:border-transparent"
@@ -180,9 +132,11 @@ export const UsersPage: React.FC = () => {
               className="border border-slate-200 rounded-xl text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-lpm-blue-800 bg-white"
             >
               <option value="">Semua Peran</option>
-              <option value="admin">Admin LPM</option>
-              <option value="dosen">Dosen / Auditor</option>
-              <option value="mahasiswa">Mahasiswa</option>
+              {opsiPeran.map((p) => (
+                <option key={p} value={p}>
+                  {SSO_ROLE_LABEL[p.toUpperCase()] || p}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -203,10 +157,10 @@ export const UsersPage: React.FC = () => {
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
                   <tr>
                     <th className="py-3 px-4 font-semibold">Pengguna</th>
-                    <th className="py-3 px-4 font-semibold">Peran Sistem</th>
-                    <th className="py-3 px-4 font-semibold">Fakultas / Prodi</th>
+                    <th className="py-3 px-4 font-semibold">Peran LPM</th>
+                    <th className="py-3 px-4 font-semibold">Peran SSO</th>
                     <th className="py-3 px-4 font-semibold">Status</th>
-                    <th className="py-3 px-4 font-semibold text-center">Aksi</th>
+                    {adaAksi && <th className="py-3 px-4 font-semibold text-center">Aksi</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -215,25 +169,28 @@ export const UsersPage: React.FC = () => {
                       <td className="py-3 px-4">
                         <div className="font-bold text-slate-900">{u.nama}</div>
                         <div className="text-[11px] text-slate-400">
-                          {u.username} Ã¢â‚¬Â¢ {u.email || 'tanpa email'}
+                          {u.username} &middot; {u.email || 'tanpa email'}
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                            u.ssoRole === 'SUPERADMIN' || u.ssoRole === 'ADMIN_LPM'
-                              ? 'bg-lpm-blue-50 text-lpm-blue-900 border border-lpm-blue-200'
-                              : 'bg-lpm-blue-50 text-lpm-blue-900 border border-lpm-blue-200'
-                          }`}
-                        >
-                          <ShieldCheckIcon className="w-3.5 h-3.5" />
-                          {SSO_ROLE_LABEL[u.ssoRole] || (u.role === 'admin' ? 'Admin SPMI' : 'Auditor Mutu')}
-                        </span>
-                        <div className="text-[10px] text-slate-400 mt-1 font-mono">{u.ssoRole || 'Ã¢â‚¬â€'}</div>
+                        <div className="flex flex-wrap gap-1">
+                          {u.peran.length === 0 ? (
+                            <span className="text-[11px] text-slate-400 italic">Tanpa peran</span>
+                          ) : (
+                            u.peran.map((p) => (
+                              <span
+                                key={p}
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-lpm-blue-50 text-lpm-blue-900 border border-lpm-blue-200"
+                              >
+                                <ShieldCheckIcon className="w-3.5 h-3.5" />
+                                {SSO_ROLE_LABEL[p.toUpperCase()] || p}
+                              </span>
+                            ))
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-slate-600">
-                        <div>{u.fakultas || '-'}</div>
-                        <div className="text-[11px] text-slate-400">{u.prodi || '-'}</div>
+                        <div className="text-[11px] font-mono">{u.ssoRole || '—'}</div>
                       </td>
                       <td className="py-3 px-4">
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-lpm-blue-700">
@@ -241,28 +198,30 @@ export const UsersPage: React.FC = () => {
                           {u.status || 'Aktif'}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-center">
-                        {isAdmin ? (
+                      {adaAksi && (
+                        <td className="py-3 px-4 text-center">
                           <div className="flex items-center justify-center gap-2">
-                            <Link
-                              to={`/admin/pengguna/edit/${u.id}`}
-                              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-lpm-blue-900 hover:bg-lpm-blue-50 transition cursor-pointer"
-                              title="Edit Pengguna"
-                            >
-                              <PencilSquareIcon className="w-4 h-4" />
-                            </Link>
-                            <button
-                              onClick={() => handleDelete(u.id)}
-                              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                              title="Hapus Pengguna"
-                            >
-                              <TrashIcon className="w-4 h-4" />
-                            </button>
+                            {bolehUbah && (
+                              <Link
+                                to={`/admin/pengguna/edit/${u.id}`}
+                                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-lpm-blue-900 hover:bg-lpm-blue-50 transition cursor-pointer"
+                                title="Edit Pengguna"
+                              >
+                                <PencilSquareIcon className="w-4 h-4" />
+                              </Link>
+                            )}
+                            {bolehHapus && (
+                              <button
+                                onClick={() => handleDelete(u.id)}
+                                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                title="Hapus Pengguna"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
-                        ) : (
-                          <span className="text-[11px] text-slate-400 font-medium italic">Hanya Baca</span>
-                        )}
-                      </td>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -271,8 +230,6 @@ export const UsersPage: React.FC = () => {
           )}
         </CardContainer>
       )}
-
-      {/* Form tambah/ubah pengguna kini halaman penuh: /admin/pengguna/tambah & /admin/pengguna/edit/:id */}
-   </div>
+    </div>
   );
 };

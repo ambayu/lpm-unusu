@@ -25,14 +25,18 @@ export interface SessionUser {
 }
 
 /**
- * Cakupan akses aplikasi (app-scoped role).
- * Dihitung SERVER, bukan klien — klien hanya menampilkan hasilnya.
+ * Cakupan akses aplikasi.
+ * Dihitung SERVER dari IZIN MASUK yang melekat pada peran, bukan dari nama
+ * peran. Klien hanya menampilkan hasilnya.
  */
 export type AppAccessReason =
   | 'allowed'
   | 'foreign_app_admin'
-  | 'role_not_allowed'
+  | 'no_izin_masuk'
   | 'missing_role';
+
+/** Tingkat masuk panel: ditentukan oleh izin masuk yang dimiliki. */
+export type TingkatMasuk = 'admin' | 'dosen' | 'mahasiswa';
 
 export interface AppAccessInfo {
   app: string;
@@ -40,15 +44,28 @@ export interface AppAccessInfo {
   allowed: boolean;
   reason: AppAccessReason;
   ssoRole: string;
-  role: string;
+  ssoRoleLabel: string;
+  /** Tingkat masuk efektif (null bila tidak punya izin masuk sama sekali). */
+  tingkat: TingkatMasuk | null;
   roleLabel: string;
   isAppAdmin: boolean;
-  foreignApp: { code: string; name: string } | null;
+  /** Seluruh kunci izin milik pengguna (izin masuk + izin fitur). */
+  izin: string[];
   message: string;
 }
 
-/** Peran SSO yang sah untuk aplikasi LPM (selaras dengan server). */
-export const LPM_APP_ROLES = ['ADMIN_LPM', 'SUPERADMIN', 'DOSEN'] as const;
+/** Kunci izin masuk panel LPM — HARUS sama dengan server. */
+export const KUNCI_IZIN_MASUK: Record<TingkatMasuk, string> = {
+  admin: 'lpm-unusu:masuk_admin',
+  dosen: 'lpm-unusu:masuk_dosen',
+  mahasiswa: 'lpm-unusu:masuk_mahasiswa',
+};
+
+export const LABEL_TINGKAT: Record<TingkatMasuk, string> = {
+  admin: 'Administrator LPM',
+  dosen: 'Dosen / Auditor Mutu',
+  mahasiswa: 'Mahasiswa / Observer',
+};
 
 export const SSO_ROLE_LABEL: Record<string, string> = {
   SUPERADMIN: 'Superadmin Ekosistem',
@@ -63,7 +80,7 @@ export const SSO_ROLE_LABEL: Record<string, string> = {
   MAHASISWA: 'Mahasiswa / Observer',
 };
 
-/** Peran admin aplikasi lain — ditolak pada penugasan peran di panel LPM. */
+/** Peran admin aplikasi lain — hanya untuk pesan penolakan yang informatif. */
 export const FOREIGN_APP_ROLES = [
   'ADMIN_LPPM',
   'ADMIN_ESURAT',
@@ -72,9 +89,6 @@ export const FOREIGN_APP_ROLES = [
   'ADMIN_LMS',
   'ADMIN_SSO',
 ] as const;
-
-export const isLpmScopedRole = (ssoRole?: string | null): boolean =>
-  !!ssoRole && (LPM_APP_ROLES as readonly string[]).includes(ssoRole.toUpperCase());
 
 const TOKEN_KEY = 'lpm_unusu_token';
 const USER_KEY = 'lpm_unusu_user';
@@ -140,18 +154,19 @@ export const ssoLogin = (client_id: string, token: string) =>
     message?: string;
   }>('/auth/sso', { client_id, token });
 
-/** Verifikasi ulang sesi ke server + ambil cakupan akses aplikasi. */
+/** Verifikasi ulang sesi ke server + ambil cakupan akses & izin pengguna. */
 export const fetchSession = () =>
-  api.get<{ success: boolean; user: SessionUser; appAccess: AppAccessInfo }>('/auth/me');
+  api.get<{ success: boolean; user: SessionUser; appAccess: AppAccessInfo; izin: string[] }>('/auth/me');
 
-/** Daftar peran yang sah untuk aplikasi LPM (dropdown penugasan peran). */
+/** Tingkat masuk & seluruh kunci izin yang dikenali panel LPM. */
 export const fetchAppRoles = () =>
   api.get<{
     success: boolean;
     app: string;
     appName: string;
-    data: { code: string; label: string; internalRole: string; isAppAdmin: boolean }[];
-    deniedRoles: { code: string; label: string; appName: string }[];
+    tingkatMasuk: { tingkat: TingkatMasuk; kunci: string; label: string }[];
+    izinMasukDimiliki: string[];
+    izin: { kunci: string; nama: string; grup: string }[];
   }>('/auth/app-roles');
 
 export interface AccessDenialItem {
@@ -275,5 +290,90 @@ export interface DashboardPayload {
 
 export const fetchDashboardStats = () =>
   api.get<{ success: boolean; data: DashboardPayload }>('/dashboard/stats');
+
+// ==========================================
+// RBAC — PENGGUNA, PERAN, IZIN (DARI DATABASE)
+// ==========================================
+
+export interface RbacPengguna {
+  id: number;
+  userId: number;
+  username: string;
+  nama: string;
+  email: string | null;
+  ssoRole: string | null;
+  status: string;
+  role: string | null;
+  peran: string[];
+  createdAt?: string;
+}
+
+export interface RbacPeran {
+  id: string;
+  roleId?: number;
+  name: string;
+  kode: string;
+  label: string;
+  nama: string;
+  description: string;
+  deskripsi: string;
+  permissionsCount: number;
+  usersCount: number;
+  isSystem: boolean;
+  izin: string[];
+}
+
+export interface RbacIzin {
+  id?: number;
+  kunci: string;
+  nama: string;
+  grup: string;
+  keterangan?: string;
+}
+
+export const fetchRbacPengguna = () =>
+  api.get<{ success: boolean; data: RbacPengguna[] }>('/users');
+export const createRbacPengguna = (data: {
+  userId: number;
+  username: string;
+  nama: string;
+  email?: string | null;
+  ssoRole?: string | null;
+  status?: string;
+  peran: string[];
+}) => api.post<{ success: boolean; data: RbacPengguna; message: string }>('/users', data);
+export const updateRbacPengguna = (
+  id: number | string,
+  data: Partial<{ nama: string; email: string | null; ssoRole: string | null; status: string; peran: string[] }>
+) => api.put<{ success: boolean; data: RbacPengguna; message: string }>(`/users/${id}`, data);
+export const deleteRbacPengguna = (id: number | string) =>
+  api.delete<{ success: boolean; message: string }>(`/users/${id}`);
+
+export const fetchRbacPeran = () =>
+  api.get<{ success: boolean; data: RbacPeran[] }>('/roles');
+export const createRbacPeran = (data: { kode: string; nama: string; deskripsi?: string; izin: string[] }) =>
+  api.post<{ success: boolean; data: RbacPeran; message: string }>('/roles', data);
+export const updateRbacPeran = (
+  id: string,
+  data: Partial<{ nama: string; deskripsi: string; izin: string[] }>
+) => api.put<{ success: boolean; data: RbacPeran; message: string }>(`/roles/${id}`, data);
+export const deleteRbacPeran = (id: string) =>
+  api.delete<{ success: boolean; message: string }>(`/roles/${id}`);
+
+export const fetchRbacIzin = () =>
+  api.get<{ success: boolean; data: RbacIzin[] }>('/permissions');
+
+export const fetchRbacMatriks = () =>
+  api.get<{
+    success: boolean;
+    peran: RbacPeran[];
+    izin: { kunci: string; nama: string; grup: string }[];
+    izinMasuk: { tingkat: TingkatMasuk; kunci: string; label: string }[];
+  }>('/rbac/matriks');
+
+export const fetchRbacSummary = () =>
+  api.get<{ success: boolean; data: { jumlahPeran: number; jumlahPengguna: number; jumlahIzin: number } }>(
+    '/rbac/summary'
+  );
 
 export default api;

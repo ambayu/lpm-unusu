@@ -218,3 +218,95 @@ model TindakLanjut {
   @@index([standarId, status])
   @@map("lpm_tindak_lanjut")
 }
+
+// ===========================================================================
+// RBAC — SUMBER KEBENARAN OTORISASI PANEL LPM
+//
+// Sebelumnya status RBAC LPM disimpan di memori proses (variabel `let`),
+// sehingga hilang setiap server restart dan tidak pernah bisa diubah lewat
+// UI. Kini disimpan di database agar izin dapat dicabut / diberikan ulang
+// kapan saja dan berlaku seketika pada permintaan berikutnya.
+//
+// Skema mengikuti model ONE UNUSU:
+//   lpm_roles  --(lpm_role_permissions)-->  lpm_permissions
+//   lpm_users  --(lpm_user_roles)------->  lpm_roles
+//
+// Izin masuk panel memakai kunci  <clientId>:masuk_<tingkat>
+// sedangkan izin fitur memakai kunci  <resource>:<action>.
+// ===========================================================================
+
+model LpmRole {
+  id          Int      @id @default(autoincrement())
+  kode        String   @unique @db.VarChar(50) // admin | dosen | mahasiswa
+  nama        String   @db.VarChar(100)
+  deskripsi   String?  @db.Text
+  // Peran bawaan sistem tidak dapat dihapus lewat panel
+  sistem      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  izin        LpmRolePermission[]
+  pengguna    LpmUserRole[]
+
+  @@map("lpm_roles")
+}
+
+model LpmPermission {
+  id          Int      @id @default(autoincrement())
+  kunci       String   @unique @db.VarChar(120) // lpm-unusu:masuk_admin | audit:create
+  nama        String   @db.VarChar(150)
+  // Grup menu untuk pengelompokan matriks izin di UI
+  grup        String   @default("umum") @db.VarChar(50)
+  keterangan  String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  peran       LpmRolePermission[]
+
+  @@index([grup])
+  @@map("lpm_permissions")
+}
+
+model LpmRolePermission {
+  id           Int           @id @default(autoincrement())
+  roleId       Int
+  role         LpmRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId Int
+  permission   LpmPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+  @@map("lpm_role_permissions")
+}
+
+model LpmUser {
+  id        Int      @id @default(autoincrement())
+  // ID pengguna pada tabel `users` milik ONE UNUSU
+  userId    Int      @unique
+  username  String   @unique @db.VarChar(100)
+  nama      String   @db.VarChar(150)
+  email     String?  @db.VarChar(150)
+  // Peran SSO mentah (SUPERADMIN, ADMIN_LPM, DOSEN, ...) — hanya metadata
+  ssoRole   String?  @db.VarChar(50)
+  status    String   @default("Aktif") @db.VarChar(20)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  peran     LpmUserRole[]
+
+  @@index([ssoRole])
+  @@map("lpm_users")
+}
+
+model LpmUserRole {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      LpmUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId    Int
+  role      LpmRole  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, roleId])
+  @@index([roleId])
+  @@map("lpm_user_roles")
+}

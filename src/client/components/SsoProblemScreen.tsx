@@ -82,7 +82,7 @@ export function SsoProblemScreen({
   const langkah = isDenial
     ? [
         isForeignAdmin
-          ? `Akun Anda tercatat sebagai administrator ${denial?.foreignApp?.name || 'aplikasi lain di ekosistem ONE UNUSU'}.`
+          ? `Akun Anda tercatat sebagai administrator ${denial?.ssoRoleLabel || 'aplikasi lain di ekosistem ONE UNUSU'}.`
           : `Peran yang aktif pada akun Anda belum termasuk peran LPM.`,
         'Bila Anda memang bertugas di LPM, minta Superadmin ONE UNUSU menambahkan peran Administrator LPM pada akun Anda.',
         'Setelah peran ditambahkan, silakan masuk lagi dari halaman ini.',
@@ -226,10 +226,10 @@ export function SsoProblemScreen({
                     </div>
                     <div className="flex items-start justify-between gap-4 py-3 last:pb-0">
                       <dt className="text-[11px] font-bold uppercase tracking-wider text-blue-200">
-                        Peran milik
+                        Peran SSO
                       </dt>
                       <dd className="max-w-[52%] text-right text-xs font-semibold text-white">
-                        {denial?.foreignApp?.name || 'Aplikasi lain di ekosistem ONE UNUSU'}
+                        {denial?.ssoRoleLabel || 'Aplikasi lain di ekosistem ONE UNUSU'}
                       </dd>
                     </div>
                   </dl>

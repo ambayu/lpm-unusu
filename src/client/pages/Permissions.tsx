@@ -10,19 +10,11 @@ import {
 } from '@heroicons/react/24/outline';
 import { CardContainer } from '../components/CardContainer';
 import { ErrorState } from '../components/ErrorState';
-import { fetchAccessDenials } from '../services/api';
-import type { AccessDenialItem } from '../services/api';
-
-interface PermissionItem {
-  id: string;
-  name: string;
-  action: string;
-  resource: string;
-  guard: string;
-}
+import { fetchAccessDenials, fetchRbacIzin } from '../services/api';
+import type { AccessDenialItem, RbacIzin } from '../services/api';
 
 export const PermissionsPage: React.FC = () => {
-  const [permissions, setPermissions] = useState<PermissionItem[]>([]);
+  const [permissions, setPermissions] = useState<RbacIzin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -79,12 +71,14 @@ export const PermissionsPage: React.FC = () => {
     fetchDenials();
   }, []);
 
-  const filtered = permissions.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.action.toLowerCase().includes(search.toLowerCase()) ||
-      p.resource.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = permissions.filter((p) => {
+    const q = search.toLowerCase();
+    return (
+      p.nama.toLowerCase().includes(q) ||
+      p.kunci.toLowerCase().includes(q) ||
+      (p.grup || '').toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -145,40 +139,34 @@ export const PermissionsPage: React.FC = () => {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-200">
                 <tr>
-                  <th className="px-5 py-3.5">Nama Izin (Key)</th>
-                  <th className="px-5 py-3.5">Aksi (Action)</th>
-                  <th className="px-5 py-3.5">Lingkup Resource</th>
-                  <th className="px-5 py-3.5">Status Guard</th>
+                  <th className="px-5 py-3.5">Kunci Izin</th>
+                  <th className="px-5 py-3.5">Nama Izin</th>
+                  <th className="px-5 py-3.5">Grup</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {filtered.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={p.kunci} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
                         <KeyIcon className="w-4 h-4 text-lpm-blue-800 shrink-0" />
                         <code className="font-mono font-semibold text-lpm-blue-900 bg-lpm-blue-50 px-2 py-0.5 rounded border border-lpm-blue-200 text-[11px]">
-                          {p.name}
+                          {p.kunci}
                         </code>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5">
-                      <span className="font-semibold px-2.5 py-1 rounded-md text-[11px] bg-slate-100 text-slate-700 border border-slate-200">
-                        {p.action}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 font-medium text-slate-800">{p.resource}</td>
+                    <td className="px-5 py-3.5 font-medium text-slate-800">{p.nama}</td>
                     <td className="px-5 py-3.5">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-lpm-blue-50 text-lpm-blue-800 border border-lpm-blue-200">
                         <CheckCircleIcon className="w-3.5 h-3.5 text-lpm-blue-700" />
-                        {p.guard}
+                        {p.grup}
                       </span>
                     </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="text-center py-8 text-slate-400">
+                    <td colSpan={3} className="text-center py-8 text-slate-400">
                       Tidak ada izin yang sesuai dengan pencarian "{search}".
                     </td>
                   </tr>
@@ -252,7 +240,7 @@ export const PermissionsPage: React.FC = () => {
                     <th className="px-4 py-3">Waktu</th>
                     <th className="px-4 py-3">Akun</th>
                     <th className="px-4 py-3">Peran SSO</th>
-                    <th className="px-4 py-3">Peran Milik</th>
+                    <th className="px-4 py-3">Aplikasi Pemilik</th>
                     <th className="px-4 py-3">Sumber</th>
                   </tr>
                 </thead>

@@ -1,115 +1,165 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { FormPageTemplate } from '../components/FormPageTemplate';
 import { CardContainer } from '../components/CardContainer';
-import { ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, KeyIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import {
+  fetchRbacPeran,
+  fetchRbacIzin,
+  createRbacPeran,
+  updateRbacPeran,
+  type RbacIzin,
+} from '../services/api';
 
-interface RoleDetail {
-  id: number | string;
-  name: string;
-  label: string;
-  description?: string;
-  isSystem?: boolean;
-}
+/** Label grup izin agar matriks mudah dibaca. */
+const LABEL_GRUP: Record<string, string> = {
+  'izin-masuk': 'Izin Masuk Panel',
+  utama: 'Dashboard',
+  standar: 'Standar SPMI',
+  dokumen: 'Dokumen Mutu',
+  audit: 'Audit Mutu Internal',
+  ppepp: 'Siklus PPEPP & Indikator',
+  'tindak-lanjut': 'Tindak Lanjut',
+  'tata-kelola': 'Tata Kelola',
+};
 
 /**
  * PeranFormPage — halaman penuh tambah/ubah peran RBAC LPM.
  *
- * Menggantikan modal `Modal Add / Edit Role` pada `Roles.tsx`.
  * Rute: `/admin/peran/tambah` dan `/admin/peran/edit/:id`.
- * Setelah berhasil menyimpan, pengguna tetap di halaman formulir.
+ *
+ * Formulir kini memuat MATRIKS IZIN: administrator memilih izin mana yang
+ * melekat pada peran. Peran tidak lagi sekadar label — ia menentukan akses.
  */
 export const PeranFormPage: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
 
-  const [loading, setLoading] = useState(isEdit);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sukses, setSukses] = useState<string | null>(null);
   const [kodeTerkunci, setKodeTerkunci] = useState(false);
+  const [daftarIzin, setDaftarIzin] = useState<RbacIzin[]>([]);
+  const [izinDipilih, setIzinDipilih] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
-    name: '',
-    label: '',
-    description: '',
+    kode: '',
+    nama: '',
+    deskripsi: '',
   });
 
-  const authHeaders = (json = false): HeadersInit => {
-    const token =
-      localStorage.getItem('lpm_unusu_token') || localStorage.getItem('lpm_token');
-    return {
-      ...(json ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-  };
-
-  // Mode ubah: muat detail peran.
+  // Muat katalog izin.
   useEffect(() => {
-    if (!isEdit || !id) return;
+    let aktif = true;
+    fetchRbacIzin()
+      .then((res) => {
+        if (!aktif || !res.data?.success) return;
+        setDaftarIzin(res.data.data);
+      })
+      .catch(() => {
+        /* dibiarkan — peringatan ditampilkan bila katalog kosong */
+      });
+    return () => {
+      aktif = false;
+    };
+  }, []);
+
+  // Mode ubah: muat detail peran + izin yang sudah melekat.
+  useEffect(() => {
     let aktif = true;
     setLoading(true);
-    fetch('/api/roles', { credentials: 'include', headers: authHeaders() })
-      .then((res) => {
-        if (!res.ok) throw new Error('Gagal memuat daftar peran.');
-        return res.json();
-      })
-      .then((json) => {
+
+    const muat = async () => {
+      if (!isEdit || !id) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await fetchRbacPeran();
         if (!aktif) return;
-        const daftar: RoleDetail[] = json.data || [];
-        const peran = daftar.find((r) => String(r.id) === String(id));
+        const daftar = res.data?.data ?? [];
+        const peran = daftar.find((r) => String(r.kode) === String(id) || String(r.id) === String(id));
         if (!peran) {
           setError('Peran tidak ditemukan. Mungkin sudah dihapus.');
           return;
         }
         setFormData({
-          name: peran.name,
-          label: peran.label,
-          description: peran.description || '',
+          kode: peran.kode || peran.name,
+          nama: peran.nama || peran.label,
+          deskripsi: peran.deskripsi || peran.description || '',
         });
+        setIzinDipilih(peran.izin ?? []);
         setKodeTerkunci(Boolean(peran.isSystem));
-      })
-      .catch((err: any) => {
-        if (aktif) setError(err.message || 'Gagal memuat detail peran.');
-      })
-      .finally(() => {
+      } catch (err: any) {
+        if (aktif) {
+          setError(err?.response?.data?.message || err.message || 'Gagal memuat detail peran.');
+        }
+      } finally {
         if (aktif) setLoading(false);
-      });
+      }
+    };
+
+    muat();
     return () => {
       aktif = false;
     };
   }, [id, isEdit]);
 
+  /** Kelompokkan izin per grup agar matriks rapi. */
+  const izinPerGrup = useMemo(() => {
+    const map = new Map<string, RbacIzin[]>();
+    daftarIzin.forEach((izin) => {
+      const grup = izin.grup || 'umum';
+      if (!map.has(grup)) map.set(grup, []);
+      map.get(grup)!.push(izin);
+    });
+    return Array.from(map.entries());
+  }, [daftarIzin]);
+
+  const toggleIzin = (kunci: string) => {
+    setIzinDipilih((prev) =>
+      prev.includes(kunci) ? prev.filter((k) => k !== kunci) : [...prev, kunci]
+    );
+  };
+
+  const toggleGrup = (izinGrup: RbacIzin[]) => {
+    const semuaKunci = izinGrup.map((i) => i.kunci);
+    const semuaDipilih = semuaKunci.every((k) => izinDipilih.includes(k));
+    setIzinDipilih((prev) =>
+      semuaDipilih
+        ? prev.filter((k) => !semuaKunci.includes(k))
+        : Array.from(new Set([...prev, ...semuaKunci]))
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSukses(null);
-    setSubmitting(true);
     setError(null);
+    setSubmitting(true);
 
     try {
-      const url = isEdit && id ? `/api/roles/${id}` : '/api/roles';
-      const method = isEdit ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: authHeaders(true),
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Gagal menyimpan peran.');
-      }
-
-      if (isEdit) {
-        setSukses(`Perubahan peran "${formData.label}" berhasil disimpan.`);
+      if (isEdit && id) {
+        await updateRbacPeran(id, {
+          nama: formData.nama,
+          deskripsi: formData.deskripsi,
+          izin: izinDipilih,
+        });
+        setSukses(`Perubahan peran "${formData.nama}" berhasil disimpan.`);
       } else {
-        setSukses(`Peran "${formData.label}" berhasil ditambahkan.`);
-        setFormData({ name: '', label: '', description: '' });
+        await createRbacPeran({
+          kode: formData.kode,
+          nama: formData.nama,
+          deskripsi: formData.deskripsi,
+          izin: izinDipilih,
+        });
+        setSukses(`Peran "${formData.nama}" berhasil dibuat.`);
+        setFormData({ kode: '', nama: '', deskripsi: '' });
+        setIzinDipilih([]);
       }
     } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan sistem.');
+      setError(err?.response?.data?.message || err.message || 'Terjadi kesalahan sistem.');
     } finally {
       setSubmitting(false);
     }
@@ -118,7 +168,7 @@ export const PeranFormPage: React.FC = () => {
   return (
     <FormPageTemplate
       title={isEdit ? 'Edit Peran RBAC' : 'Buat Peran Baru'}
-      description="Peran mengelompokkan hak akses pengguna LPM UNUSU. Kode peran dipakai sistem, label dipakai antarmuka."
+      description="Peran menentukan izin apa saja yang dimiliki penggunanya. Kode peran dipakai sistem, label dipakai antarmuka."
       badge={
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-lpm-blue-50 border border-lpm-blue-200 text-[10px] font-bold uppercase tracking-wider text-lpm-blue-900">
           <ShieldCheckIcon className="w-3.5 h-3.5" aria-hidden="true" />
@@ -148,62 +198,142 @@ export const PeranFormPage: React.FC = () => {
           Memuat detail peran...
         </div>
       ) : (
-        <CardContainer
-          title="Identitas Peran"
-          subtitle="Kode peran tidak dapat diubah setelah dibuat."
-        >
-          <div className="space-y-3.5">
-            <div>
-              <label htmlFor="peran-name" className="block text-xs font-semibold text-slate-700 mb-1">
-                Kode / Identifier Peran <span className="text-rose-500">*</span>
-              </label>
-              <input
-                id="peran-name"
-                type="text"
-                required
-                disabled={kodeTerkunci}
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Contoh: auditor_fakultas"
-                className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] font-mono disabled:bg-slate-100 disabled:text-slate-500 focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
-              />
-              {kodeTerkunci && (
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Peran sistem bawaan — kode tidak dapat diubah.
-                </p>
-              )}
-            </div>
+        <>
+          <CardContainer
+            title="Identitas Peran"
+            subtitle="Kode peran tidak dapat diubah setelah dibuat."
+          >
+            <div className="space-y-3.5">
+              <div>
+                <label htmlFor="peran-kode" className="block text-xs font-semibold text-slate-700 mb-1">
+                  Kode / Identifier Peran <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  id="peran-kode"
+                  type="text"
+                  required
+                  disabled={kodeTerkunci || isEdit}
+                  value={formData.kode}
+                  onChange={(e) => setFormData({ ...formData, kode: e.target.value })}
+                  placeholder="Contoh: auditor_fakultas"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] font-mono disabled:bg-slate-100 disabled:text-slate-500 focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
+                />
+                {(kodeTerkunci || isEdit) && (
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    {kodeTerkunci
+                      ? 'Peran sistem bawaan — kode tidak dapat diubah.'
+                      : 'Kode peran tidak dapat diubah setelah dibuat.'}
+                  </p>
+                )}
+              </div>
 
-            <div>
-              <label htmlFor="peran-label" className="block text-xs font-semibold text-slate-700 mb-1">
-                Nama Tampilan Label <span className="text-rose-500">*</span>
-              </label>
-              <input
-                id="peran-label"
-                type="text"
-                required
-                value={formData.label}
-                onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-                placeholder="Contoh: Auditor Mutu Fakultas"
-                className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
-              />
-            </div>
+              <div>
+                <label htmlFor="peran-nama" className="block text-xs font-semibold text-slate-700 mb-1">
+                  Nama Tampilan Label <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  id="peran-nama"
+                  type="text"
+                  required
+                  value={formData.nama}
+                  onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+                  placeholder="Contoh: Auditor Mutu Fakultas"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
+                />
+              </div>
 
-            <div>
-              <label htmlFor="peran-description" className="block text-xs font-semibold text-slate-700 mb-1">
-                Deskripsi &amp; Cakupan Tugas
-              </label>
-              <textarea
-                id="peran-description"
-                rows={4}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Jelaskan batas wewenang pengguna yang memegang peran ini..."
-                className="w-full px-3 py-2 text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
-              />
+              <div>
+                <label htmlFor="peran-deskripsi" className="block text-xs font-semibold text-slate-700 mb-1">
+                  Deskripsi &amp; Cakupan Tugas
+                </label>
+                <textarea
+                  id="peran-deskripsi"
+                  rows={3}
+                  value={formData.deskripsi}
+                  onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
+                  placeholder="Jelaskan batas wewenang pengguna yang memegang peran ini..."
+                  className="w-full px-3 py-2 text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
+                />
+              </div>
             </div>
-          </div>
-        </CardContainer>
+          </CardContainer>
+
+          <CardContainer
+            title="Matriks Izin"
+            subtitle="Centang izin yang melekat pada peran ini. Izin masuk panel wajib dipilih agar pengguna dapat membuka panel LPM."
+            badge={
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-bold text-slate-700">
+                <KeyIcon className="w-3.5 h-3.5" />
+                {izinDipilih.length} dipilih
+              </span>
+            }
+          >
+            {daftarIzin.length === 0 ? (
+              <p className="text-[11px] text-slate-400 italic">
+                Katalog izin belum tersedia. Pastikan seeder RBAC sudah dijalankan.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {izinPerGrup.map(([grup, items]) => {
+                  const semuaDipilih = items.every((i) => izinDipilih.includes(i.kunci));
+                  const adalahIzinMasuk = grup === 'izin-masuk';
+                  return (
+                    <div
+                      key={grup}
+                      className={`rounded-[12px] border p-3.5 ${
+                        adalahIzinMasuk
+                          ? 'border-lpm-yellow-400 bg-lpm-yellow-400/20'
+                          : 'border-[#CBD5E1] bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2.5">
+                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                          {adalahIzinMasuk && <LockClosedIcon className="w-3.5 h-3.5" />}
+                          {LABEL_GRUP[grup] || grup}
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => toggleGrup(items)}
+                          className="text-[10px] font-bold text-lpm-blue-800 hover:text-lpm-blue-950 underline cursor-pointer"
+                        >
+                          {semuaDipilih ? 'Kosongkan' : 'Pilih semua'}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {items.map((izin) => {
+                          const dipilih = izinDipilih.includes(izin.kunci);
+                          return (
+                            <label
+                              key={izin.kunci}
+                              className={`flex items-start gap-2 p-2 rounded-[8px] border cursor-pointer transition text-[11px] ${
+                                dipilih
+                                  ? 'border-lpm-blue-900 bg-lpm-blue-50'
+                                  : 'border-transparent hover:bg-slate-50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={dipilih}
+                                onChange={() => toggleIzin(izin.kunci)}
+                                className="mt-0.5 w-3.5 h-3.5 accent-lpm-blue-900"
+                              />
+                              <span>
+                                <span className="block font-semibold text-slate-800">{izin.nama}</span>
+                                <code className="block text-[10px] text-slate-400 font-mono">
+                                  {izin.kunci}
+                                </code>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContainer>
+        </>
       )}
     </FormPageTemplate>
   );

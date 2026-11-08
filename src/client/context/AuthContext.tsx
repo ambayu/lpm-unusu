@@ -1,18 +1,27 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { AppAccessInfo, SessionUser } from '../services/api';
-import { FOREIGN_APP_ROLES, SSO_ROLE_LABEL, fetchSession, isLpmScopedRole } from '../services/api';
+import type { AppAccessInfo, SessionUser, TingkatMasuk } from '../services/api';
+import { KUNCI_IZIN_MASUK, LABEL_TINGKAT, fetchSession } from '../services/api';
 
 interface AuthContextValue {
   user: SessionUser | null;
   /** Cakupan akses aplikasi hasil hitung server (null saat belum terverifikasi). */
   appAccess: AppAccessInfo | null;
   loading: boolean;
-  /** true bila peran pengguna bukan milik aplikasi LPM (mis. ADMIN_LPPM). */
+  /** true bila pengguna tidak memiliki izin masuk panel LPM. */
   accessDenied: boolean;
-  /** Label peran yang siap tampil di UI. */
+  /** Label tingkat akses yang siap tampil di UI. */
   roleLabel: string;
-  /** true hanya untuk Administrator LPM / Superadmin (bukan admin aplikasi lain). */
+  /** Tingkat masuk efektif (admin / dosen / mahasiswa) berdasarkan izin. */
+  tingkat: TingkatMasuk | null;
+  /** true bila memiliki izin masuk tingkat administrator. */
   isAppAdmin: boolean;
+  /** Seluruh kunci izin pengguna (izin masuk + izin fitur). */
+  izin: string[];
+  /**
+   * Pemeriksa izin fitur. SELALU pakai ini untuk menentukan tampil/tidaknya
+   * menu dan tombol — jangan pernah membandingkan `user.role`.
+   */
+  bisa: (...kunci: string[]) => boolean;
   saveSession: (token: string, user: SessionUser, appAccess?: AppAccessInfo) => void;
   refreshSession: () => Promise<void>;
   logout: () => void;
@@ -20,45 +29,58 @@ interface AuthContextValue {
 
 const TOKEN_KEY = 'lpm_unusu_token';
 const USER_KEY = 'lpm_unusu_user';
+const IZIN_KEY = 'lpm_unusu_izin';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * Cadangan cakupan akses bila server tidak dapat dihubungi.
- * Aturan tetap SAMA dengan server: hanya peran LPM yang diizinkan, dan peran
- * admin aplikasi lain selalu ditolak.
+ * Cadangan bila server tidak dapat dihubungi.
+ * Tanpa data izin dari server, akses DITOLAK (fail-closed) — konsisten dengan
+ * prinsip server: tidak ada izin terbaca berarti tidak boleh masuk.
  */
-function deriveAppAccess(user: SessionUser | null): AppAccessInfo | null {
-  if (!user) return null;
-  const ssoRole = (user.ssoRole || '').toUpperCase();
-  const allowed = isLpmScopedRole(ssoRole);
-  const isForeignAdmin = (FOREIGN_APP_ROLES as readonly string[]).includes(ssoRole);
+function fallbackAppAccess(): AppAccessInfo {
   return {
     app: 'lpm-unusu',
     appName: 'LPM UNUSU',
-    allowed,
-    reason: allowed ? 'allowed' : isForeignAdmin ? 'foreign_app_admin' : 'role_not_allowed',
-    ssoRole,
-    role: user.role,
-    roleLabel: SSO_ROLE_LABEL[ssoRole] || ssoRole || 'Tanpa Peran',
-    isAppAdmin: ssoRole === 'ADMIN_LPM' || ssoRole === 'SUPERADMIN',
-    foreignApp: null,
-    message: allowed
-      ? 'Selamat datang di panel LPM UNUSU.'
-      : `Peran ${ssoRole || 'tidak dikenal'} bukan milik aplikasi LPM UNUSU.`,
+    allowed: false,
+    reason: 'no_izin_masuk',
+    ssoRole: '',
+    ssoRoleLabel: '',
+    tingkat: null,
+    roleLabel: 'Tanpa Izin Masuk',
+    isAppAdmin: false,
+    izin: [],
+    message: 'Izin akses belum dapat diverifikasi. Periksa koneksi ke server LPM.',
   };
 }
+
+const bacaIzinCache = (): string[] => {
+  try {
+    const raw = localStorage.getItem(IZIN_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+
+const simpanIzinCache = (izin: string[]) => {
+  localStorage.setItem(IZIN_KEY, JSON.stringify(izin));
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [appAccess, setAppAccess] = useState<AppAccessInfo | null>(null);
+  const [izin, setIzin] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const clearSession = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(IZIN_KEY);
     setUser(null);
     setAppAccess(null);
+    setIzin([]);
   }, []);
 
   useEffect(() => {
@@ -66,56 +88,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const bootstrap = async () => {
       const token = localStorage.getItem(TOKEN_KEY);
-      const raw = localStorage.getItem(USER_KEY);
 
-      if (!token || !raw) {
+      if (!token) {
         if (!cancelled) setLoading(false);
         return;
       }
 
-      let cachedUser: SessionUser | null = null;
-      try {
-        cachedUser = JSON.parse(raw) as SessionUser;
-      } catch {
-        localStorage.removeItem(USER_KEY);
-      }
-
       // Tampilkan sesi tersimpan lebih dulu agar UI tidak berkedip.
+      const cachedUserRaw = localStorage.getItem(USER_KEY);
+      const cachedUser: SessionUser | null = cachedUserRaw
+        ? (() => {
+            try {
+              return JSON.parse(cachedUserRaw) as SessionUser;
+            } catch {
+              localStorage.removeItem(USER_KEY);
+              return null;
+            }
+          })()
+        : null;
+      const cachedIzin = bacaIzinCache();
+
       if (cachedUser && !cancelled) {
         setUser(cachedUser);
-        setAppAccess(deriveAppAccess(cachedUser));
+        setIzin(cachedIzin);
       }
 
       try {
-        // Server adalah sumber kebenaran: peran & cakupan aplikasi dihitung ulang.
+        // Server adalah sumber kebenaran: izin dihitung ulang dari database.
         const response = await fetchSession();
         if (cancelled) return;
 
         const freshUser = response.data?.user ?? cachedUser;
-        const freshAccess = response.data?.appAccess ?? deriveAppAccess(freshUser);
+        const freshAccess = response.data?.appAccess ?? null;
+        const freshIzin = response.data?.izin ?? [];
 
         setUser(freshUser);
         setAppAccess(freshAccess);
+        setIzin(freshIzin);
 
-        if (freshAccess && !freshAccess.allowed) {
-          // Sesi milik aplikasi lain — jangan pernah dipakai di panel LPM.
+        if (!freshAccess || freshAccess.allowed === false) {
+          // Tidak punya izin masuk — jangan simpan kredensial panel.
           localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(USER_KEY);
-        } else if (freshUser) {
-          localStorage.setItem(USER_KEY, JSON.stringify(freshUser));
+          localStorage.removeItem(IZIN_KEY);
+        } else {
+          if (freshUser) localStorage.setItem(USER_KEY, JSON.stringify(freshUser));
+          simpanIzinCache(freshIzin);
         }
       } catch (error: any) {
         if (cancelled) return;
 
+        const status = error?.response?.status;
         const deniedAccess: AppAccessInfo | undefined = error?.response?.data?.appAccess;
-        if (deniedAccess && !deniedAccess.allowed) {
+
+        if (deniedAccess && deniedAccess.allowed === false) {
           setAppAccess(deniedAccess);
+          setIzin([]);
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(IZIN_KEY);
+        } else if (status === 401) {
           clearSession();
-          setUser(cachedUser);
-          setAppAccess(deniedAccess);
+        } else {
+          // Gagal jaringan: pakai izin tersimpan agar panel tetap bisa dibuka,
+          // tetapi server tetap menolak operasi yang tidak diizinkan.
+          setAppAccess((prev) => prev ?? { ...fallbackAppAccess(), allowed: cachedIzin.length > 0, izin: cachedIzin });
         }
-        // Selain 401/403 (mis. jaringan mati) biarkan sesi tersimpan dipakai
-        // dengan cakupan hasil turunan lokal.
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -132,7 +168,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(sessionUser));
     setUser(sessionUser);
-    setAppAccess(access ?? deriveAppAccess(sessionUser));
+    if (access) {
+      setAppAccess(access);
+      if (access.izin) {
+        setIzin(access.izin);
+        simpanIzinCache(access.izin);
+      }
+    }
   };
 
   const refreshSession = useCallback(async () => {
@@ -140,31 +182,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await fetchSession();
       if (response.data?.success) {
         const access = response.data.appAccess;
+        const freshIzin = response.data.izin ?? [];
         setUser(response.data.user);
         setAppAccess(access);
+        setIzin(freshIzin);
 
-        // Peran bisa dicabut / dipindah ke aplikasi lain di portal. Bila server
-        // menyatakan akses tidak lagi sah, kredensial lokal wajib dibuang.
-        if (access && access.allowed === false) {
+        // Izin bisa dicabut kapan saja di portal ONE UNUSU. Bila server
+        // menyatakan tidak lagi berhak masuk, kredensial lokal wajib dibuang.
+        if (!access || access.allowed === false) {
           localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(USER_KEY);
+          localStorage.removeItem(IZIN_KEY);
+        } else {
+          simpanIzinCache(freshIzin);
         }
       }
     } catch (error: any) {
       const deniedAccess: AppAccessInfo | undefined = error?.response?.data?.appAccess;
       if (deniedAccess && deniedAccess.allowed === false) {
         setAppAccess(deniedAccess);
+        setIzin([]);
         localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
+        localStorage.removeItem(IZIN_KEY);
       }
-      /* kegagalan jaringan diabaikan — status akses terakhir tetap dipakai */
+      /* kegagalan jaringan diabaikan — izin terakhir tetap dipakai */
     }
   }, []);
 
   /**
-   * Revalidasi cakupan aplikasi saat tab kembali aktif.
-   * Kasus nyata: admin LPM dipindahkan menjadi admin LPPM di portal, sesi lokalnya
-   * masih tersimpan. Tanpa ini panel LPM tetap terbuka sampai halaman di-reload.
+   * Revalidasi izin saat tab kembali aktif.
+   * Kasus nyata: admin LPM dicabut izin masuknya di portal, sesi lokalnya masih
+   * tersimpan. Tanpa ini panel LPM tetap terbuka sampai halaman di-reload.
    */
   useEffect(() => {
     const REVALIDATE_INTERVAL_MS = 60_000;
@@ -194,9 +241,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearSession();
   };
 
+  /** Pemeriksa izin — semua harus dimiliki bila argumen lebih dari satu. */
+  const bisa = useCallback((...kunci: string[]) => kunci.every((k) => izin.includes(k)), [izin]);
+
   const accessDenied = !!appAccess && appAccess.allowed === false;
-  const roleLabel = appAccess?.roleLabel || SSO_ROLE_LABEL[user?.ssoRole || ''] || user?.role || 'Pengguna';
-  const isAppAdmin = !!appAccess?.isAppAdmin;
+  const tingkat: TingkatMasuk | null =
+    appAccess?.tingkat ??
+    (izin.includes(KUNCI_IZIN_MASUK.admin)
+      ? 'admin'
+      : izin.includes(KUNCI_IZIN_MASUK.dosen)
+        ? 'dosen'
+        : izin.includes(KUNCI_IZIN_MASUK.mahasiswa)
+          ? 'mahasiswa'
+          : null);
+  const roleLabel = appAccess?.roleLabel || (tingkat ? LABEL_TINGKAT[tingkat] : 'Pengguna');
+  const isAppAdmin = tingkat === 'admin';
 
   const value = useMemo(
     () => ({
@@ -205,12 +264,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       accessDenied,
       roleLabel,
+      tingkat,
       isAppAdmin,
+      izin,
+      bisa,
       saveSession,
       refreshSession,
       logout,
     }),
-    [user, appAccess, loading, accessDenied, roleLabel, isAppAdmin, refreshSession]
+    [user, appAccess, loading, accessDenied, roleLabel, tingkat, isAppAdmin, izin, bisa, refreshSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
