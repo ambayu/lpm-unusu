@@ -118,40 +118,98 @@ const ROLE_LABEL_SSO: Record<string, string> = {
 };
 
 /**
- * Ambil seluruh kunci izin milik seorang pengguna dari database.
- * Menggabungkan izin pemetaan SSO (lpm_users, berdasarkan ssoRole) dan izin
- * penugasan peran lokal (lpm_user_roles). Mengembalikan himpunan kosong bila
- * pengguna belum pernah dipetakan -> fail-closed (tolak akses).
+ * Ambil seluruh kunci izin milik seorang pengguna dari database LPM lokal.
+ * Mendukung auto-provisioning jika pengguna baru login pertama kali dari SSO.
  */
 const ambilIzinPengguna = async (
   userId: number,
   ssoRole: string,
-): Promise<Set<string>> => {
+  userInfo?: { username?: string; nama?: string; email?: string | null; ssoRoles?: string[] }
+): Promise<{ izin: Set<string>; roles: string[]; userRecord?: any }> => {
   const hasil = new Set<string>();
 
-  // 1) Pemetaan berdasarkan peran SSO (lpm_users.ssoRole)
-  if (ssoRole) {
-    const lewatSso = await prisma.lpmUser.findMany({
-      where: { userId, ssoRole },
-      include: { peran: { include: { role: { include: { izin: { include: { permission: true } } } } } } },
-    });
-    for (const u of lewatSso) {
-      for (const ur of u.peran) {
-        for (const rp of ur.role.izin) hasil.add(rp.permission.kunci);
-      }
+  // Cari di tabel lpm_users
+  let user = await prisma.lpmUser.findFirst({
+    where: {
+      OR: [
+        { userId },
+        ...(userInfo?.username ? [{ username: userInfo.username }] : []),
+      ],
+    },
+    include: {
+      peran: {
+        include: {
+          role: {
+            include: {
+              izin: {
+                include: {
+                  permission: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Jika belum ada di lpm_users, lakukan auto-provisioning peran default
+  if (!user && userInfo?.username) {
+    const ssoRoles = userInfo.ssoRoles ?? (ssoRole ? [ssoRole] : []);
+    let targetRoleKode = "dosen";
+    if (ssoRoles.includes("SUPERADMIN") || ssoRoles.includes("ADMIN_LPM")) {
+      targetRoleKode = "admin";
+    } else if (ssoRoles.includes("MAHASISWA")) {
+      targetRoleKode = "mahasiswa";
     }
-    if (hasil.size > 0) return hasil;
+
+    const defaultRole = await prisma.lpmRole.findUnique({
+      where: { kode: targetRoleKode },
+    });
+
+    if (defaultRole) {
+      user = await prisma.lpmUser.create({
+        data: {
+          userId,
+          username: userInfo.username,
+          nama: userInfo.nama || userInfo.username,
+          email: userInfo.email || null,
+          ssoRole: ssoRole ? String(ssoRole).toUpperCase() : null,
+          status: "Aktif",
+          peran: {
+            create: [{ roleId: defaultRole.id }],
+          },
+        },
+        include: {
+          peran: {
+            include: {
+              role: {
+                include: {
+                  izin: {
+                    include: {
+                      permission: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
   }
 
-  // 2) Penugasan peran lokal langsung (lpm_user_roles)
-  const lokal = await prisma.lpmUserRole.findMany({
-    where: { user: { userId } },
-    include: { role: { include: { izin: { include: { permission: true } } } } },
-  });
-  for (const ur of lokal) {
-    for (const rp of ur.role.izin) hasil.add(rp.permission.kunci);
+  const roleKodes: string[] = [];
+  if (user) {
+    for (const ur of user.peran) {
+      roleKodes.push(ur.role.kode);
+      for (const rp of ur.role.izin) {
+        hasil.add(rp.permission.kunci);
+      }
+    }
   }
-  return hasil;
+
+  return { izin: hasil, roles: roleKodes, userRecord: user };
 };
 
 /** Tingkat masuk tertinggi yang dimiliki pengguna (null = tidak boleh masuk). */
@@ -304,7 +362,11 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
 
     // Izin dibaca ulang dari database pada setiap permintaan sehingga
     // pencabutan izin oleh administrator berlaku seketika.
-    const izin = await ambilIzinPengguna(userId, ssoRole);
+    const resAkses = await ambilIzinPengguna(userId, ssoRole, {
+      username: typeof decoded.username === "string" ? decoded.username : undefined,
+      nama: typeof decoded.nama === "string" ? decoded.nama : undefined,
+    });
+    const izin = resAkses.izin;
     const akses = putuskanAkses({ ssoRole, izin });
 
     // Penjaga izin masuk: tanpa izin masuk, seluruh API panel ditolak.
@@ -377,8 +439,20 @@ app.post("/api/auth/sso", async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: ssoPayload?.message || "Verifikasi token SSO gagal" });
     }
 
-    // Tolak login bila pengguna tidak memiliki izin masuk panel LPM.
-    const izinSso = await ambilIzinPengguna(ssoUser.id, ssoUser.role);
+    // Ambil izin dan peran lokal LPM pengguna dari database lokal
+    const ssoRoles = Array.isArray((ssoUser as any).roles)
+      ? (ssoUser as any).roles
+      : ssoUser.role
+      ? [ssoUser.role]
+      : [];
+
+    const resAkses = await ambilIzinPengguna(ssoUser.id, ssoUser.role, {
+      username: ssoUser.username,
+      nama: ssoUser.nama,
+      email: ssoUser.email,
+      ssoRoles,
+    });
+    const izinSso = resAkses.izin;
     const akses = putuskanAkses({ ssoRole: ssoUser.role, izin: izinSso });
     if (!akses.allowed) {
       recordAccessDenial({

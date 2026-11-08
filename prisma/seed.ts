@@ -444,7 +444,76 @@ async function seedRbacLpm() {
   console.log(
     `RBAC LPM seeded: ${PERAN_BAWAAN.length} peran, ${semuaIzin.length} izin (${IZIN_MASUK.length} izin masuk).`,
   );
-  console.log('Petakan peran ONE UNUSU -> izin masuk lewat panel ONE UNUSU (role_permissions).');
+
+  // 4. Default Seed Pengguna Lokal LPM
+  const adminRole = await prisma.lpmRole.findUnique({ where: { kode: 'admin' } });
+  const dosenRole = await prisma.lpmRole.findUnique({ where: { kode: 'dosen' } });
+
+  if (adminRole) {
+    const adminUser = await prisma.lpmUser.upsert({
+      where: { username: 'admin' },
+      update: {
+        nama: 'Super Administrator LPM',
+        status: 'Aktif',
+      },
+      create: {
+        userId: 1,
+        username: 'admin',
+        nama: 'Super Administrator LPM',
+        email: 'admin@unusu.ac.id',
+        ssoRole: 'SUPERADMIN',
+        status: 'Aktif',
+      },
+    });
+
+    await prisma.lpmUserRole.upsert({
+      where: {
+        userId_roleId: {
+          userId: adminUser.id,
+          roleId: adminRole.id,
+        },
+      },
+      update: {},
+      create: {
+        userId: adminUser.id,
+        roleId: adminRole.id,
+      },
+    });
+  }
+
+  if (dosenRole) {
+    const dosenUser = await prisma.lpmUser.upsert({
+      where: { username: '0102038901' },
+      update: {
+        nama: 'Dr. Muhammad Farhan, M.Kom.',
+        status: 'Aktif',
+      },
+      create: {
+        userId: 2,
+        username: '0102038901',
+        nama: 'Dr. Muhammad Farhan, M.Kom.',
+        email: 'farhan@unusu.ac.id',
+        ssoRole: 'DOSEN',
+        status: 'Aktif',
+      },
+    });
+
+    await prisma.lpmUserRole.upsert({
+      where: {
+        userId_roleId: {
+          userId: dosenUser.id,
+          roleId: dosenRole.id,
+        },
+      },
+      update: {},
+      create: {
+        userId: dosenUser.id,
+        roleId: dosenRole.id,
+      },
+    });
+  }
+
+  console.log('Pengguna default LPM berhasil ditugaskan.');
 }
 
 main()
