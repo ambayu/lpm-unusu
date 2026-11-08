@@ -104,22 +104,16 @@ menghapus data) dan `git push` **wajib** persetujuan eksplisit user.
 
 ---
 
-## 6. Aturan SSO & Otorisasi Per Aplikasi
+## 6. Aturan SSO & Otorisasi Berbasis Permission
 
-Ekosistem ONE UNUSU memakai **satu tabel pengguna** dengan peran berprefix aplikasi.
-Karena itu berlaku aturan berikut (lihat `docs/adr/ADR-0001-app-scoped-admin.md`):
+Ekosistem ONE UNUSU memakai **otorisasi berbasis permission (Permission-First)** yang diterbitkan dari portal pusat ONE UNUSU:
 
-1. Panel LPM hanya menerima peran `SUPERADMIN`, `ADMIN_LPM`, `DOSEN`.
-2. Peran admin aplikasi lain (`ADMIN_LPPM`, `ADMIN_ESURAT`, `ADMIN_SARPRAS`,
-   `ADMIN_AKREDITASI`, `ADMIN_LMS`, `ADMIN_SSO`) **wajib ditolak** dengan `403` dan pesan
-   eksplisit — bukan pesan generik "akses ditolak".
-3. Keputusan akses dihitung **satu fungsi** di server (`resolveAppAccess`) dan dipakai pada
-   tiga titik: tukar token SSO, middleware `authenticate`, dan `GET /api/auth/me`.
-4. Klien wajib memverifikasi ulang sesi ke `GET /api/auth/me` saat boot; `localStorage`
-   tidak boleh dipercaya sebagai sumber otorisasi.
-5. Peran di luar cakupan diarahkan ke `/akses-ditolak` (halaman `AccessDenied.tsx`), bukan
-   redirect diam-diam ke landing.
-6. Penugasan peran di panel LPM hanya boleh menawarkan peran dalam cakupan LPM.
+1. **Izin Masuk Aplikasi**: Akses ke panel LPM ditentukan oleh izin masuk SSO (`lpm-unusu:masuk_admin` atau `lpm-unusu:masuk_dosen`) yang diterima pada `data.access.allowed` saat verifikasi tiket.
+2. **Peniadaan Peran Cabang Kaku**: Peran admin kaku per-aplikasi (`ADMIN_LPM`, `ADMIN_LPPM`, dll.) telah dihapus dari portal pusat. `SUPERADMIN` memegang seluruh izin masuk secara global dan dapat masuk ke semua aplikasi. Super Administrator membuat peran kustom dan menentukan izin fitur/masuk, lalu menautkannya ke pengguna di portal SSO.
+3. **Pemeriksaan Fitur per Sub-Menu**: Operasi data dan fitur di LPM dilindungi oleh middleware berbasis permission key (bukan pengecekan raw role `role === '...'`).
+4. **Verifikasi Sesi Server**: Klien wajib memverifikasi ulang sesi ke server saat boot; cache lokal tidak boleh dipercaya sebagai sumber tunggal otorisasi.
+5. **Fail-Closed**: Pengguna tanpa izin masuk diarahkan ke `/akses-ditolak` (`AccessDenied.tsx`) dengan pesan yang jelas.
+6. **Manajemen Pengguna Terpusat**: LPM tidak mengelola registri akun pengguna sendiri; pengelolaan akun dan penautan peran sepenuhnya dilakukan di portal ONE UNUSU.
 
 ---
 
