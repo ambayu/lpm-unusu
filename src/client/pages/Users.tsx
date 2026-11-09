@@ -236,14 +236,6 @@ export const UsersPage: React.FC = () => {
                     );
                   })}
                 </tbody>
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
               </table>
             </div>
           )}
