@@ -102,7 +102,15 @@ export const PenggunaFormPage: React.FC = () => {
     };
   }, [id, isEdit]);
 
+  const isTargetSuperadmin =
+    formData.ssoRole === 'SUPERADMIN' ||
+    formData.peran.includes('SUPERADMIN') ||
+    formData.username === 'admin';
+
   const togglePeran = (kode: string) => {
+    // Guard: SUPERADMIN tidak boleh dilepas
+    if (isTargetSuperadmin && kode === 'SUPERADMIN') return;
+
     setFormData((prev) => ({
       ...prev,
       peran: prev.peran.includes(kode)
@@ -125,11 +133,10 @@ export const PenggunaFormPage: React.FC = () => {
     try {
       if (isEdit && id) {
         await updateRbacPengguna(id, {
-          nama: formData.nama,
-          email: formData.email || null,
-          ssoRole: formData.ssoRole || null,
-          status: formData.status,
-          peran: formData.peran,
+          status: isTargetSuperadmin ? 'Aktif' : formData.status,
+          peran: isTargetSuperadmin && !formData.peran.includes('SUPERADMIN')
+            ? [...formData.peran, 'SUPERADMIN']
+            : formData.peran,
         });
         setSukses(`Perubahan data pengguna "${formData.nama}" berhasil disimpan.`);
       } else {
@@ -205,72 +212,49 @@ export const PenggunaFormPage: React.FC = () => {
       ) : (
         <>
           <CardContainer
-            title="Identitas Pengguna"
-            subtitle="Data ini mengikuti akun ONE UNUSU — username biasanya NIDN atau NIM."
+            title="Identitas &amp; Biodata Civitas (ONE UNUSU SSO)"
+            subtitle="Data identitas civitas disinkronkan secara otomatis dari SSO ONE UNUSU (Read-Only)."
           >
-            <div className="space-y-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
               <div>
-                <label htmlFor="pengguna-userid" className="block text-xs font-semibold text-slate-700 mb-1">
-                  ID Pengguna ONE UNUSU {!isEdit && <span className="text-rose-500">*</span>}
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  NIDN / NIM
                 </label>
                 <input
-                  id="pengguna-userid"
-                  type="number"
-                  required={!isEdit}
-                  disabled={isEdit}
-                  min={1}
-                  value={formData.userId}
-                  onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-                  placeholder="Contoh: 12"
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 disabled:bg-slate-100 disabled:text-slate-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="pengguna-username" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Username / NIDN / NIM {!isEdit && <span className="text-rose-500">*</span>}
-                </label>
-                <input
-                  id="pengguna-username"
                   type="text"
-                  required={!isEdit}
-                  disabled={isEdit}
+                  disabled
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  placeholder="Contoh: 0102030405"
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900 disabled:bg-slate-100 disabled:text-slate-500"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs font-mono rounded-[10px] border border-[#CBD5E1] bg-slate-100 text-slate-600 cursor-not-allowed"
                 />
               </div>
 
               <div>
-                <label htmlFor="pengguna-nama" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nama Lengkap &amp; Gelar <span className="text-rose-500">*</span>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Nama Lengkap
                 </label>
                 <input
-                  id="pengguna-nama"
                   type="text"
-                  required
+                  disabled
                   value={formData.nama}
-                  onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                  placeholder="Contoh: Dr. H. Ahmad Farhan, M.Kom."
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
+                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] bg-slate-100 text-slate-600 cursor-not-allowed"
                 />
               </div>
 
               <div>
-                <label htmlFor="pengguna-email" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Email Institusi
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Email
                 </label>
                 <input
-                  id="pengguna-email"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Contoh: dosen@unusu.ac.id"
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
+                  disabled
+                  value={formData.email || (formData.username.includes('@') ? formData.username : `${formData.username.toLowerCase()}@unusu.ac.id`)}
+                  className="w-full px-3 py-2 min-h-[44px] text-xs font-mono rounded-[10px] border border-[#CBD5E1] bg-slate-100 text-slate-600 cursor-not-allowed"
                 />
               </div>
             </div>
+            <p className="text-[11px] text-slate-500 mt-2 italic">
+              🔒 Data biodata civitas dikelola terpusat di ONE UNUSU. Satelit LPM hanya mengelola hak peran dan status keaktifan akun.
+            </p>
           </CardContainer>
 
           <CardContainer
@@ -320,35 +304,28 @@ export const PenggunaFormPage: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="pengguna-sso-role" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Peran SSO (metadata)
-                  </label>
-                  <input
-                    id="pengguna-sso-role"
-                    type="text"
-                    value={formData.ssoRole}
-                    onChange={(e) => setFormData({ ...formData, ssoRole: e.target.value.toUpperCase() })}
-                    placeholder="SUPERADMIN / ADMIN_LPM / DOSEN / MAHASISWA"
-                    className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Hanya untuk pencocokan otomatis. Otorisasi tetap memakai izin.
-                  </p>
-                </div>
-
-                <div>
                   <label htmlFor="pengguna-status" className="block text-xs font-semibold text-slate-700 mb-1">
                     Status Akun
                   </label>
                   <select
                     id="pengguna-status"
-                    value={formData.status}
+                    disabled={isTargetSuperadmin}
+                    value={isTargetSuperadmin ? 'Aktif' : formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3 py-2 min-h-[44px] text-xs border border-[#CBD5E1] rounded-[10px] bg-white focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900"
+                    className={`w-full px-3 py-2 min-h-[44px] text-xs border border-[#CBD5E1] rounded-[10px] ${
+                      isTargetSuperadmin
+                        ? 'bg-slate-100 text-slate-500 cursor-not-allowed'
+                        : 'bg-white focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900'
+                    }`}
                   >
                     <option value="Aktif">Aktif</option>
                     <option value="Nonaktif">Nonaktif</option>
                   </select>
+                  {isTargetSuperadmin && (
+                    <p className="text-[10px] text-amber-600 mt-1 font-semibold">
+                      🔒 Akun Super Administrator terkunci permanen pada status Aktif.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

@@ -1605,14 +1605,37 @@ app.post("/api/users", requirePermission("pengguna:create"), async (req: Request
 app.put("/api/users/:id", requirePermission("pengguna:update"), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const { nama, email, ssoRole, status, peran } = req.body ?? {};
+    const { status, peran } = req.body ?? {};
 
-    const ada = await prisma.lpmUser.findUnique({ where: { id } });
+    const ada = await prisma.lpmUser.findUnique({
+      where: { id },
+      include: { peran: { include: { role: true } } },
+    });
     if (!ada) {
       return res.status(404).json({ success: false, message: "Pengguna tidak ditemukan" });
     }
 
-    const kodePeran: string[] | undefined = Array.isArray(peran) ? peran : undefined;
+    const isTargetSuperadmin =
+      ada.ssoRole === "SUPERADMIN" ||
+      ada.peran.some((p) => p.role.kode === "SUPERADMIN");
+
+    // Guard: Akun Super Administrator tidak dapat dinonaktifkan
+    if (isTargetSuperadmin && status && status !== "Aktif") {
+      return res.status(403).json({
+        success: false,
+        message: "Akun Super Administrator tidak dapat dinonaktifkan demi integritas sistem.",
+      });
+    }
+
+    let kodePeran: string[] | undefined = Array.isArray(peran) ? peran : undefined;
+    
+    // Guard: Role SUPERADMIN tidak boleh dilepas jika target adalah superadmin
+    if (isTargetSuperadmin && kodePeran) {
+      if (!kodePeran.includes("SUPERADMIN")) {
+        kodePeran.push("SUPERADMIN");
+      }
+    }
+
     let peranDb: { id: number; kode: string }[] = [];
     if (kodePeran) {
       const ditemukan = await prisma.lpmRole.findMany({ where: { kode: { in: kodePeran } } });
@@ -1623,12 +1646,11 @@ app.put("/api/users/:id", requirePermission("pengguna:update"), async (req: Requ
     }
 
     const diperbarui = await prisma.$transaction(async (tx) => {
+      // HANYA field status dan peran yang dapat diubah dari panel lokal LPM.
+      // Biodata civitas (nama, email, ssoRole) terkunci dari SSO.
       await tx.lpmUser.update({
         where: { id },
         data: {
-          ...(nama !== undefined ? { nama: String(nama) } : {}),
-          ...(email !== undefined ? { email: email || null } : {}),
-          ...(ssoRole !== undefined ? { ssoRole: ssoRole ? String(ssoRole).toUpperCase() : null } : {}),
           ...(status !== undefined ? { status: String(status) } : {}),
         },
       });

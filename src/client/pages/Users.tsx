@@ -153,70 +153,89 @@ export const UsersPage: React.FC = () => {
             <div className="p-12 text-center text-xs text-slate-400">Belum ada data pengguna yang sesuai kriteria.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs min-w-[980px]">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
                   <tr>
-                    <th className="py-3 px-4 font-semibold">Pengguna</th>
-                    <th className="py-3 px-4 font-semibold">Peran LPM</th>
-                    <th className="py-3 px-4 font-semibold">Peran SSO</th>
-                    <th className="py-3 px-4 font-semibold">Status</th>
+                    <th className="py-3 px-4 font-semibold">NIDN / NIM</th>
+                    <th className="py-3 px-4 font-semibold">Nama Lengkap</th>
+                    <th className="py-3 px-4 font-semibold">Email</th>
+                    <th className="py-3 px-4 font-semibold">Status Akun</th>
+                    <th className="py-3 px-4 font-semibold">Role Terkait</th>
                     {adaAksi && <th className="py-3 px-4 font-semibold text-center">Aksi</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900">{u.nama}</div>
-                        <div className="text-[11px] text-slate-400">
-                          {u.username} &middot; {u.email || 'tanpa email'}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex flex-wrap gap-1">
-                          {u.peran.length === 0 ? (
-                            <span className="text-[11px] text-slate-400 italic">Tanpa peran</span>
-                          ) : (
-                            u.peran.map((p) => (
-                              <span
-                                key={p}
-                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-lpm-blue-50 text-lpm-blue-900 border border-lpm-blue-200"
-                              >
-                                <ShieldCheckIcon className="w-3.5 h-3.5" />
-                                {SSO_ROLE_LABEL[p.toUpperCase()] || p}
-                              </span>
-                            ))
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-slate-600">
-                        <div className="text-[11px] font-mono">{u.ssoRole || '—'}</div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-lpm-blue-700">
-                          <CheckBadgeIcon className="w-3.5 h-3.5" />
-                          {u.status || 'Aktif'}
-                        </span>
-                      </td>
-                      {adaAksi && (
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            {bolehUbah && (
-                              <Link
-                                to={`/admin/pengguna/edit/${u.id}`}
-                                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-lpm-blue-900 hover:bg-lpm-blue-50 transition cursor-pointer"
-                                title="Edit Pengguna"
-                              >
-                                <PencilSquareIcon className="w-4 h-4" />
-                              </Link>
+                  {filteredUsers.map((u) => {
+                    const isSuper =
+                      u.ssoRole === 'SUPERADMIN' ||
+                      u.peran.includes('SUPERADMIN') ||
+                      u.username === 'admin';
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4 font-mono font-semibold text-slate-800">
+                          {u.username}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-900">{u.nama}</div>
+                        </td>
+                        <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
+                          {u.email || (u.username.includes('@') ? u.username : `${u.username.toLowerCase()}@unusu.ac.id`)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                            u.status === 'Aktif'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}>
+                            <CheckBadgeIcon className="w-3.5 h-3.5" />
+                            {u.status || 'Aktif'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex flex-wrap gap-1">
+                            {u.peran.length === 0 ? (
+                              <span className="text-[11px] text-slate-400 italic">Tanpa peran</span>
+                            ) : (
+                              u.peran.map((p) => (
+                                <span
+                                  key={p}
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-lpm-blue-50 text-lpm-blue-900 border border-lpm-blue-200"
+                                >
+                                  <ShieldCheckIcon className="w-3.5 h-3.5" />
+                                  {SSO_ROLE_LABEL[p.toUpperCase()] || p}
+                                </span>
+                              ))
                             )}
-                            {bolehHapus && (
-                              <button
-                                onClick={() => handleDelete(u.id)}
-                                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                                title="Hapus Pengguna"
-                              >
-                                <TrashIcon className="w-4 h-4" />
+                          </div>
+                        </td>
+                        {adaAksi && (
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {bolehUbah && (
+                                <Link
+                                  to={`/admin/pengguna/edit/${u.id}`}
+                                  className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-lpm-blue-900 hover:bg-lpm-blue-50 transition cursor-pointer"
+                                  title="Edit Pengguna"
+                                >
+                                  <PencilSquareIcon className="w-4 h-4" />
+                                </Link>
+                              )}
+                              {bolehHapus && !isSuper && (
+                                <button
+                                  onClick={() => handleDelete(u.id)}
+                                  className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                  title="Hapus Pengguna"
+                                >
+                                  <TrashIcon className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
                               </button>
                             )}
                           </div>
