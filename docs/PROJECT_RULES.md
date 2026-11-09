@@ -109,11 +109,16 @@ menghapus data) dan `git push` **wajib** persetujuan eksplisit user.
 Ekosistem ONE UNUSU memakai **otorisasi berbasis permission (Permission-First)** yang diterbitkan dari portal pusat ONE UNUSU:
 
 1. **Izin Masuk Aplikasi**: Akses ke panel LPM ditentukan oleh izin masuk SSO (`lpm-unusu:masuk_admin` atau `lpm-unusu:masuk_dosen`) yang diterima pada `data.access.allowed` saat verifikasi tiket.
-2. **Peniadaan Peran Cabang Kaku**: Peran admin kaku per-aplikasi (`ADMIN_LPM`, `ADMIN_LPPM`, dll.) telah dihapus dari portal pusat. `SUPERADMIN` memegang seluruh izin masuk secara global dan dapat masuk ke semua aplikasi. Super Administrator membuat peran kustom dan menentukan izin fitur/masuk, lalu menautkannya ke pengguna di portal SSO.
-3. **Pemeriksaan Fitur per Sub-Menu**: Operasi data dan fitur di LPM dilindungi oleh middleware berbasis permission key (bukan pengecekan raw role `role === '...'`).
-4. **Verifikasi Sesi Server**: Klien wajib memverifikasi ulang sesi ke server saat boot; cache lokal tidak boleh dipercaya sebagai sumber tunggal otorisasi.
-5. **Fail-Closed**: Pengguna tanpa izin masuk diarahkan ke `/akses-ditolak` (`AccessDenied.tsx`) dengan pesan yang jelas.
-6. **Manajemen Pengguna Terpusat**: LPM tidak mengelola registri akun pengguna sendiri; pengelolaan akun dan penautan peran sepenuhnya dilakukan di portal ONE UNUSU.
+2. **Desentralisasi RBAC & Multi-Role**: LPM UNUSU memiliki tabel `lpm_users`, `lpm_roles`, `lpm_permissions`, `lpm_role_permissions`, dan `lpm_user_roles`. Hak akses dan izin granular per menu diatur di database lokal LPM.
+3. **Auto-Provisioning**: Pengguna SSO baru secara otomatis didaftarkan ke tabel `lpm_users` dan ditautkan ke peran default di `lpm_user_roles`.
+4. **Pembedaan URL Callback (Local Dev vs VPS)**:
+   - Lingkungan lokal: `http://localhost:5177/sso/callback`.
+   - Lingkungan VPS / Produksi: `https://unusu.ac.id/lpm/sso/callback`.
+   - Diselaraskan dari seeder pusat ONE UNUSU via skrip `npm run db:sso-dev-urls` / `npm run db:sso-vps-urls`.
+5. **Peniadaan Peran Cabang Kaku**: Peran admin kaku per-aplikasi (`ADMIN_LPM`, `ADMIN_LPPM`, dll.) telah dihapus dari portal pusat. `SUPERADMIN` memegang seluruh izin masuk secara global dan dapat masuk ke semua aplikasi.
+6. **Pemeriksaan Fitur per Sub-Menu**: Operasi data dan fitur di LPM dilindungi oleh middleware berbasis permission key (bukan pengecekan raw role `role === '...'`).
+7. **Verifikasi Sesi Server**: Klien wajib memverifikasi ulang sesi ke server saat boot; cache lokal tidak boleh dipercaya sebagai sumber tunggal otorisasi.
+8. **Fail-Closed**: Pengguna tanpa izin masuk diarahkan ke `/akses-ditolak` (`AccessDenied.tsx`) dengan pesan yang jelas.
 
 ---
 

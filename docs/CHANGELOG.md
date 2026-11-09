@@ -1,5 +1,15 @@
 # Changelog — LPM UNUSU
 
+## [2026-11-09] — Desentralisasi Otentikasi, Seeder Granular 37 Izin, & Sinkronisasi Callback
+
+### Added
+- **Desentralisasi Penuh RBAC LPM**: Mengaktifkan relasi mandiri `lpm_user_roles` dan `lpm_role_permissions` di database lokal LPM.
+- **Seeder Granular 37 Permissions**: Menyemai 37 permissions domain PPEPP, Kebijakan Mutu, Auditor/Auditee AMI, Temuan, dan tata kelola RBAC lokal.
+
+### Changed
+- **Endpoint SSO (`POST /api/auth/sso`)**: Membaca identitas, peran, dan permissions dari database lokal `lpm_users` dengan mekanisme auto-provisioning pengguna baru.
+- **Penyelarasan Callback per Lingkungan**: Mendukung callback mode lokal (`http://localhost:5177/sso/callback`) dan mode VPS (`/lpm/sso/callback`) yang dikelola terpusat dari gateway ONE UNUSU.
+
 ## [2026-11-06] — Dashboard Laporan & Template Formulir Seragam
 
 ### Changed
