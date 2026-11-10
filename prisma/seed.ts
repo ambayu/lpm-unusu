@@ -292,7 +292,7 @@ async function main() {
 // tabel role_permissions di database ONE UNUSU.
 // ===========================================================================
 
-const CLIENT_ID = 'lpm-unusu';
+const CLIENT_ID = process.env.SSO_CLIENT_ID || '014813db6bffb39f';
 
 /** Tiga tingkat izin masuk panel LPM. */
 const IZIN_MASUK = [

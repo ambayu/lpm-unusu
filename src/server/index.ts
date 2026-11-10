@@ -87,9 +87,9 @@ interface AuthRequest extends Request {
 
 /** Kunci izin masuk panel LPM. */
 const KUNCI_IZIN_MASUK = {
-  admin: "lpm-unusu:masuk_admin",
-  dosen: "lpm-unusu:masuk_dosen",
-  mahasiswa: "lpm-unusu:masuk_mahasiswa",
+  admin: `${SSO_CLIENT_ID}:masuk_admin`,
+  dosen: `${SSO_CLIENT_ID}:masuk_dosen`,
+  mahasiswa: `${SSO_CLIENT_ID}:masuk_mahasiswa`,
 } as const;
 
 type TingkatMasuk = keyof typeof KUNCI_IZIN_MASUK;

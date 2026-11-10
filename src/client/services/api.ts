@@ -54,11 +54,13 @@ export interface AppAccessInfo {
   message: string;
 }
 
+const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || '014813db6bffb39f';
+
 /** Kunci izin masuk panel LPM — HARUS sama dengan server. */
 export const KUNCI_IZIN_MASUK: Record<TingkatMasuk, string> = {
-  admin: 'lpm-unusu:masuk_admin',
-  dosen: 'lpm-unusu:masuk_dosen',
-  mahasiswa: 'lpm-unusu:masuk_mahasiswa',
+  admin: `${SSO_CLIENT_ID}:masuk_admin`,
+  dosen: `${SSO_CLIENT_ID}:masuk_dosen`,
+  mahasiswa: `${SSO_CLIENT_ID}:masuk_mahasiswa`,
 };
 
 export const LABEL_TINGKAT: Record<TingkatMasuk, string> = {
