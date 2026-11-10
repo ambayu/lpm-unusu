@@ -9,6 +9,7 @@ import { DokumenPage } from './pages/Dokumen';
 import { DokumenFormPage } from './pages/DokumenForm';
 import { AmiPage } from './pages/Ami';
 import { AmiFormPage } from './pages/AmiForm';
+import { ManajemenSliderLpm } from './pages/ManajemenSliderLpm';
 import { UsersPage } from './pages/Users';
 import { PenggunaFormPage } from './pages/PenggunaForm';
 import { PeranFormPage } from './pages/RolesForm';
@@ -189,6 +190,16 @@ export function App() {
             element={
               <ProtectedRoute izin={['audit:update']}>
                 <AmiFormPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Manajemen Slider Hero Halaman Depan */}
+          <Route
+            path="/admin/slider"
+            element={
+              <ProtectedRoute izin={['standar:view', 'dokumen:view', 'audit:view']}>
+                <ManajemenSliderLpm />
               </ProtectedRoute>
             }
           />

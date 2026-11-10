@@ -19,6 +19,7 @@ import {
   UserCircleIcon,
   GlobeAltIcon,
   IdentificationIcon,
+  PhotoIcon,
 } from '@heroicons/react/24/outline';
 
 interface SidebarLayoutProps {
@@ -133,6 +134,12 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
       label: 'Audit Mutu Internal (AMI)',
       icon: ClipboardDocumentCheckIcon,
       desc: 'Siklus Evaluasi & KTS Mutu',
+    },
+    {
+      path: '/admin/slider',
+      label: 'Slider Hero',
+      icon: PhotoIcon,
+      desc: 'Foto Banner Halaman Depan',
     },
   ];
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { assetUrl } from "../lib/assets";
+import { fetchPublicSliders, LpmBannerSliderItem } from "../services/api";
 
 export interface HeroSlideItem {
   id: number;
@@ -54,22 +55,44 @@ const defaultHeroSlides: HeroSlideItem[] = [
 export const FullHeroSlider: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [slides, setSlides] = useState<HeroSlideItem[]>(defaultHeroSlides);
   const touchStartX = React.useRef<number | null>(null);
   const touchEndX = React.useRef<number | null>(null);
 
   useEffect(() => {
-    if (isPaused) return;
+    fetchPublicSliders()
+      .then((res) => {
+        if (res.data.success && res.data.data.length > 0) {
+          const mapped: HeroSlideItem[] = res.data.data.map((item) => ({
+            id: item.id,
+            image: item.gambarUrl,
+            imageMobile: item.gambarMobileUrl || item.gambarUrl,
+            title: item.judul,
+            badge: "LPM UNUSU",
+            headline: item.judul,
+            subheadline: item.subjudul || "Sistem Penjaminan Mutu Internal Universitas Nahdlatul Ulama Sumatera Utara.",
+          }));
+          setSlides(mapped);
+        }
+      })
+      .catch(() => {
+        // Fallback memakai defaultHeroSlides bawaan
+      });
+  }, []);
+
+  useEffect(() => {
+    if (isPaused || slides.length === 0) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % defaultHeroSlides.length);
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, [isPaused]);
+  }, [isPaused, slides.length]);
 
   const goTo = (index: number) => setCurrentSlide(index);
   const prevSlide = () =>
-    setCurrentSlide((prev) => (prev === 0 ? defaultHeroSlides.length - 1 : prev - 1));
+    setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
   const nextSlide = () =>
-    setCurrentSlide((prev) => (prev + 1) % defaultHeroSlides.length);
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
 
   const handleTouchStart = (e: React.TouchEvent<HTMLElement>) => {
     touchStartX.current = e.targetTouches[0].clientX;
@@ -92,8 +115,8 @@ export const FullHeroSlider: React.FC = () => {
     setIsPaused(false);
   };
 
-  const slide = defaultHeroSlides[currentSlide];
-  const counter = `${String(currentSlide + 1).padStart(2, '0')} / ${String(defaultHeroSlides.length).padStart(2, '0')}`;
+  const slide = slides[currentSlide] || slides[0] || defaultHeroSlides[0];
+  const counter = `${String(currentSlide + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
 
   return (
     <section
@@ -110,7 +133,7 @@ export const FullHeroSlider: React.FC = () => {
         Desktop: Full-bleed menutupi seluruh hero 16:9.
       */}
       <div className="relative aspect-square w-full overflow-hidden md:absolute md:inset-0 md:aspect-auto md:h-full">
-        {defaultHeroSlides.map((item, index) => (
+        {slides.map((item, index) => (
           <div
             key={item.id}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
@@ -156,7 +179,7 @@ export const FullHeroSlider: React.FC = () => {
 
           <div className="flex items-center justify-between gap-4 shrink-0 lg:flex-col lg:items-end lg:gap-3">
             <div className="flex items-center gap-2">
-              {defaultHeroSlides.map((item, idx) => (
+              {slides.map((item, idx) => (
                 <button
                   key={item.id}
                   type="button"

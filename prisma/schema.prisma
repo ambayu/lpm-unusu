@@ -310,3 +310,19 @@ model LpmUserRole {
   @@index([roleId])
   @@map("lpm_user_roles")
 }
+
+model LpmBannerSlider {
+  id              Int      @id @default(autoincrement())
+  judul           String   @db.VarChar(150)
+  subjudul        String?  @db.VarChar(255)
+  gambarUrl       String   @db.LongText
+  gambarMobileUrl String?  @db.LongText
+  linkUrl         String?  @db.VarChar(255)
+  urutan          Int      @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([active, urutan])
+  @@map("lpm_banner_sliders")
+}

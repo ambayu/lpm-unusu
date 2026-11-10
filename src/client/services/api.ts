@@ -294,6 +294,37 @@ export const fetchDashboardStats = () =>
   api.get<{ success: boolean; data: DashboardPayload }>('/dashboard/stats');
 
 // ==========================================
+// BANNER SLIDER HERO (`/api/sliders`, `/api/admin/sliders`)
+// ==========================================
+export interface LpmBannerSliderItem {
+  id: number;
+  judul: string;
+  subjudul?: string | null;
+  gambarUrl: string;
+  gambarMobileUrl?: string | null;
+  linkUrl?: string | null;
+  urutan: number;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const fetchPublicSliders = () =>
+  api.get<{ success: boolean; data: LpmBannerSliderItem[] }>('/sliders');
+
+export const fetchAdminSliders = () =>
+  api.get<{ success: boolean; data: LpmBannerSliderItem[] }>('/admin/sliders');
+
+export const createAdminSlider = (data: Partial<LpmBannerSliderItem>) =>
+  api.post<{ success: boolean; message: string; data: LpmBannerSliderItem }>('/admin/sliders', data);
+
+export const updateAdminSlider = (id: number, data: Partial<LpmBannerSliderItem>) =>
+  api.put<{ success: boolean; message: string; data: LpmBannerSliderItem }>(`/admin/sliders/${id}`, data);
+
+export const deleteAdminSlider = (id: number) =>
+  api.delete<{ success: boolean; message: string }>(`/admin/sliders/${id}`);
+
+// ==========================================
 // RBAC — PENGGUNA, PERAN, IZIN (DARI DATABASE)
 // ==========================================
 
