@@ -8,17 +8,12 @@ import {
   TrashIcon,
   KeyIcon,
   CheckCircleIcon,
-  LockClosedIcon,
-  BuildingOffice2Icon,
 } from '@heroicons/react/24/outline';
 import { CardContainer } from '../components/CardContainer';
 import { ErrorState } from '../components/ErrorState';
 import {
   fetchRbacPeran,
   deleteRbacPeran,
-  fetchAppRoles,
-  FOREIGN_APP_ROLES,
-  SSO_ROLE_LABEL,
   type RbacPeran,
 } from '../services/api';
 
@@ -51,28 +46,6 @@ export const RolesPage: React.FC = () => {
 
   useEffect(() => {
     fetchRoles();
-  }, []);
-
-  // Tingkat izin masuk yang dikenali panel LPM (informatif).
-  const [izinMasuk, setIzinMasuk] = useState<{ tingkat: string; kunci: string; label: string }[]>([]);
-  const [scopeLoading, setScopeLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    fetchAppRoles()
-      .then((res) => {
-        if (!active || !res.data?.success) return;
-        setIzinMasuk(res.data.tingkatMasuk ?? []);
-      })
-      .catch(() => {
-        /* panel cakupan bersifat informatif — kegagalan tidak memblokir halaman */
-      })
-      .finally(() => {
-        if (active) setScopeLoading(false);
-      });
-    return () => {
-      active = false;
-    };
   }, []);
 
   const handleDelete = async (role: RbacPeran) => {
@@ -206,88 +179,6 @@ export const RolesPage: React.FC = () => {
           ))}
         </div>
       )}
-
-      {/* Izin masuk panel — sumber: GET /api/auth/app-roles */}
-      <CardContainer
-        title="Izin Masuk Panel LPM"
-        subtitle="Panel LPM hanya dapat dibuka pengguna yang memiliki salah satu izin masuk berikut. Pemberiannya diatur dari panel ONE UNUSU, bukan di sini."
-        badge={
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-bold text-slate-700">
-            <LockClosedIcon className="w-3.5 h-3.5" />
-            Izin, bukan peran
-          </span>
-        }
-      >
-        {scopeLoading ? (
-          <p className="py-8 text-center text-xs font-semibold text-slate-500">
-            Memuat izin masuk dari server...
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="rounded-[12px] border border-lpm-blue-200 bg-lpm-blue-50/60 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <ShieldCheckIcon className="w-4 h-4 text-lpm-blue-700" aria-hidden="true" />
-                <h3 className="text-xs font-bold text-lpm-blue-900 uppercase tracking-wider">
-                  Tiga tingkat izin masuk
-                </h3>
-              </div>
-              <ul className="space-y-2">
-                {izinMasuk.length === 0 ? (
-                  <li className="text-[11px] text-slate-600">Belum ada data izin dari server.</li>
-                ) : (
-                  izinMasuk.map((izin) => (
-                    <li
-                      key={izin.kunci}
-                      className="flex items-start justify-between gap-2 rounded-[10px] bg-white border border-lpm-blue-200/70 px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-slate-900 truncate">{izin.label}</p>
-                        <code className="text-[10px] font-mono text-slate-500">{izin.kunci}</code>
-                      </div>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-lpm-blue-100 text-lpm-blue-800 border border-lpm-blue-200 flex-shrink-0">
-                        {izin.tingkat}
-                      </span>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </div>
-
-            <div className="rounded-[12px] border border-rose-200 bg-rose-50/60 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <LockClosedIcon className="w-4 h-4 text-rose-700" aria-hidden="true" />
-                <h3 className="text-xs font-bold text-rose-900 uppercase tracking-wider">
-                  Peran admin aplikasi lain
-                </h3>
-              </div>
-              <ul className="space-y-2">
-                {FOREIGN_APP_ROLES.map((kode) => (
-                  <li
-                    key={kode}
-                    className="flex items-start justify-between gap-2 rounded-[10px] bg-white border border-rose-200/70 px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-slate-900 truncate">
-                        {SSO_ROLE_LABEL[kode] || kode}
-                      </p>
-                      <code className="text-[10px] font-mono text-slate-500">{kode}</code>
-                    </div>
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex-shrink-0">
-                      <BuildingOffice2Icon className="w-3 h-3" aria-hidden="true" />
-                      Tanpa izin masuk LPM
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-3 text-[10px] text-rose-800 leading-relaxed">
-                Akun dengan peran ini tidak memiliki izin masuk panel LPM dan menerima{' '}
-                <code className="font-mono">403</code> saat mencoba masuk. Pemberian izin masuk
-                dilakukan melalui matriks izin di panel ONE UNUSU.
-              </p>
-            </div>
-          </div>
-        )}
-      </CardContainer>
     </div>
   );
 };
