@@ -1,5 +1,110 @@
 # Changelog — LPM UNUSU
 
+### Added
+- **Filter kategori pada daftar arsip dokumen** (`/admin/arsip-dokumen`): select
+  "Semua Kategori" di samping filter status. Pilihan kategori digabung dari endpoint
+  `GET /api/kategori` dan kategori milik dokumen yang sudah dimuat, diurutkan menurut
+  nama dan bebas duplikat berdasarkan `id`. Penyaringan memakai `kategoriId`.
+- **Tombol Reset Filter** yang menampilkan jumlah filter aktif dan hanya muncul saat
+  ada filter menyala.
+
+## [2026-11-17] — Komponen Tabel Global `DataTable`
+
+### Fixed
+- **Teks terasa "kurang tebal" di LPM**: font `Quicksand` hanya memiliki bobot
+  400–700 dan strokenya tipis, sehingga `font-normal`/`font-semibold` tampak jauh
+  lebih ringan dibanding font UI lain. Bobot dasar badan teks (`body`) dinaikkan ke
+  **500**, `-webkit-font-smoothing` diubah ke `auto` (sebelumnya `antialiased` yang
+  menipiskan stroke), serta label menu sidebar dinaikkan `font-semibold` → `font-bold`
+  dan deskripsinya `font-normal` → `font-medium`.
+- **Ukuran teks tabel tidak seragam antar kolom**: sel membawa kelas font sendiri
+  (`text-xs`, `text-slate-400`, `font-bold`) sehingga tiap kolom tampak berbeda
+  ukuran. `DataTable` kini menempelkan ukuran baku langsung pada `<th>`/`<td>`
+  (`text-sm font-medium` untuk sel, `text-xs font-bold` untuk header); kolom hanya
+  boleh mengatur perataan, lebar, dan warna.
+- **Kontras sidebar terlalu pudar**: label menu `text-slate-600` → `text-slate-700`,
+  deskripsi menu `text-[10px] text-slate-400` → `text-[11px] text-slate-600`,
+  judul grup `text-[10px] text-slate-400` → `text-[11px] text-slate-500`.
+
+### Added
+- **`DataTable`** (`src/client/components/DataTable.tsx`): komponen tabel data baku
+  aplikasi. Menerima `columns`/`rows`/`rowKey`, menangani kondisi memuat dan kosong,
+  serta mendukung `size="sm" | "md"` dan `minTableWidth`.
+- **`NotificationModal`**: kini terdaftar resmi di `docs/design-system/COMPONENTS.md`
+  sebagai komponen bersama #12.
+
+### Changed
+- **Ukuran teks tabel diperbesar**: header dari `text-[11px]` menjadi `text-xs`,
+  isi sel dari `text-xs` menjadi `text-sm`, padding sel `py-3` → `py-3.5`. Perubahan
+  berada di `DataTable` sehingga berlaku seragam di semua halaman daftar.
+- **`ListPageTemplate`** kini mendelegasikan perenderan tabel ke `DataTable`
+  (markup `<table>` tidak lagi ditulis ganda).
+- **Migrasi tabel inline → `DataTable`**: `Users.tsx`, `Permissions.tsx`
+  (dua tabel: daftar izin + jejak penolakan akses).
+- **Daftar arsip dokumen**: kolom dipecah menjadi 12 kolom terpisah
+  (JUDUL, NOMOR, TAHUN, KATEGORI, TUJUAN PUBLIKASI, PROGRAM STUDI, MULAI BERLAKU,
+  BERAKHIR, STATUS, BERKAS, AKSI) — tidak ada lagi beberapa nilai dalam satu sel.
+
+### Fixed
+- **Input Tahun Dokumen tidak bisa dikosongkan**: `tahun` disimpan sebagai `number`
+  sehingga `Number('')` menjadi `0` dan nol tersebut tidak dapat dihapus. State kini
+  berupa string dengan konversi saat submit, dan validasi melaporkan tahun kosong /
+  bukan angka / di luar 2000–2100 secara spesifik.
+- **Validasi rentang tanggal**: tanggal berakhir lebih awal daripada tanggal mulai
+  kini ditolak dengan pesan yang menyebut kedua field.
+- **LPPM**: perbaikan input `tahun` yang sama diterapkan pada `DokumenForm.tsx`.
+
+## [2026-11-16] — Modal Galat Spesifik & Perbaikan Penyimpanan Berkas PDF
+
+### Added
+- **`NotificationModal`** (`src/client/components/NotificationModal.tsx`): modal umpan balik
+  sistem (error/warning/confirm/info) untuk panel admin. Menggantikan seluruh pemakaian
+  `alert()` / `window.confirm()` pada modul dokumen.
+- **`src/client/lib/galat.ts`**: helper `deskripsikanGalat()` dan `galatValidasi()` yang
+  menyusun judul, kalimat utama, rincian penyebab, dan kode HTTP dari respons server.
+
+### Changed
+- **Batas unggah berkas diturunkan ke 5 MB** (sebelumnya 10 MB). Nilai kini terpusat pada
+  konstanta `BATAS_UKURAN_PDF_MB` di `src/client/lib/galat.ts` dan dipakai oleh validasi
+  unggah maupun teks bantuan formulir, sehingga tidak ada angka yang tersebar.
+
+### Fixed
+- **Unggahan PDF selalu gagal disimpan**: kolom `LpmDocument.filePdfUrl` bertipe
+  `VARCHAR(500)` padahal formulir mengirim PDF sebagai data URL base64 (jauh melebihi 500
+  karakter). Kolom diubah menjadi `LONGTEXT` pada `schema.prisma` **dan** basis data
+  (diverifikasi: berkas ±2,7 MB kini tersimpan, terbaca ulang, dan terhapus normal, dan
+  berkas ±4,9 MB lolos sementara >5 MB ditolak di klien).
+- **Batas body Express terlalu kecil**: `express.json()` tanpa opsi `limit` memakai batas
+  bawaan 100 KB, sehingga unggahan PDF ditolak sebelum mencapai route. Kini `limit: "10mb"`
+  (berkas maksimal 5 MB ≈ 6,7 MB setelah base64).
+- **Pesan galat generik**: `Gagal menyimpan dokumen.` diganti modal yang menyebut dokumen
+  dan penyebabnya (mis. "Kategori tidak ditemukan", status HTTP, atau nama field yang belum
+  diisi).
+- **Kebocoran detail internal server**: handler `POST`/`PUT`/`DELETE` `/api/dokumen` tidak
+  lagi mengirim `error.message` Prisma (memuat path absolut berkas) ke peramban; detail
+  dicatat di log server dan klien menerima pesan ringkas + `code` yang aman.
+- **Kegagalan body-parser** kini dibalas JSON terstruktur (`413 PAYLOAD_TOO_LARGE`,
+  `400 PAYLOAD_PARSE_FAILED`) alih-alih halaman HTML tanpa keterangan.
+
+### Removed
+- Import tak terpakai `DokumenPage` & `DokumenFormPage` di `App.tsx` (halaman tersebut sudah
+  mati sejak rutenya dialihkan ke `/admin/arsip-dokumen`).
+
+## [2026-11-15] — Modul Dokumen Mandiri, Kategori Dinamis & Standardisasi SSO Session Sync
+
+### Added
+- **Opsi Tujuan Publikasi & Integrasi Prodi**: Menambahkan opsi tujuan publikasi dokumen (`LPM` / `Program Studi`) pada modul formulir dan daftar dokumen terpadu.
+- **Integrasi Hierarki Akademik One UNUSU**: Menambahkan endpoint proxy `/api/prodi` yang mengambil data langsung dari API Hub ONE UNUSU (`/api/academic/hierarchy`) untuk memuat daftar prodi dinamis.
+- **Model Prisma & Relasi Baru**: Menambahkan model `LpmCategory` dan `LpmDocument` untuk pengarsipan dokumen dengan status, masa berlaku, tujuan publish (`tujuanPublish`, `prodiCode`, `prodiName`), dan klasifikasi kategori dinamis.
+- **RESTful Endpoints**: Menambahkan endpoint `/api/kategori` (CRUD) dan `/api/dokumen` (CRUD) lengkap dengan filter pencarian, status, tahun, serta validasi payload.
+- **Frontend Pages**: Menambahkan halaman `Kategori.tsx`, `KategoriForm.tsx`, `DokumenBaru.tsx`, dan `DokumenBaruForm.tsx` berbasis `ListPageTemplate`, `FormPageTemplate`, dan `CardContainer`.
+- **SSO Cross-Tab Session Sync**: Menambahkan listener storage event dan sinkronisasi berkala dengan verifikasi sesi terhadap `one-unusu`.
+
+### Changed
+- **Pembersihan Navigasi Dokumen**: Menghapus tautan menu legacy "Dokumen Mutu & SOP" dan mengonsolidasikan pengelolaan dokumen terpusat di `/admin/arsip-dokumen`.
+- **Validasi Unggah Berkas**: Membatasi unggahan berkas dokumen secara ketat hanya menerima format PDF (`.pdf`, `application/pdf`) maksimal 10 MB.
+- **Sidebar & App Routing**: Mendaftarkan rute navigasi `/admin/arsip-dokumen` dan `/admin/kategori` pada sidebar dan router client.
+
 ## [2026-11-09] — Desentralisasi Otentikasi, Seeder Granular 37 Izin, & Sinkronisasi Callback
 
 ### Added

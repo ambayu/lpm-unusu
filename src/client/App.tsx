@@ -5,8 +5,10 @@ import { LandingPage } from './pages/Landing';
 import { DashboardPage } from './pages/Dashboard';
 import { StandarPage } from './pages/Standar';
 import { StandarFormPage } from './pages/StandarForm';
-import { DokumenPage } from './pages/Dokumen';
-import { DokumenFormPage } from './pages/DokumenForm';
+import { DokumenBaruPage } from './pages/DokumenBaru';
+import { DokumenBaruFormPage } from './pages/DokumenBaruForm';
+import { KategoriPage } from './pages/Kategori';
+import { KategoriFormPage } from './pages/KategoriForm';
 import { AmiPage } from './pages/Ami';
 import { AmiFormPage } from './pages/AmiForm';
 import { ManajemenSliderLpm } from './pages/ManajemenSliderLpm';
@@ -142,28 +144,68 @@ export function App() {
             }
           />
 
-          {/* Dokumen Mutu */}
+          {/* Modul Dokumen Terpadu (Arsip Dokumen) */}
           <Route
-            path="/admin/dokumen"
+            path="/admin/arsip-dokumen"
             element={
               <ProtectedRoute izin={['dokumen:view']}>
-                <DokumenPage />
+                <DokumenBaruPage />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/admin/arsip-dokumen/tambah"
+            element={
+              <ProtectedRoute izin={['dokumen:create']}>
+                <DokumenBaruFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/arsip-dokumen/edit/:id"
+            element={
+              <ProtectedRoute izin={['dokumen:update']}>
+                <DokumenBaruFormPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Alias /admin/dokumen dialihkan ke /admin/arsip-dokumen */}
+          <Route
+            path="/admin/dokumen"
+            element={<Navigate to="/admin/arsip-dokumen" replace />}
           />
           <Route
             path="/admin/dokumen/tambah"
+            element={<Navigate to="/admin/arsip-dokumen/tambah" replace />}
+          />
+          <Route
+            path="/admin/dokumen/edit/:id"
+            element={<Navigate to="/admin/arsip-dokumen" replace />}
+          />
+
+          {/* Modul Kategori Dokumen */}
+          <Route
+            path="/admin/kategori"
             element={
-              <ProtectedRoute izin={['dokumen:create']}>
-                <DokumenFormPage />
+              <ProtectedRoute izin={['dokumen:view']}>
+                <KategoriPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/admin/dokumen/edit/:id"
+            path="/admin/kategori/tambah"
+            element={
+              <ProtectedRoute izin={['dokumen:create']}>
+                <KategoriFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/kategori/edit/:id"
             element={
               <ProtectedRoute izin={['dokumen:update']}>
-                <DokumenFormPage />
+                <KategoriFormPage />
               </ProtectedRoute>
             }
           />

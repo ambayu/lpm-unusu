@@ -66,8 +66,29 @@ Komponen-komponen bersama (shared components) yang wajib digunakan kembali di se
       default `Aktif` bila server belum mengirim nilainya.
     - Ikon: `@heroicons/react/24/outline` (patuh aturan Anti-Lucide pada `AGENTS.md`).
 
-## Peta Pemakaian Komponen
+11. **`DataTable`**
+    - Lokasi: `src/client/components/DataTable.tsx`
+    - Tanggung Jawab: satu-satunya komponen tabel data aplikasi. Seluruh halaman
+      daftar merender data lewat komponen ini — langsung, atau lewat
+      `ListPageTemplate` yang memakainya secara internal.
+    - Props: `columns` (`DataTableColumn<T>`), `rows`, `rowKey`, `loading`,
+      `emptyMessage`, `size` (`sm` | `md`), `minTableWidth`, `footer`, `className`.
+    - Ukuran baku `size="md"`: header `text-xs` uppercase `tracking-wider` latar
+      `bg-slate-50/70`; isi sel `text-sm` padding `py-3.5 px-4`.
+    - Aksesibilitas: `<table>` semantik, `<th scope="col">`, `role="status"` untuk
+      kondisi memuat/kosong.
+    - **Dilarang** menulis `<table>` inline di halaman (`docs/PROJECT_RULES.md` §5).
 
+12. **`NotificationModal`**
+    - Lokasi: `src/client/components/NotificationModal.tsx`
+    - Tanggung Jawab: modal umpan balik sistem (error / warning / confirm / info)
+      pengganti `alert()` dan `window.confirm()`.
+    - Props: `isOpen`, `type`, `title`, `message`, `details[]`, `code`,
+      `confirmLabel`, `cancelLabel`, `onConfirm`, `onClose`, `loading`.
+    - Aturan pesan: sebut APA yang gagal dan objeknya; lihat
+      `docs/routes/dokumen/RULES.md` §2a.
+
+## Peta Pemakaian Komponen
 | Komponen | Dipakai di |
 |---|---|
 | `SidebarLayout` | seluruh rute `/admin/*` via `ProtectedRoute` |
@@ -86,7 +107,6 @@ Komponen-komponen bersama (shared components) yang wajib digunakan kembali di se
 ## Komponen Terdokumentasikan tapi Belum Diimplementasikan
 
 - **`PageHeader`** — Banner konteks modul. Saat ini setiap halaman admin menulis banner header inline.
-- **`DataTable`** — Tabel data reusable. Saat ini setiap halaman menulis `<table>` inline.
 - **`FormSectionCard`** — Pembungkus form section. Saat ini modal form menggunakan div inline.
 
 > Komponen di atas direncanakan untuk fase refactoring berikutnya (Build Once, Reuse Everywhere).

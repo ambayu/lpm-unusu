@@ -1,9 +1,21 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+/*
+ * `node:crypto` diimpor eksplisit: tsconfig server memuat lib DOM sehingga
+ * nama global `crypto` bertipe Web Crypto (tanpa createHmac/timingSafeEqual).
+ */
+import { createHmac, timingSafeEqual } from "node:crypto";
 import dotenv from "dotenv";
 import path from "path";
 import jwt from "jsonwebtoken";
 import { PrismaClient, Prisma } from "@prisma/client";
+import {
+  pasangRuteBerkasArsip,
+  simpanBerkasArsip,
+  hapusBerkasArsip,
+  ARSIP_MAX_BYTES,
+} from "./arsipBerkas.js";
+import { jalankanMigrasiArsip } from "./arsipMigrasi.js";
 
 dotenv.config();
 
@@ -11,16 +23,58 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5004;
 
+/**
+ * Penyajian berkas arsip dokumen lewat URL bertanda tangan.
+ *
+ * Dipasang lebih awal (sebelum autentikasi) karena berkas dibaca juga oleh
+ * server lain tanpa sesi pengguna; keamanannya berasal dari tanda tangan URL.
+ */
+pasangRuteBerkasArsip(app);
+
 app.use(cors({
   origin: true,
   credentials: true,
 }));
-app.use(express.json());
+/**
+ * Batas body 10 MB: berkas PDF dikirim ke `POST /api/dokumen/berkas` sebagai
+ * base64 sekali jalan (± 33% lebih besar dari berkas asli, sehingga PDF 5 MB
+ * menjadi ± 6,7 MB). Base64 TIDAK disimpan ke database — server mengubahnya
+ * menjadi berkas di `uploads/dokumen` dan hanya menyimpan URL-nya. Batas
+ * bawaan 100 KB dari Express akan menolak setiap unggahan.
+ */
+app.use(express.json({ limit: "10mb" }));
 
 // Static files in production
 const clientDistPath = path.resolve(process.cwd(), "dist/client");
 app.use(express.static(clientDistPath));
 app.use("/lpm", express.static(clientDistPath));
+
+/**
+ * Penanganan galat body-parser: tanpa ini, unggahan yang melebihi batas
+ * berhenti di middleware dengan halaman HTML sehingga klien hanya menerima
+ * pesan generik. Di sini penyebabnya diteruskan sebagai JSON terstruktur agar
+ * modal galat dapat menyebut "ukuran berkas melebihi batas", bukan "gagal".
+ */
+app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) return next(err);
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({
+      success: false,
+      code: "PAYLOAD_TOO_LARGE",
+      message:
+        "Ukuran data yang dikirim melebihi batas server (10 MB). Kompres atau perkecil berkas PDF lalu coba lagi.",
+    });
+  }
+  if (err?.type === "entity.parse.failed") {
+    return res.status(400).json({
+      success: false,
+      code: "PAYLOAD_PARSE_FAILED",
+      message: "Format data yang dikirim tidak dapat dibaca server.",
+    });
+  }
+  return next(err);
+});
+
 
 // Health check
 app.get("/api/health", (req: Request, res: Response) => {
@@ -341,12 +395,69 @@ const recordAccessDenial = (entry: Omit<AccessDenialEntry, "id" | "at">) => {
   }
 };
 
+/**
+ * Memeriksa token layanan arsip yang diterbitkan portal ONE UNUSU.
+ *
+ * Token berbentuk `arsip.<clientId>.<hmac>` dan hanya sah bila HMAC-nya cocok
+ * dengan `ARSIP_SERVICE_TOKEN_SECRET`. Fungsi mengembalikan `null` untuk token
+ * apa pun yang tidak cocok, sehingga token sesi pengguna biasa tetap diproses
+ * lewat jalur JWT di bawahnya.
+ */
+const verifikasiTokenLayananArsip = (token: string): { clientId: string } | null => {
+  const secret = process.env.ARSIP_SERVICE_TOKEN_SECRET || "";
+  if (!secret) return null;
+
+  const bagian = token.split(".");
+  if (bagian.length !== 3 || bagian[0] !== "arsip") return null;
+
+  const [, clientId, tanda] = bagian;
+  if (!clientId || !/^[A-Za-z0-9_-]{1,64}$/.test(clientId)) return null;
+
+  const diharapkan = createHmac("sha256", secret)
+    .update(`arsip-dokumen|${clientId}`)
+    .digest("hex");
+
+  const a = Buffer.from(tanda, "utf8");
+  const b = Buffer.from(diharapkan, "utf8");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  return { clientId };
+};
+
 const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const header = req.headers.authorization;
   const token = header && header.startsWith("Bearer ") ? header.slice(7) : null;
 
   if (!token) {
     return res.status(401).json({ success: false, message: "Token otentikasi tidak disediakan" });
+  }
+
+  /*
+   * Token layanan arsip.
+   *
+   * Portal ONE UNUSU memanggil endpoint arsip tanpa sesi pengguna (server-ke-
+   * server, mis. dari website prodi). Untuk itu portal menerbitkan token
+   * bertanda tangan dari `ARSIP_SERVICE_TOKEN_SECRET` yang hanya memberi hak
+   * BACA arsip (`dokumen:view`) — tidak ada peran administrator dan tidak
+   * dapat dipakai untuk mengubah data.
+   */
+  const serviceToken = verifikasiTokenLayananArsip(token);
+  if (serviceToken) {
+    (req as AuthRequest).izin = new Set(["dokumen:view"]);
+    (req as AuthRequest).user = {
+      id: 0,
+      username: serviceToken.clientId,
+      nama: `Layanan Arsip (${serviceToken.clientId})`,
+      email: null,
+      role: "dosen",
+      ssoRole: "SERVICE_ARSIP",
+      nim: null,
+      nidn: null,
+      prodi: null,
+      fakultas: null,
+    };
+    next();
+    return;
   }
 
   let decoded: jwt.JwtPayload;
@@ -1975,6 +2086,439 @@ app.delete("/api/admin/sliders/:id", async (req: Request, res: Response) => {
   }
 });
 
+// ===========================================================================
+// DOKUMEN & KATEGORI — Manajemen dokumen terstruktur per aplikasi LPM
+// ===========================================================================
+
+// GET /api/kategori (Daftar kategori untuk dropdown atau tabel)
+app.get("/api/kategori", requirePermission("dokumen:view"), async (req: Request, res: Response) => {
+  try {
+    const daftar = await prisma.lpmCategory.findMany({
+      where: { isActive: true },
+      orderBy: { nama: "asc" },
+    });
+    res.json({ success: true, data: daftar });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || "Gagal mengambil daftar kategori" });
+  }
+});
+
+// POST /api/kategori (Tambah kategori baru)
+app.post("/api/kategori", requirePermission("dokumen:create"), async (req: Request, res: Response) => {
+  try {
+    const { nama, deskripsi } = req.body;
+    if (!nama || typeof nama !== "string" || !nama.trim()) {
+      return res.status(400).json({ success: false, message: "Nama kategori wajib diisi" });
+    }
+
+    const created = await prisma.lpmCategory.create({
+      data: {
+        nama: nama.trim(),
+        deskripsi: deskripsi && typeof deskripsi === "string" ? deskripsi.trim() : null,
+      },
+    });
+
+    res.status(201).json({ success: true, data: created, message: "Kategori berhasil ditambahkan" });
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      return res.status(409).json({ success: false, message: "Nama kategori sudah digunakan" });
+    }
+    res.status(500).json({ success: false, message: error?.message || "Gagal menambah kategori" });
+  }
+});
+
+// GET /api/kategori/:id (Detail kategori)
+app.get("/api/kategori/:id", requirePermission("dokumen:view"), async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: "ID kategori tidak valid" });
+    }
+
+    const kategori = await prisma.lpmCategory.findUnique({ where: { id } });
+    if (!kategori) {
+      return res.status(404).json({ success: false, message: "Kategori tidak ditemukan" });
+    }
+
+    res.json({ success: true, data: kategori });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || "Gagal mengambil detail kategori" });
+  }
+});
+
+// PUT /api/kategori/:id (Update kategori)
+app.put("/api/kategori/:id", requirePermission("dokumen:update"), async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: "ID kategori tidak valid" });
+    }
+
+    const { nama, deskripsi } = req.body;
+    const updateData: Record<string, unknown> = {};
+    if (nama !== undefined) updateData.nama = String(nama).trim();
+    if (deskripsi !== undefined) updateData.deskripsi = deskripsi ? String(deskripsi).trim() : null;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, message: "Tidak ada field yang diubah" });
+    }
+
+    const updated = await prisma.lpmCategory.update({
+      where: { id },
+      data: updateData,
+    });
+
+    res.json({ success: true, data: updated, message: "Kategori berhasil diperbarui" });
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      return res.status(409).json({ success: false, message: "Nama kategori sudah digunakan" });
+    }
+    if (error?.code === "P2025") {
+      return res.status(404).json({ success: false, message: "Kategori tidak ditemukan" });
+    }
+    res.status(500).json({ success: false, message: error?.message || "Gagal memperbarui kategori" });
+  }
+});
+
+// DELETE /api/kategori/:id (Hapus kategori)
+app.delete("/api/kategori/:id", requirePermission("dokumen:delete"), async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: "ID kategori tidak valid" });
+    }
+
+    await prisma.lpmCategory.delete({ where: { id } });
+    res.json({ success: true, message: "Kategori berhasil dihapus" });
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ success: false, message: "Kategori tidak ditemukan" });
+    }
+    if (error?.code === "P2003") {
+      return res.status(400).json({ success: false, message: "Kategori masih digunakan oleh dokumen. Hapus dokumen terlebih dahulu" });
+    }
+    res.status(500).json({ success: false, message: error?.message || "Gagal menghapus kategori" });
+  }
+});
+
+// GET /api/prodi (Daftar prodi dari SSO One UNUSU Academic Hierarchy)
+app.get("/api/prodi", async (_req: Request, res: Response) => {
+  try {
+    const ssoBase = process.env.SSO_BASE_URL || "http://localhost:5000";
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const upstreamRes = await fetch(`${ssoBase}/api/academic/hierarchy`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (upstreamRes.ok) {
+      const json = await upstreamRes.json() as { status?: boolean; data?: any[] };
+      const faculties = Array.isArray(json.data) ? json.data : [];
+      const prodiList: Array<{ id: number; code: string; name: string; degree: string; facultyName: string }> = [];
+      for (const f of faculties) {
+        if (Array.isArray(f.studyPrograms)) {
+          for (const sp of f.studyPrograms) {
+            prodiList.push({
+              id: sp.id,
+              code: sp.code,
+              name: sp.name,
+              degree: sp.degree || '',
+              facultyName: f.name || '',
+            });
+          }
+        }
+      }
+      return res.json({ success: true, data: prodiList });
+    }
+    return res.status(502).json({ success: false, message: "Gagal mengambil data dari SSO One UNUSU" });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error?.message || "Kesalahan jaringan mengambil daftar prodi" });
+  }
+});
+
+// GET /api/dokumen (Daftar dokumen + pagination + filter)
+app.get("/api/dokumen", requirePermission("dokumen:view"), async (req: Request, res: Response) => {
+  try {
+    const skip = Math.max(0, Number(req.query.skip) || 0);
+    const take = Math.min(100, Math.max(1, Number(req.query.take) || 10));
+    const search = req.query.search ? String(req.query.search).trim() : "";
+    const status = req.query.status ? String(req.query.status) : "";
+    const tahun = req.query.tahun ? Number(req.query.tahun) : undefined;
+    const tujuanPublish = req.query.tujuanPublish ? String(req.query.tujuanPublish) : undefined;
+    const prodiCode = req.query.prodiCode ? String(req.query.prodiCode) : undefined;
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { judul: { contains: search } },
+        { nomor: { contains: search } },
+        { prodiName: { contains: search } },
+      ];
+    }
+    if (status) where.status = status;
+    if (tahun) where.tahun = tahun;
+    if (tujuanPublish) where.tujuanPublish = tujuanPublish;
+    if (prodiCode) where.prodiCode = prodiCode;
+
+    const [total, dokumen] = await Promise.all([
+      prisma.lpmDocument.count({ where }),
+      prisma.lpmDocument.findMany({
+        where,
+        include: { kategori: true },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      data: dokumen,
+      meta: { total, skip, take, pages: Math.ceil(total / take) },
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || "Gagal mengambil daftar dokumen" });
+  }
+});
+
+/**
+ * POST /api/dokumen/berkas
+ *
+ * Menerima berkas PDF dan menyimpannya ke penyimpanan arsip, lalu
+ * mengembalikan URL bertanda tangan yang siap diisi ke kolom `filePdfUrl`.
+ *
+ * Body dikirim sebagai JSON `{ nama, data }` dengan `data` berupa base64
+ * TANPA awalan `data:`. Base64 hanya menjadi alat transportasi sekali jalan —
+ * yang tersimpan di database tetap URL berkas, bukan isi PDF.
+ */
+app.post("/api/dokumen/berkas", requirePermission("dokumen:create"), async (req: Request, res: Response) => {
+  try {
+    const { nama, data } = req.body ?? {};
+
+    if (!data || typeof data !== "string") {
+      return res.status(400).json({ success: false, message: "Isi berkas PDF belum dikirim." });
+    }
+
+    // Perkiraan ukuran sebelum decoding agar tidak mengalokasikan buffer besar.
+    const perkiraanByte = Math.floor((data.length * 3) / 4);
+    if (perkiraanByte > ARSIP_MAX_BYTES) {
+      return res.status(413).json({
+        success: false,
+        code: "ARSIP_FILE_TOO_LARGE",
+        message: `Ukuran berkas melebihi batas ${Math.round(ARSIP_MAX_BYTES / (1024 * 1024))} MB.`,
+      });
+    }
+
+    const buffer = Buffer.from(data, "base64");
+    const hasil = await simpanBerkasArsip(buffer);
+
+    res.status(201).json({
+      success: true,
+      message: "Berkas PDF berhasil disimpan.",
+      data: { url: hasil.url, ukuran: hasil.ukuran, nama: typeof nama === "string" ? nama : null },
+    });
+  } catch (error: any) {
+    const pesan = error?.message || "Berkas PDF gagal disimpan.";
+    console.error("[POST /api/dokumen/berkas]", pesan);
+    res.status(400).json({ success: false, message: pesan });
+  }
+});
+
+// POST /api/dokumen (Tambah dokumen baru)
+app.post("/api/dokumen", requirePermission("dokumen:create"), async (req: Request, res: Response) => {  try {
+    const {
+      judul,
+      nomor,
+      kategoriId,
+      tahun,
+      tanggalDokumen,
+      tanggalMulaiBerlaku,
+      tanggalBerakhir,
+      keterangan,
+      filePdfUrl,
+      fileSize,
+      status,
+      tujuanPublish,
+      prodiCode,
+      prodiName,
+    } = req.body;
+
+    if (!judul || typeof judul !== "string" || !judul.trim()) {
+      return res.status(400).json({ success: false, message: "Judul dokumen wajib diisi" });
+    }
+    if (!kategoriId || !Number.isInteger(kategoriId)) {
+      return res.status(400).json({ success: false, message: "Kategori wajib dipilih" });
+    }
+    if (!tahun || !Number.isInteger(tahun) || tahun < 2000 || tahun > 2100) {
+      return res.status(400).json({ success: false, message: "Tahun dokumen tidak valid" });
+    }
+
+    // Verifikasi kategori ada
+    const kategoriAda = await prisma.lpmCategory.findUnique({ where: { id: kategoriId } });
+    if (!kategoriAda) {
+      return res.status(404).json({ success: false, message: "Kategori tidak ditemukan" });
+    }
+
+    const created = await prisma.lpmDocument.create({
+      data: {
+        judul: judul.trim(),
+        nomor: nomor && typeof nomor === "string" ? nomor.trim() : null,
+        kategoriId,
+        tahun,
+        tanggalDokumen: tanggalDokumen ? new Date(tanggalDokumen) : null,
+        tanggalMulaiBerlaku: tanggalMulaiBerlaku ? new Date(tanggalMulaiBerlaku) : null,
+        tanggalBerakhir: tanggalBerakhir ? new Date(tanggalBerakhir) : null,
+        keterangan: keterangan && typeof keterangan === "string" ? keterangan.trim() : null,
+        filePdfUrl: filePdfUrl && typeof filePdfUrl === "string" ? filePdfUrl.trim() : null,
+        fileSize: fileSize && Number.isInteger(fileSize) ? fileSize : null,
+        status: (status && typeof status === "string" ? status : "Aktif").trim(),
+        tujuanPublish: tujuanPublish === "prodi" ? "prodi" : "lpm",
+        prodiCode: tujuanPublish === "prodi" && prodiCode ? String(prodiCode).trim() : null,
+        prodiName: tujuanPublish === "prodi" && prodiName ? String(prodiName).trim() : null,
+      },
+      include: { kategori: true },
+    });
+
+    res.status(201).json({ success: true, data: created, message: "Dokumen berhasil ditambahkan" });
+  } catch (error: any) {
+    console.error("[dokumen] gagal menambah dokumen:", error);
+    res.status(500).json({
+      success: false,
+      code: "DOKUMEN_SIMPAN_GAGAL",
+      message:
+        "Server gagal menyimpan dokumen ke basis data. Detail teknis telah dicatat pada log server.",
+    });
+  }
+});
+
+// GET /api/dokumen/:id (Detail dokumen)
+app.get("/api/dokumen/:id", requirePermission("dokumen:view"), async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: "ID dokumen tidak valid" });
+    }
+
+    const dokumen = await prisma.lpmDocument.findUnique({
+      where: { id },
+      include: { kategori: true },
+    });
+    if (!dokumen) {
+      return res.status(404).json({ success: false, message: "Dokumen tidak ditemukan" });
+    }
+
+    res.json({ success: true, data: dokumen });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error?.message || "Gagal mengambil detail dokumen" });
+  }
+});
+
+// PUT /api/dokumen/:id (Update dokumen)
+app.put("/api/dokumen/:id", requirePermission("dokumen:update"), async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: "ID dokumen tidak valid" });
+    }
+
+    const {
+      judul,
+      nomor,
+      kategoriId,
+      tahun,
+      tanggalDokumen,
+      tanggalMulaiBerlaku,
+      tanggalBerakhir,
+      keterangan,
+      filePdfUrl,
+      fileSize,
+      status,
+      tujuanPublish,
+      prodiCode,
+      prodiName,
+    } = req.body;
+
+    const updateData: Record<string, unknown> = {};
+    if (judul !== undefined) updateData.judul = String(judul).trim();
+    if (nomor !== undefined) updateData.nomor = nomor ? String(nomor).trim() : null;
+    if (kategoriId !== undefined) updateData.kategoriId = kategoriId;
+    if (tahun !== undefined) updateData.tahun = tahun;
+    if (tanggalDokumen !== undefined) updateData.tanggalDokumen = tanggalDokumen ? new Date(tanggalDokumen) : null;
+    if (tanggalMulaiBerlaku !== undefined) updateData.tanggalMulaiBerlaku = tanggalMulaiBerlaku ? new Date(tanggalMulaiBerlaku) : null;
+    if (tanggalBerakhir !== undefined) updateData.tanggalBerakhir = tanggalBerakhir ? new Date(tanggalBerakhir) : null;
+    if (keterangan !== undefined) updateData.keterangan = keterangan ? String(keterangan).trim() : null;
+    if (filePdfUrl !== undefined) updateData.filePdfUrl = filePdfUrl ? String(filePdfUrl).trim() : null;
+    if (fileSize !== undefined) updateData.fileSize = fileSize && Number.isInteger(fileSize) ? fileSize : null;
+    if (status !== undefined) updateData.status = String(status).trim();
+    if (tujuanPublish !== undefined) {
+      updateData.tujuanPublish = tujuanPublish === "prodi" ? "prodi" : "lpm";
+      if (tujuanPublish === "prodi") {
+        updateData.prodiCode = prodiCode ? String(prodiCode).trim() : null;
+        updateData.prodiName = prodiName ? String(prodiName).trim() : null;
+      } else {
+        updateData.prodiCode = null;
+        updateData.prodiName = null;
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, message: "Tidak ada field yang diubah" });
+    }
+
+    // Verifikasi kategori jika diubah
+    if (kategoriId) {
+      const kategoriAda = await prisma.lpmCategory.findUnique({ where: { id: kategoriId } });
+      if (!kategoriAda) {
+        return res.status(404).json({ success: false, message: "Kategori tidak ditemukan" });
+      }
+    }
+
+    const updated = await prisma.lpmDocument.update({
+      where: { id },
+      data: updateData,
+      include: { kategori: true },
+    });
+
+    res.json({ success: true, data: updated, message: "Dokumen berhasil diperbarui" });
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ success: false, message: "Dokumen tidak ditemukan" });
+    }
+    console.error("[dokumen] gagal memperbarui dokumen:", error);
+    res.status(500).json({
+      success: false,
+      code: "DOKUMEN_PERBARUI_GAGAL",
+      message:
+        "Server gagal memperbarui dokumen pada basis data. Detail teknis telah dicatat pada log server.",
+    });
+  }
+});
+
+// DELETE /api/dokumen/:id (Hapus dokumen)
+app.delete("/api/dokumen/:id", requirePermission("dokumen:delete"), async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: "ID dokumen tidak valid" });
+    }
+
+    await prisma.lpmDocument.delete({ where: { id } });
+    res.json({ success: true, message: "Dokumen berhasil dihapus" });
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ success: false, message: "Dokumen tidak ditemukan" });
+    }
+    console.error("[dokumen] gagal menghapus dokumen:", error);
+    res.status(500).json({
+      success: false,
+      code: "DOKUMEN_HAPUS_GAGAL",
+      message:
+        "Server gagal menghapus dokumen dari basis data. Detail teknis telah dicatat pada log server.",
+    });
+  }
+});
+
 // SPA Fallback
 app.get("*", (req: Request, res: Response) => {
   res.sendFile(path.join(clientDistPath, "index.html"), (err) => {
@@ -1986,4 +2530,23 @@ app.get("*", (req: Request, res: Response) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 LPM UNUSU Monolith Server running on http://localhost:${PORT}`);
+
+  /**
+   * Migrasi dokumen lama yang masih menyimpan PDF sebagai base64.
+   * Dijalankan setelah server siap; kegagalannya tidak menghentikan server.
+   */
+  void jalankanMigrasiArsip({
+    label: "lpm_documents",
+    ambilBase64: () =>
+      prisma.lpmDocument.findMany({
+        where: { filePdfUrl: { startsWith: "data:" } },
+        select: { id: true, filePdfUrl: true },
+      }),
+    simpanUrl: (id, url, ukuran) =>
+      prisma.lpmDocument.update({ where: { id }, data: { filePdfUrl: url, fileSize: ukuran } }),
+  }).catch((error) => {
+    // Tabel belum ada (database belum di-push) adalah kondisi normal pada
+    // instalasi baru; migrasi akan berjalan sendiri pada start berikutnya.
+    console.error("[arsip-migrasi] lpm_documents dilewati:", error?.message ?? error);
+  });
 });

@@ -20,6 +20,8 @@ import {
   GlobeAltIcon,
   IdentificationIcon,
   PhotoIcon,
+  DocumentTextIcon,
+  FolderIcon,
 } from '@heroicons/react/24/outline';
 
 interface SidebarLayoutProps {
@@ -87,7 +89,9 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
 
     const allPaths = [
       '/admin/standar',
+      '/admin/arsip-dokumen',
       '/admin/dokumen',
+      '/admin/kategori',
       '/admin/ami',
       '/admin/pengguna',
       '/admin/peran',
@@ -124,10 +128,16 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
       desc: 'Pangkalan Butir Siklus PPEPP',
     },
     {
-      path: '/admin/dokumen',
-      label: 'Dokumen Mutu & SOP',
-      icon: BookOpenIcon,
-      desc: 'Arsip Kebijakan & Formulir',
+      path: '/admin/arsip-dokumen',
+      label: 'Dokumen',
+      icon: DocumentTextIcon,
+      desc: 'Pangkalan Dokumen & Berkas',
+    },
+    {
+      path: '/admin/kategori',
+      label: 'Kategori',
+      icon: FolderIcon,
+      desc: 'Klasifikasi Kategori Dokumen',
     },
     {
       path: '/admin/ami',
@@ -171,9 +181,15 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
     if (path === '/admin/standar') return 'Pangkalan Standar Mutu SPMI';
     if (path === '/admin/standar/tambah') return 'Tambah Standar SPMI Baru';
     if (path.startsWith('/admin/standar/edit/')) return 'Edit Standar SPMI';
-    if (path === '/admin/dokumen') return 'Bank Dokumen Kebijakan, Manual & SOP';
-    if (path === '/admin/dokumen/tambah') return 'Upload Dokumen Mutu Baru';
-    if (path.startsWith('/admin/dokumen/edit/')) return 'Edit Dokumen Mutu';
+    if (path === '/admin/arsip-dokumen') return 'Pangkalan Dokumen & Berkas';
+    if (path === '/admin/arsip-dokumen/tambah') return 'Tambah Dokumen Baru';
+    if (path.startsWith('/admin/arsip-dokumen/edit/')) return 'Edit Dokumen';
+    if (path === '/admin/dokumen') return 'Pangkalan Dokumen & Berkas';
+    if (path === '/admin/dokumen/tambah') return 'Tambah Dokumen Baru';
+    if (path.startsWith('/admin/dokumen/edit/')) return 'Edit Dokumen';
+    if (path === '/admin/kategori') return 'Kategori Dokumen';
+    if (path === '/admin/kategori/tambah') return 'Tambah Kategori Dokumen';
+    if (path.startsWith('/admin/kategori/edit/')) return 'Edit Kategori Dokumen';
     if (path === '/admin/ami') return 'Audit Mutu Internal (AMI) & Temuan Lapangan';
     if (path === '/admin/ami/tambah') return 'Catat Temuan Audit AMI Baru';
     if (path.startsWith('/admin/ami/edit/')) return 'Edit Temuan Audit AMI';
@@ -220,7 +236,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           {/* Menu umum: Dashboard + Profil (selalu tampil, tanpa guard peran) */}
           <div>
             {!isCollapsed && (
-              <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+              <p className="px-3 pb-1 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                 UTAMA
               </p>
             )}
@@ -235,12 +251,12 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                     onClick={() => setMobileOpen(false)}
                     title={isCollapsed ? item.label : undefined}
                     aria-current={active ? 'page' : undefined}
-                    className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-semibold transition-all ${
+                    className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-bold transition-all ${
                       isCollapsed ? 'justify-center p-2.5' : 'px-3.5 py-2.5 gap-3'
                     } ${
                       active
                         ? 'bg-[#DBEAFE] text-lpm-blue-900 font-bold shadow-2xs'
-                        : 'text-slate-600 hover:bg-[#E2EDFB] hover:text-lpm-blue-900'
+                        : 'text-slate-700 hover:bg-[#E2EDFB] hover:text-lpm-blue-900'
                     }`}
                   >
                     <div
@@ -255,7 +271,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                     {!isCollapsed && (
                       <div className="truncate">
                         <div className="leading-tight">{item.label}</div>
-                        <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
+                        <div className="text-[11px] text-slate-600 font-medium truncate mt-0.5">
                           {item.desc}
                         </div>
                       </div>
@@ -268,7 +284,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
 
           <div>
             {!isCollapsed && (
-              <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+              <p className="px-3 pb-1 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                 MENU TATA KELOLA MUTU
               </p>
             )}
@@ -283,12 +299,12 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                     onClick={() => setMobileOpen(false)}
                     title={isCollapsed ? item.label : undefined}
                     aria-current={active ? 'page' : undefined}
-                    className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-semibold transition-all ${
+                    className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-bold transition-all ${
                       isCollapsed ? 'justify-center p-2.5' : 'px-3.5 py-2.5 gap-3'
                     } ${
                       active
                         ? 'bg-[#DBEAFE] text-lpm-blue-900 font-bold shadow-2xs'
-                        : 'text-slate-600 hover:bg-[#E2EDFB] hover:text-lpm-blue-900'
+                        : 'text-slate-700 hover:bg-[#E2EDFB] hover:text-lpm-blue-900'
                     }`}
                   >
                     <div
@@ -303,7 +319,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                     {!isCollapsed && (
                       <div className="truncate">
                         <div className="leading-tight">{item.label}</div>
-                        <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
+                        <div className="text-[11px] text-slate-600 font-medium truncate mt-0.5">
                           {item.desc}
                         </div>
                       </div>
@@ -317,7 +333,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           {rbacItems.length > 0 && (
             <div>
               {!isCollapsed && (
-                <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                <p className="px-3 pb-1 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                   TATA KELOLA
                 </p>
               )}
@@ -332,12 +348,12 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                       onClick={() => setMobileOpen(false)}
                       title={isCollapsed ? item.label : undefined}
                       aria-current={active ? 'page' : undefined}
-                      className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-semibold transition-all ${
+                      className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-bold transition-all ${
                         isCollapsed ? 'justify-center p-2.5' : 'px-3.5 py-2.5 gap-3'
                       } ${
                         active
                           ? 'bg-[#DBEAFE] text-lpm-blue-900 font-bold shadow-2xs'
-                          : 'text-slate-600 hover:bg-[#E2EDFB] hover:text-lpm-blue-900'
+                          : 'text-slate-700 hover:bg-[#E2EDFB] hover:text-lpm-blue-900'
                       }`}
                     >
                       <div
@@ -352,7 +368,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                       {!isCollapsed && (
                         <div className="truncate">
                           <div className="leading-tight">{item.label}</div>
-                          <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
+                          <div className="text-[11px] text-slate-600 font-medium truncate mt-0.5">
                             {item.desc}
                           </div>
                         </div>
@@ -366,16 +382,16 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
 
           <div>
             {!isCollapsed && (
-              <p className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+              <p className="px-3 pb-1 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                 NAVIGASI
               </p>
             )}
             <div className="space-y-1.5">
               <Link
                 to="/"
-                className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-medium transition-all ${
+                className={`w-full flex items-center min-h-[44px] rounded-[12px] text-[13.5px] font-semibold transition-all ${
                   isCollapsed ? 'justify-center p-2.5' : 'px-3.5 py-2.5 gap-3'
-                } text-slate-600 hover:bg-[#E2EDFB] hover:text-lpm-blue-900`}
+                } text-slate-700 hover:bg-[#E2EDFB] hover:text-lpm-blue-900`}
                 title={isCollapsed ? 'Halaman Depan LPM' : undefined}
               >
                 <div className="w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0 bg-[#DBEAFE] text-lpm-blue-700">
@@ -384,7 +400,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
                 {!isCollapsed && (
                   <div className="truncate">
                     <div className="leading-tight font-semibold">Halaman Depan</div>
-                    <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
+                    <div className="text-[11px] text-slate-600 font-medium truncate mt-0.5">
                       Beranda Profil LPM UNUSU
                     </div>
                   </div>

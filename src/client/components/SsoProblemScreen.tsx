@@ -40,7 +40,7 @@ import type { AppAccessInfo } from '../services/api';
  * kontrasnya tidak memadai.
  */
 
-const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
+const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5178';
 
 type Masalah = {
   judul: string;

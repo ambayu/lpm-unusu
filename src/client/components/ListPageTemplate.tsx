@@ -1,12 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { PageShell } from './PageShell';
+import { DataTable } from './DataTable';
 
 /* -------------------------------------------------------------------------- */
 /* Tipe kolom tabel                                                           */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Definisi kolom pada halaman daftar. Tipenya identik dengan `DataTableColumn`
+ * sehingga kolom dapat langsung diteruskan ke `DataTable`.
+ */
 export interface ListColumn<T> {
   /** Kunci unik kolom. */
   key: string;
@@ -281,47 +286,16 @@ export function ListPageTemplate<T>({
         </div>
 
         <div className="p-5 sm:p-6">
-          {loading ? (
-            <div className="py-16 text-center text-slate-400 text-xs">
-              <ArrowPathIcon className="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400" aria-hidden="true" />
-              Memuat data...
-            </div>
-          ) : rows.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 text-xs">
-              {hasActiveFilter ? noResultMessage : emptyMessage}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className={`w-full ${minTableWidth} text-left text-xs text-slate-700 border-collapse`}>
-                <thead>
-                  <tr className="border-b border-[#CBD5E1] bg-slate-50/70 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
-                    {columns.map((col) => (
-                      <th key={col.key} className={`py-3 px-4 ${col.headerClassName ?? ''}`}>
-                        {col.header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#CBD5E1]/60">
-                  {rows.map((row, index) => (
-                    <tr key={rowKey(row, index)} className="hover:bg-slate-50/80 transition-colors">
-                      {columns.map((col) => (
-                        <td key={col.key} className={`py-3.5 px-4 ${col.cellClassName ?? ''}`}>
-                          {col.render
-                            ? col.render(row, index)
-                            : ((row as Record<string, unknown>)[col.key] as React.ReactNode)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable<T>
+            columns={columns}
+            rows={rows}
+            rowKey={rowKey}
+            loading={loading}
+            minTableWidth={minTableWidth}
+            footer={footer}
+            emptyMessage={hasActiveFilter ? noResultMessage : emptyMessage}
+          />
         </div>
-
-        {/* Isi tambahan (paginasi) — tetap di dalam kartu tabel */}
-        {footer}
       </div>
     </PageShell>
   );

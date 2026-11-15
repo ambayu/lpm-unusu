@@ -160,6 +160,34 @@ export const ssoLogin = (client_id: string, token: string) =>
 export const fetchSession = () =>
   api.get<{ success: boolean; user: SessionUser; appAccess: AppAccessInfo; izin: string[] }>('/auth/me');
 
+/**
+ * Periksa status sesi terpusat di Identity Provider (ONE UNUSU).
+ * - authenticated: true -> sesi ONE UNUSU aktif.
+ * - authenticated: false -> pengguna telah logout dari ONE UNUSU.
+ * - authenticated: null -> gagal menghubungi server SSO (offline/network error).
+ */
+export const checkOneUnusuSession = async () => {
+  const ssoApiUrl = import.meta.env.VITE_SSO_API_URL || 'http://localhost:5000/api';
+  try {
+    const res = await axios.get<{
+      status: boolean;
+      authenticated: boolean;
+      user?: { username: string; nama: string; role: string };
+      message?: string;
+    }>(`${ssoApiUrl}/sso/session-check`, {
+      withCredentials: true,
+      timeout: 3500,
+    });
+    return res.data;
+  } catch (err: any) {
+    return {
+      status: false,
+      authenticated: null,
+      message: err.message,
+    };
+  }
+};
+
 /** Tingkat masuk & seluruh kunci izin yang dikenali panel LPM. */
 export const fetchAppRoles = () =>
   api.get<{
@@ -408,5 +436,106 @@ export const fetchRbacSummary = () =>
   api.get<{ success: boolean; data: { jumlahPeran: number; jumlahPengguna: number; jumlahIzin: number } }>(
     '/rbac/summary'
   );
+
+// ==========================================
+// DOKUMEN & KATEGORI (MODUL TERBARU)
+// ==========================================
+
+export interface KategoriItem {
+  id: number;
+  nama: string;
+  deskripsi?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ProdiOption {
+  id: number;
+  code: string;
+  name: string;
+  degree?: string;
+  facultyName?: string;
+}
+
+export interface DokumenRecord {
+  id: number;
+  judul: string;
+  nomor?: string | null;
+  kategoriId: number;
+  kategori?: KategoriItem;
+  tahun: number;
+  tanggalDokumen?: string | null;
+  tanggalMulaiBerlaku?: string | null;
+  tanggalBerakhir?: string | null;
+  keterangan?: string | null;
+  filePdfUrl?: string | null;
+  fileSize?: number | null;
+  status: string;
+  tujuanPublish?: 'lpm' | 'prodi' | string;
+  prodiCode?: string | null;
+  prodiName?: string | null;
+  createdBy?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const fetchProdiList = () =>
+  api.get<{ success: boolean; data: ProdiOption[] }>('/prodi');
+
+export const fetchKategori = () =>
+  api.get<{ success: boolean; data: KategoriItem[] }>('/kategori');
+
+export const fetchKategoriDetail = (id: number | string) =>
+  api.get<{ success: boolean; data: KategoriItem }>(`/kategori/${id}`);
+
+export const createKategori = (data: { nama: string; deskripsi?: string | null }) =>
+  api.post<{ success: boolean; data: KategoriItem; message: string }>('/kategori', data);
+
+export const updateKategori = (id: number | string, data: { nama?: string; deskripsi?: string | null }) =>
+  api.put<{ success: boolean; data: KategoriItem; message: string }>(`/kategori/${id}`, data);
+
+export const deleteKategori = (id: number | string) =>
+  api.delete<{ success: boolean; message: string }>(`/kategori/${id}`);
+
+export const fetchDokumen = (params?: { search?: string; status?: string; tahun?: number; skip?: number; take?: number }) =>
+  api.get<{ success: boolean; data: DokumenRecord[]; meta: { total: number; skip: number; take: number; pages: number } }>('/dokumen', { params });
+
+export const fetchDokumenDetail = (id: number | string) =>
+  api.get<{ success: boolean; data: DokumenRecord }>(`/dokumen/${id}`);
+
+export const createDokumen = (data: Partial<DokumenRecord>) =>
+  api.post<{ success: boolean; data: DokumenRecord; message: string }>('/dokumen', data);
+
+/**
+ * Mengunggah berkas PDF dokumen ke penyimpanan arsip.
+ *
+ * Body dikirim sebagai JSON `{ nama, data }` dengan `data` berupa base64.
+ * Base64 hanya dipakai sebagai alat transportasi sekali jalan — server
+ * menyimpannya sebagai berkas dan mengembalikan URL bertanda tangan yang
+ * kemudian diisi ke kolom `filePdfUrl`. Jadi tidak ada lagi PDF base64 yang
+ * tersimpan di database.
+ */
+export const uploadBerkasDokumen = async (file: File) => {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Peramban gagal membaca isi berkas PDF.'));
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+
+  // Buang awalan `data:application/pdf;base64,` — hanya isi base64 yang dikirim.
+  const data = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  return api.post<{ success: boolean; data: { url: string; ukuran: number; nama: string | null }; message: string }>(
+    '/dokumen/berkas',
+    { nama: file.name, data },
+  );
+};
+
+export const updateDokumen = (id: number | string, data: Partial<DokumenRecord>) =>
+  api.put<{ success: boolean; data: DokumenRecord; message: string }>(`/dokumen/${id}`, data);
+
+export const deleteDokumen = (id: number | string) =>
+  api.delete<{ success: boolean; message: string }>(`/dokumen/${id}`);
 
 export default api;

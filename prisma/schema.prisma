@@ -326,3 +326,55 @@ model LpmBannerSlider {
   @@index([active, urutan])
   @@map("lpm_banner_sliders")
 }
+
+// =============================================================================
+// DOKUMEN & KATEGORI — Manajemen dokumen terstruktur per aplikasi LPM
+// =============================================================================
+
+model LpmCategory {
+  id        Int    @id @default(autoincrement())
+  nama      String @unique @db.VarChar(100)
+  deskripsi String? @db.Text
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dokumen LpmDocument[]
+
+  @@index([isActive])
+  @@map("lpm_categories")
+}
+
+model LpmDocument {
+  id                    Int     @id @default(autoincrement())
+  judul                 String  @db.VarChar(255)
+  nomor                 String? @db.VarChar(100)
+  kategoriId            Int
+  kategori              LpmCategory @relation(fields: [kategoriId], references: [id], onDelete: Cascade)
+  tahun                 Int
+  tanggalDokumen        DateTime?
+  tanggalMulaiBerlaku   DateTime?
+  tanggalBerakhir       DateTime?
+  keterangan            String? @db.LongText
+  /// URL bertanda tangan berkas PDF (`/api/arsip-berkas/<nama>?t=<hmac>`).
+  /// Berkas fisik disimpan di `uploads/dokumen`, BUKAN sebagai base64 di sini.
+  /// Tipe LONGTEXT dipertahankan agar dokumen lama hasil migrasi tetap aman.
+  filePdfUrl            String? @db.LongText
+  /// Ukuran berkas PDF dalam byte, diisi saat unggahan.
+  fileSize              Int?
+  status                String  @default("Aktif") @db.VarChar(50)
+  tujuanPublish         String  @default("lpm") @db.VarChar(20)
+  prodiCode             String? @db.VarChar(50)
+  prodiName             String? @db.VarChar(150)
+  createdBy             Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([kategoriId])
+  @@index([tahun])
+  @@index([status])
+  @@index([tujuanPublish])
+  @@index([prodiCode])
+  @@index([createdAt(sort: Desc)])
+  @@map("lpm_documents")
+}

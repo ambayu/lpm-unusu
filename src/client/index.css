@@ -8,4 +8,24 @@
   html {
     scroll-behavior: smooth;
   }
+
+  /**
+   * Quicksand hanya memiliki bobot 400–700 dan strokenya tipis, sehingga
+   * `font-normal` (400) terlihat jauh lebih ringan dibanding font UI lain.
+   * Badan teks dinaikkan ke 500 sebagai bobot dasar, dan `-webkit-font-smoothing:
+   * antialiased` dimatikan (`auto`) agar stroke tetap tebal di macOS/WebKit.
+   * Judul, tombol, dan menu tetap lebih tebal lewat kelas `font-semibold`/`bold`.
+   */
+  body {
+    font-weight: 500;
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-weight: 500;
+  }
 }

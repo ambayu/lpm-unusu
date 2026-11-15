@@ -97,9 +97,16 @@ menghapus data) dan `git push` **wajib** persetujuan eksplisit user.
    `grid-cols-1 sm:grid-cols-2 lg:grid-cols-*`, teks panjang `truncate`/`break-words`.
 5. **Build Once, Reuse Everywhere** — komponen bersama di `src/client/components/`;
    halaman baru wajib mengikuti `docs/design-system/PAGE_TEMPLATES.md`.
-6. **Anti-Sparkles** — dilarang ikon bintang/sparkles; gunakan ikon semantik mutu
+6. **Tabel global wajib** — semua tabel data dirender lewat `DataTable`
+   (`src/client/components/DataTable.tsx`), baik langsung maupun via
+   `ListPageTemplate`. Menulis `<table>` inline di halaman **dilarang**; ukuran teks,
+   warna header, garis pemisah, dan scroll horizontal harus seragam. Ukuran baku:
+   header `text-xs` uppercase, isi sel `text-sm`.
+7. **Satu kolom = satu jenis data** — dilarang menggabungkan beberapa nilai berbeda
+   dalam satu sel dengan `<span>`/`<div>` bertumpuk. Nilai kosong ditulis `-`.
+8. **Anti-Sparkles** — dilarang ikon bintang/sparkles; gunakan ikon semantik mutu
    (`AcademicCap`, `DocumentCheck`, `ShieldCheck`, `ClipboardDocumentCheck`, `Funnel`).
-7. **Bahasa UI** — Indonesia, ringkas, tanpa label berlebihan ("Menu Pengguna" ✗,
+9. **Bahasa UI** — Indonesia, ringkas, tanpa label berlebihan ("Menu Pengguna" ✗,
    "Pengguna" ✓).
 
 ---

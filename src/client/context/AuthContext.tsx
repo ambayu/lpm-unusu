@@ -1,6 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { AppAccessInfo, SessionUser, TingkatMasuk } from '../services/api';
-import { KUNCI_IZIN_MASUK, LABEL_TINGKAT, fetchSession } from '../services/api';
+import { KUNCI_IZIN_MASUK, LABEL_TINGKAT, fetchSession, checkOneUnusuSession } from '../services/api';
+
+const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5178';
+const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || '014813db6bffb39f';
 
 interface AuthContextValue {
   user: SessionUser | null;
@@ -133,6 +136,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           if (freshUser) localStorage.setItem(USER_KEY, JSON.stringify(freshUser));
           simpanIzinCache(freshIzin);
+        }
+
+        // Sinkronisasi status sesi dengan Identity Provider ONE UNUSU
+        try {
+          const ssoStatus = await checkOneUnusuSession();
+          if (ssoStatus?.authenticated === false) {
+            clearSession();
+            return;
+          }
+
+          if (
+            ssoStatus?.authenticated === true &&
+            ssoStatus.user?.username &&
+            freshUser?.username &&
+            ssoStatus.user.username.toLowerCase() !== freshUser.username.toLowerCase()
+          ) {
+            clearSession();
+            window.location.replace(
+              `${ONE_UNUSU_URL}/authorize?client_id=${encodeURIComponent(SSO_CLIENT_ID)}`
+            );
+            return;
+          }
+        } catch {
+          // Abaikan kegagalan jaringan saat offline
         }
       } catch (error: any) {
         if (cancelled) return;

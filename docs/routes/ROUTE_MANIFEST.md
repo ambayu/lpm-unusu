@@ -27,6 +27,12 @@ Basename router ditentukan otomatis dari `import.meta.env.BASE_URL` (mis. `/lpm`
 | `/admin/dokumen` | `DokumenPage` | login + peran LPM | Bank dokumen mutu & SOP |
 | `/admin/dokumen/tambah` | `DokumenFormPage` | login + peran LPM | Form unggah dokumen |
 | `/admin/dokumen/edit/:id` | `DokumenFormPage` | login + peran LPM | Form edit dokumen |
+| `/admin/arsip-dokumen` | `DokumenBaruPage` | login + peran LPM | Pangkalan Dokumen & Berkas terpadu |
+| `/admin/arsip-dokumen/tambah` | `DokumenBaruFormPage` | login + peran LPM | Form unggah dokumen arsip |
+| `/admin/arsip-dokumen/edit/:id` | `DokumenBaruFormPage` | login + peran LPM | Form sunting dokumen arsip |
+| `/admin/kategori` | `KategoriPage` | login + peran LPM | Manajemen kategori dokumen |
+| `/admin/kategori/tambah` | `KategoriFormPage` | login + peran LPM | Form tambah kategori dokumen |
+| `/admin/kategori/edit/:id` | `KategoriFormPage` | login + peran LPM | Form edit kategori dokumen |
 | `/admin/ami` | `AmiPage` | login + peran LPM | Temuan Audit Mutu Internal |
 | `/admin/ami/tambah` | `AmiFormPage` | login + peran LPM | Form catat temuan |
 | `/admin/ami/edit/:id` | `AmiFormPage` | login + peran LPM | Form edit temuan |

@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { assetUrl } from '../lib/assets';
 import { SSO_ROLE_LABEL } from '../services/api';
 
-const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
+const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5178';
 const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || 'lpm-unusu';
 
 /** Ditulis oleh halaman callback SSO ketika server menolak cakupan aplikasi. */

@@ -9,6 +9,7 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline';
 import { CardContainer } from '../components/CardContainer';
+import { DataTable } from '../components/DataTable';
 import { ErrorState } from '../components/ErrorState';
 import { fetchAccessDenials, fetchRbacIzin } from '../services/api';
 import type { AccessDenialItem, RbacIzin } from '../services/api';
@@ -135,45 +136,43 @@ export const PermissionsPage: React.FC = () => {
         <ErrorState description={error} onRetry={fetchPermissions} />
       ) : (
         <CardContainer title="Daftar Hak Akses Sistem (Permissions)">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-200">
-                <tr>
-                  <th className="px-5 py-3.5">Kunci Izin</th>
-                  <th className="px-5 py-3.5">Nama Izin</th>
-                  <th className="px-5 py-3.5">Grup</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filtered.map((p) => (
-                  <tr key={p.kunci} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <KeyIcon className="w-4 h-4 text-lpm-blue-800 shrink-0" />
-                        <code className="font-mono font-semibold text-lpm-blue-900 bg-lpm-blue-50 px-2 py-0.5 rounded border border-lpm-blue-200 text-[11px]">
-                          {p.kunci}
-                        </code>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5 font-medium text-slate-800">{p.nama}</td>
-                    <td className="px-5 py-3.5">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-lpm-blue-50 text-lpm-blue-800 border border-lpm-blue-200">
-                        <CheckCircleIcon className="w-3.5 h-3.5 text-lpm-blue-700" />
-                        {p.grup}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="text-center py-8 text-slate-400">
-                      Tidak ada izin yang sesuai dengan pencarian "{search}".
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            minTableWidth="min-w-[760px]"
+            columns={[
+              {
+                key: 'kunci',
+                header: 'Kunci Izin',
+                render: (p) => (
+                  <div className="flex items-center gap-2">
+                    <KeyIcon className="w-4 h-4 text-lpm-blue-800 shrink-0" aria-hidden="true" />
+                    <code className="font-mono font-semibold text-lpm-blue-900 bg-lpm-blue-50 px-2 py-0.5 rounded border border-lpm-blue-200">
+                      {p.kunci}
+                    </code>
+                  </div>
+                ),
+              },
+              {
+                key: 'nama',
+                header: 'Nama Izin',
+                cellClassName: 'font-medium text-slate-800',
+                render: (p) => p.nama,
+              },
+              {
+                key: 'grup',
+                header: 'Grup',
+                headerClassName: 'w-48',
+                render: (p) => (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold bg-lpm-blue-50 text-lpm-blue-800 border border-lpm-blue-200">
+                    <CheckCircleIcon className="w-3.5 h-3.5 text-lpm-blue-700" aria-hidden="true" />
+                    {p.grup}
+                  </span>
+                ),
+              },
+            ]}
+            rows={filtered}
+            rowKey={(p) => p.kunci}
+            emptyMessage={`Tidak ada izin yang sesuai dengan pencarian "${search}".`}
+          />
         </CardContainer>
       )}
 
@@ -233,49 +232,68 @@ export const PermissionsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[720px]">
-                <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider text-[11px] border-b border-slate-200">
-                  <tr>
-                    <th className="px-4 py-3">Waktu</th>
-                    <th className="px-4 py-3">Akun</th>
-                    <th className="px-4 py-3">Peran SSO</th>
-                    <th className="px-4 py-3">Aplikasi Pemilik</th>
-                    <th className="px-4 py-3">Sumber</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {denials.map((d) => (
-                    <tr key={d.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 text-slate-600">
-                          <ClockIcon className="w-3.5 h-3.5 text-slate-400" />
-                          {new Date(d.at).toLocaleString('id-ID', {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                          })}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-900">{d.nama || d.username || '—'}</div>
-                        <div className="text-[11px] text-slate-400">{d.username || '—'}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <code className="font-mono text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                          {d.ssoRole || '—'}
-                        </code>
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">{d.foreignApp || 'Aplikasi lain'}</td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                          {d.source === 'sso_exchange' ? 'Tukar Token SSO' : 'Permintaan API'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              minTableWidth="min-w-[900px]"
+              columns={[
+                {
+                  key: 'at',
+                  header: 'Waktu',
+                  cellClassName: 'whitespace-nowrap text-slate-600',
+                  render: (d) => (
+                    <span className="inline-flex items-center gap-1.5">
+                      <ClockIcon className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
+                      {new Date(d.at).toLocaleString('id-ID', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'akun',
+                  header: 'Akun',
+                  render: (d) => (
+                    <span className="font-semibold text-slate-900">
+                      {d.nama || d.username || '-'}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'username',
+                  header: 'Username',
+                  headerClassName: 'w-44',
+                  cellClassName: 'font-mono',
+                  render: (d) => d.username || '-',
+                },
+                {
+                  key: 'ssoRole',
+                  header: 'Peran SSO',
+                  render: (d) => (
+                    <code className="font-mono font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                      {d.ssoRole || '-'}
+                    </code>
+                  ),
+                },
+                {
+                  key: 'foreignApp',
+                  header: 'Aplikasi Pemilik',
+                  cellClassName: 'text-slate-700',
+                  render: (d) => d.foreignApp || 'Aplikasi lain',
+                },
+                {
+                  key: 'source',
+                  header: 'Sumber',
+                  headerClassName: 'w-44',
+                  render: (d) => (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                      {d.source === 'sso_exchange' ? 'Tukar Token SSO' : 'Permintaan API'}
+                    </span>
+                  ),
+                },
+              ]}
+              rows={denials}
+              rowKey={(d) => d.id}
+            />
             <p className="text-[11px] text-slate-500 mt-3">
               Menampilkan {denials.length} percobaan terakhir dari total {denialTotal}. Catatan
               disimpan di memori server dan terhapus saat layanan dimulai ulang.
