@@ -142,11 +142,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const ssoStatus = await checkOneUnusuSession();
           if (ssoStatus?.authenticated === false) {
-            clearSession();
-            return;
-          }
-
-          if (
+            // Jika token lokal LPM masih valid, jangan langsung buang sesi ke login loop.
+            // Cukup log warning agar pengguna tetap bisa beraktivitas dengan sesi lokalnya,
+            // atau arahkan ke penanganan eksplisit tanpa redirect diam-diam.
+            console.warn('[SSO] Sesi pusat ONE UNUSU tidak terdeteksi aktif, mempertahankan sesi lokal LPM.');
+          } else if (
             ssoStatus?.authenticated === true &&
             ssoStatus.user?.username &&
             freshUser?.username &&
