@@ -126,6 +126,11 @@ Ekosistem ONE UNUSU memakai **otorisasi berbasis permission (Permission-First)**
 6. **Pemeriksaan Fitur per Sub-Menu**: Operasi data dan fitur di LPM dilindungi oleh middleware berbasis permission key (bukan pengecekan raw role `role === '...'`).
 7. **Verifikasi Sesi Server**: Klien wajib memverifikasi ulang sesi ke server saat boot; cache lokal tidak boleh dipercaya sebagai sumber tunggal otorisasi.
 8. **Fail-Closed**: Pengguna tanpa izin masuk diarahkan ke `/akses-ditolak` (`AccessDenied.tsx`) dengan pesan yang jelas.
+9. **Callback Berisi Token Saja**: URL callback hanya membawa `?token=...` — tanpa `client_id`/`client_key` di address bar. Identitas aplikasi dibaca dari env server (`SSO_CLIENT_ID`) dan dikirim hanya pada `POST /api/v2/website/verify-token`.
+10. **Tiket Sekali Pakai**: `SsoCallback.tsx` wajib memakai penanda `useRef` (`sudahJalan`) agar `POST /api/auth/sso` tidak terkirim dua kali (React `StrictMode`), menyimpan tiket ke memori modul (`TIKET_TERAKHIR`) **sebelum** `window.history.replaceState` membersihkan address bar, dan dilarang memasang logika `cancelled` yang membuang hasil tukar yang sudah berhasil.
+11. **Basis API Relatif**: nilai cadangan `VITE_API_URL` wajib jalur relatif, tidak boleh `http://localhost:<port>/api`. Verifikasi: `grep -o 'http://localhost:[0-9]*/api' dist/**/*.js` harus kosong.
+12. **Tiga Lapisan Sepakat**: `base` Vite, rute/redirect server Express, dan `urlRedirect` di tabel `sso_apps` wajib menunjuk bentuk URL yang sama.
+13. **Katalog Diagnosis Wajib**: saat SSO dilaporkan gagal, catat gejala persis lebih dulu, lalu ikuti tabel gejala–sebab–solusi di `one-unusu/docs/SSO_TROUBLESHOOTING.md` beserta langkah pembuktiannya. Gejala baru wajib ditambahkan ke katalog itu pada commit yang sama dengan perbaikannya.
 
 ---
 
