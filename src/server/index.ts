@@ -16,6 +16,16 @@ import {
   ARSIP_MAX_BYTES,
 } from "./arsipBerkas.js";
 import { jalankanMigrasiArsip } from "./arsipMigrasi.js";
+import {
+  PREFIX_MEDIA_SLIDER,
+  direktoriMediaSlider,
+  hapusMediaSliderFisik,
+  namaBerkasMediaDariUrl,
+  pastikanDirektoriMediaSlider,
+  periksaUkuranMediaSlider,
+  unggahMediaSlider,
+  urlMediaSlider,
+} from "./sliderMedia.js";
 
 dotenv.config();
 
@@ -48,6 +58,14 @@ app.use(express.json({ limit: "10mb" }));
 const clientDistPath = path.resolve(process.cwd(), "dist/client");
 app.use(express.static(clientDistPath));
 app.use("/lpm", express.static(clientDistPath));
+
+// Media slider hero (gambar & video) disajikan sebagai berkas statis publik.
+try {
+  pastikanDirektoriMediaSlider();
+} catch (error) {
+  console.error("[SLIDER] Gagal menyiapkan direktori media slider:", error);
+}
+app.use(PREFIX_MEDIA_SLIDER, express.static(direktoriMediaSlider(), { maxAge: "7d" }));
 
 /**
  * Penanganan galat body-parser: tanpa ini, unggahan yang melebihi batas
@@ -2011,67 +2029,100 @@ app.get("/api/admin/sliders", async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/admin/sliders (Tambah foto slider hero baru dengan upload langsung)
-app.post("/api/admin/sliders", async (req: Request, res: Response) => {
+// POST /api/admin/sliders (Tambah media slider hero: gambar atau video)
+//
+// Body `multipart/form-data`, field `berkas` berisi gambar atau video. Kolom
+// database diisi path hasil unggahan, bukan base64.
+app.post("/api/admin/sliders", unggahMediaSlider, async (req: Request, res: Response) => {
+  const berkas = req.file as Express.Multer.File | undefined;
   try {
-    const { judul, subjudul, gambarUrl, gambarMobileUrl, linkUrl, urutan, active } = req.body;
+    const { judul, subjudul, linkUrl, urutan, active } = req.body;
 
     if (!judul || typeof judul !== "string" || !judul.trim()) {
+      if (berkas) hapusMediaSliderFisik(berkas.filename);
       return res.status(400).json({ success: false, message: "Judul slider wajib diisi." });
     }
-    if (!gambarUrl || typeof gambarUrl !== "string" || !gambarUrl.trim()) {
-      return res.status(400).json({ success: false, message: "File foto slider desktop wajib diunggah." });
+    if (!berkas) {
+      return res.status(400).json({ success: false, message: "Berkas gambar atau video slider wajib diunggah." });
+    }
+
+    const galatUkuran = periksaUkuranMediaSlider(berkas);
+    if (galatUkuran) {
+      hapusMediaSliderFisik(berkas.filename);
+      return res.status(400).json({ success: false, message: galatUkuran });
     }
 
     const created = await prisma.lpmBannerSlider.create({
       data: {
         judul: judul.trim(),
         subjudul: subjudul && typeof subjudul === "string" ? subjudul.trim() : null,
-        gambarUrl: gambarUrl.trim(),
-        gambarMobileUrl: gambarMobileUrl && typeof gambarMobileUrl === "string" ? gambarMobileUrl.trim() : null,
+        gambarUrl: urlMediaSlider(berkas),
+        gambarMobileUrl: null,
         linkUrl: linkUrl && typeof linkUrl === "string" ? linkUrl.trim() : null,
         urutan: Number.isInteger(Number(urutan)) ? Number(urutan) : 0,
-        active: active === undefined ? true : Boolean(active),
+        active: active === undefined || active === "" ? true : active === "true" || active === true,
       },
     });
 
-    res.status(201).json({ success: true, message: "Foto slider hero berhasil ditambahkan.", data: created });
+    res.status(201).json({ success: true, message: "Media slider hero berhasil ditambahkan.", data: created });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Gagal menyimpan foto slider." });
+    // Berkas sudah tertulis ke disk; jangan tinggalkan sampah bila simpan gagal.
+    if (berkas) hapusMediaSliderFisik(berkas.filename);
+    console.error("[SLIDER] Gagal menyimpan slider:", error);
+    res.status(500).json({ success: false, message: "Gagal menyimpan media slider." });
   }
 });
 
-// PUT /api/admin/sliders/:id (Update foto slider hero)
-app.put("/api/admin/sliders/:id", async (req: Request, res: Response) => {
+// PUT /api/admin/sliders/:id (Ubah media slider; berkas baru menggantikan lama)
+app.put("/api/admin/sliders/:id", unggahMediaSlider, async (req: Request, res: Response) => {
+  const berkas = req.file as Express.Multer.File | undefined;
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) {
+      if (berkas) hapusMediaSliderFisik(berkas.filename);
       return res.status(400).json({ success: false, message: "ID slider tidak valid." });
     }
 
-    const { judul, subjudul, gambarUrl, gambarMobileUrl, linkUrl, urutan, active } = req.body;
+    const galatUkuran = periksaUkuranMediaSlider(berkas);
+    if (galatUkuran) {
+      if (berkas) hapusMediaSliderFisik(berkas.filename);
+      return res.status(400).json({ success: false, message: galatUkuran });
+    }
+
+    const existing = await prisma.lpmBannerSlider.findUnique({ where: { id } });
+    if (!existing) {
+      if (berkas) hapusMediaSliderFisik(berkas.filename);
+      return res.status(404).json({ success: false, message: "Slider tidak ditemukan." });
+    }
+
+    const { judul, subjudul, linkUrl, urutan, active } = req.body;
 
     const data: Record<string, unknown> = {};
     if (judul !== undefined) data.judul = String(judul).trim();
     if (subjudul !== undefined) data.subjudul = subjudul ? String(subjudul).trim() : null;
-    if (gambarUrl !== undefined) data.gambarUrl = String(gambarUrl).trim();
-    if (gambarMobileUrl !== undefined) data.gambarMobileUrl = gambarMobileUrl ? String(gambarMobileUrl).trim() : null;
     if (linkUrl !== undefined) data.linkUrl = linkUrl ? String(linkUrl).trim() : null;
     if (urutan !== undefined) data.urutan = Number(urutan) || 0;
-    if (active !== undefined) data.active = Boolean(active);
+    if (active !== undefined) data.active = active === "true" || active === true;
+    if (berkas) data.gambarUrl = urlMediaSlider(berkas);
 
-    const updated = await prisma.lpmBannerSlider.update({
-      where: { id },
-      data,
-    });
+    const updated = await prisma.lpmBannerSlider.update({ where: { id }, data });
 
-    res.json({ success: true, message: "Foto slider hero berhasil diperbarui.", data: updated });
+    // Berkas lama baru dihapus SETELAH pembaruan berhasil, agar baris tidak
+    // kehilangan rujukan bila penyimpanan gagal.
+    if (berkas) {
+      const namaLama = namaBerkasMediaDariUrl(existing.gambarUrl);
+      if (namaLama) hapusMediaSliderFisik(namaLama);
+    }
+
+    res.json({ success: true, message: "Media slider hero berhasil diperbarui.", data: updated });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Gagal memperbarui foto slider." });
+    if (berkas) hapusMediaSliderFisik(berkas.filename);
+    console.error("[SLIDER] Gagal memperbarui slider:", error);
+    res.status(500).json({ success: false, message: "Gagal memperbarui media slider." });
   }
 });
 
-// DELETE /api/admin/sliders/:id (Hapus foto slider hero)
+// DELETE /api/admin/sliders/:id (Hapus slider beserta berkas medianya)
 app.delete("/api/admin/sliders/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
@@ -2079,10 +2130,21 @@ app.delete("/api/admin/sliders/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "ID slider tidak valid." });
     }
 
+    const existing = await prisma.lpmBannerSlider.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: "Slider tidak ditemukan." });
+    }
+
     await prisma.lpmBannerSlider.delete({ where: { id } });
-    res.json({ success: true, message: "Foto slider hero berhasil dihapus." });
+
+    // Berkas dihapus setelah baris hilang; kegagalan pembersihan disk hanya
+    // menyisakan berkas yatim dan tidak membatalkan penghapusan data.
+    const nama = namaBerkasMediaDariUrl(existing.gambarUrl);
+    if (nama) hapusMediaSliderFisik(nama);
+
+    res.json({ success: true, message: "Media slider hero berhasil dihapus." });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Gagal menghapus foto slider." });
+    res.status(500).json({ success: false, message: "Gagal menghapus media slider." });
   }
 });
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { assetUrl } from "../lib/assets";
 import { fetchPublicSliders, LpmBannerSliderItem } from "../services/api";
+import { JENIS_MEDIA, jenisMedia, type JenisMedia } from "../lib/mediaSlider";
 
 export interface HeroSlideItem {
   id: number;
@@ -11,6 +12,8 @@ export interface HeroSlideItem {
   badge: string;
   headline: string;
   subheadline: string;
+  /** Slide video tidak memakai timer; perpindahan menunggu `onEnded`. */
+  jenis: JenisMedia;
 }
 
 const defaultHeroSlides: HeroSlideItem[] = [
@@ -22,6 +25,7 @@ const defaultHeroSlides: HeroSlideItem[] = [
     badge: "Siklus PPEPP Nasional",
     headline: "Standar Penjaminan Mutu Internal",
     subheadline: "Mengawal mutu tata kelola tridharma perguruan tinggi menuju akreditasi institusi Unggul.",
+    jenis: JENIS_MEDIA.GAMBAR,
   },
   {
     id: 2,
@@ -31,6 +35,7 @@ const defaultHeroSlides: HeroSlideItem[] = [
     badge: "Outcome-Based Education",
     headline: "Capaian Pembelajaran Terstandarisasi",
     subheadline: "Penyelarasan kurikulum 14 Program Studi S1 berbasis KKNI level 6 dan nilai Aswaja An-Nahdliyah.",
+    jenis: JENIS_MEDIA.GAMBAR,
   },
   {
     id: 3,
@@ -40,6 +45,7 @@ const defaultHeroSlides: HeroSlideItem[] = [
     badge: "Audit AMI Real-Time",
     headline: "Audit Mutu Internal Berkelanjutan",
     subheadline: "Pencatatan kesenjangan mutu (KTS Mayor & Minor) dan rekomendasi tindak lanjut (RTL) terintegrasi.",
+    jenis: JENIS_MEDIA.GAMBAR,
   },
   {
     id: 4,
@@ -49,6 +55,7 @@ const defaultHeroSlides: HeroSlideItem[] = [
     badge: "Bank Dokumen Legal",
     headline: "Arsip Kebijakan, Manual & SOP",
     subheadline: "Dokumentasi digital resmi pedoman mutu universitas terverifikasi SK Rektor.",
+    jenis: JENIS_MEDIA.GAMBAR,
   },
 ];
 
@@ -71,6 +78,7 @@ export const FullHeroSlider: React.FC = () => {
             badge: "LPM UNUSU",
             headline: item.judul,
             subheadline: item.subjudul || "Sistem Penjaminan Mutu Internal Universitas Nahdlatul Ulama Sumatera Utara.",
+            jenis: jenisMedia(item.gambarUrl),
           }));
           setSlides(mapped);
         }
@@ -80,13 +88,17 @@ export const FullHeroSlider: React.FC = () => {
       });
   }, []);
 
+  // Slide video tidak memakai timer: perpindahan menunggu video selesai agar
+  // isinya tidak terpotong. Slide gambar tetap berotasi tiap 6 detik.
+  const slideAktifVideo = slides[currentSlide]?.jenis === JENIS_MEDIA.VIDEO;
+
   useEffect(() => {
-    if (isPaused || slides.length === 0) return;
+    if (isPaused || slides.length === 0 || slideAktifVideo) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, [isPaused, slides.length]);
+  }, [isPaused, slides.length, slideAktifVideo]);
 
   const goTo = (index: number) => setCurrentSlide(index);
   const prevSlide = () =>
@@ -140,18 +152,35 @@ export const FullHeroSlider: React.FC = () => {
               index === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
             }`}
           >
-            <picture>
-              <source media="(max-width: 767px)" srcSet={item.imageMobile} />
-              <img
+            {item.jenis === JENIS_MEDIA.VIDEO ? (
+              // Video bisu + playsInline agar autoplay diizinkan peramban.
+              // Setelah selesai, slider berpindah ke slide berikutnya.
+              <video
                 src={item.image}
-                alt={item.title}
-                width={1280}
-                height={720}
                 className="h-full w-full object-cover object-center"
-                loading={index === 0 ? "eager" : "lazy"}
-                decoding="async"
+                muted
+                playsInline
+                autoPlay
+                preload={index === 0 ? "auto" : "metadata"}
+                aria-label={item.title}
+                onEnded={() => {
+                  if (index === currentSlide) nextSlide();
+                }}
               />
-            </picture>
+            ) : (
+              <picture>
+                <source media="(max-width: 767px)" srcSet={item.imageMobile} />
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  width={1280}
+                  height={720}
+                  className="h-full w-full object-cover object-center"
+                  loading={index === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+              </picture>
+            )}
 
             {/* Gradient Scrim Tipis agar teks terbaca kontras & elegan */}
             <div className="absolute inset-0 bg-gradient-to-t from-lpm-blue-950/90 via-lpm-blue-900/40 to-transparent md:from-lpm-blue-950/85 md:via-lpm-blue-900/30" />

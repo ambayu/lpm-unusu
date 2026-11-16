@@ -343,11 +343,48 @@ export const fetchPublicSliders = () =>
 export const fetchAdminSliders = () =>
   api.get<{ success: boolean; data: LpmBannerSliderItem[] }>('/admin/sliders');
 
-export const createAdminSlider = (data: Partial<LpmBannerSliderItem>) =>
-  api.post<{ success: boolean; message: string; data: LpmBannerSliderItem }>('/admin/sliders', data);
+export interface SliderKiriman {
+  judul?: string;
+  subjudul?: string | null;
+  linkUrl?: string | null;
+  urutan?: number;
+  active?: boolean;
+  /** Berkas gambar atau video baru pengganti media lama. */
+  berkas?: File | null;
+}
 
-export const updateAdminSlider = (id: number, data: Partial<LpmBannerSliderItem>) =>
-  api.put<{ success: boolean; message: string; data: LpmBannerSliderItem }>(`/admin/sliders/${id}`, data);
+/**
+ * Media slider dikirim sebagai multipart/form-data, bukan JSON base64.
+ *
+ * Content-Type sengaja dihapus agar peramban menuliskannya sendiri lengkap
+ * dengan boundary; tanpa itu multer menolak body dan berkas tidak terbaca.
+ * Berkas hanya disertakan bila benar-benar ada, sehingga penyuntingan teks
+ * saja tidak mengirim field kosong yang dianggap galat oleh server.
+ */
+const buatFormSlider = ({ berkas, ...teks }: SliderKiriman): FormData => {
+  const form = new FormData();
+  Object.entries(teks).forEach(([kunci, nilai]) => {
+    if (nilai !== undefined && nilai !== null) form.append(kunci, String(nilai));
+  });
+  if (berkas) form.append("berkas", berkas);
+  return form;
+};
+
+const KONFIG_MULTIPART = { headers: { "Content-Type": undefined } };
+
+export const createAdminSlider = (data: SliderKiriman) =>
+  api.post<{ success: boolean; message: string; data: LpmBannerSliderItem }>(
+    "/admin/sliders",
+    buatFormSlider(data),
+    KONFIG_MULTIPART,
+  );
+
+export const updateAdminSlider = (id: number, data: SliderKiriman) =>
+  api.put<{ success: boolean; message: string; data: LpmBannerSliderItem }>(
+    "/admin/sliders/" + id,
+    buatFormSlider(data),
+    KONFIG_MULTIPART,
+  );
 
 export const deleteAdminSlider = (id: number) =>
   api.delete<{ success: boolean; message: string }>(`/admin/sliders/${id}`);

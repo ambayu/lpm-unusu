@@ -49,7 +49,8 @@ docs/
 │   ├── ROUTE_MANIFEST.md         ← daftar rute aktual dari App.tsx
 │   ├── standar/                  ← RULES.md (aturan rute) + README.md (peta implementasi)
 │   ├── dokumen/                  ← RULES.md + README.md modul Dokumen Mutu & SOP
-│   └── ami/                      ← RULES.md + README.md modul Audit Mutu Internal
+│   ├── ami/                      ← RULES.md + README.md modul Audit Mutu Internal
+│   └── slider/                   ← README.md modul Slider Hero Beranda (gambar & video)
 ├── database/
 │   └── SCHEMA_MIGRATION_PLAN.md  ← rencana skema & migrasi
 └── adr/

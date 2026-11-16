@@ -38,6 +38,7 @@ Basename router ditentukan otomatis dari `import.meta.env.BASE_URL` (mis. `/lpm`
 | `/admin/ami/edit/:id` | `AmiFormPage` | login + peran LPM | Form edit temuan |
 | `/admin/pengguna` | `UsersPage` | **adminOnly** | Manajemen pengguna |
 | `/admin/users` | `UsersPage` | **adminOnly** | Alias legacy |
+| `/admin/slider` | `ManajemenSliderLpm` | izin `standar:view` / `dokumen:view` / `audit:view` | Kelola gambar & video hero beranda (lihat `routes/slider/README.md`) |
 | `/admin/peran` | `RolesPage` | **adminOnly** | Manajemen peran |
 | `/admin/roles` | `RolesPage` | **adminOnly** | Alias legacy |
 | `/admin/izin` | `PermissionsPage` | **adminOnly** | Matriks izin |

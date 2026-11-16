@@ -17,6 +17,16 @@ import {
   updateAdminSlider,
   deleteAdminSlider,
 } from '../services/api';
+import {
+  JENIS_MEDIA,
+  BATAS_GAMBAR_BYTE,
+  BATAS_VIDEO_BYTE,
+  jenisMedia,
+  labelJenisMedia,
+  validasiBerkasMedia,
+} from '../lib/mediaSlider';
+
+const MB = (byte: number) => Math.round(byte / (1024 * 1024));
 
 export const ManajemenSliderLpm: React.FC = () => {
   const [sliders, setSliders] = useState<LpmBannerSliderItem[]>([]);
@@ -28,10 +38,13 @@ export const ManajemenSliderLpm: React.FC = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [judul, setJudul] = useState('');
   const [subjudul, setSubjudul] = useState('');
-  const [gambarUrl, setGambarUrl] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [urutan, setUrutan] = useState(0);
   const [active, setActive] = useState(true);
+  // Berkas baru yang belum diunggah. `null` berarti memakai media yang ada.
+  const [berkasBaru, setBerkasBaru] = useState<File | null>(null);
+  const [pratinjauBaru, setPratinjauBaru] = useState('');
+  const [mediaLama, setMediaLama] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Delete State
@@ -48,7 +61,7 @@ export const ManajemenSliderLpm: React.FC = () => {
         setSliders(res.data.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Gagal memuat daftar foto slider.');
+      setError(err?.response?.data?.message || 'Gagal memuat daftar media slider.');
     } finally {
       setLoading(false);
     }
@@ -62,11 +75,21 @@ export const ManajemenSliderLpm: React.FC = () => {
     setEditingId(null);
     setJudul('');
     setSubjudul('');
-    setGambarUrl('');
     setLinkUrl('');
     setUrutan(0);
     setActive(true);
+    setBerkasBaru(null);
+    setMediaLama('');
+    lepasPratinjau();
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  /** Membebaskan object URL pratinjau agar blob tidak menumpuk di memori. */
+  const lepasPratinjau = () => {
+    setPratinjauBaru((sebelumnya) => {
+      if (sebelumnya) URL.revokeObjectURL(sebelumnya);
+      return '';
+    });
   };
 
   const openCreateModal = () => {
@@ -75,37 +98,38 @@ export const ManajemenSliderLpm: React.FC = () => {
   };
 
   const openEditModal = (item: LpmBannerSliderItem) => {
+    resetForm();
     setEditingId(item.id);
     setJudul(item.judul);
     setSubjudul(item.subjudul || '');
-    setGambarUrl(item.gambarUrl);
     setLinkUrl(item.linkUrl || '');
     setUrutan(item.urutan);
     setActive(item.active);
+    setMediaLama(item.gambarUrl || '');
     setIsModalOpen(true);
   };
 
+  /**
+   * Menyimpan berkas pilihan pengguna tanpa membacanya ke base64.
+   *
+   * Berkas asli dipertahankan dan dikirim sebagai `FormData` saat menyimpan.
+   * Pratinjau memakai `URL.createObjectURL()` sehingga peramban tidak pernah
+   * mengubah media menjadi teks sepanjang belasan megabyte.
+   */
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      alert('Mohon pilih file gambar yang valid (JPG, PNG, atau WebP).');
+    const hasil = validasiBerkasMedia(file);
+    if (!hasil.sah) {
+      alert(hasil.pesan || 'Berkas tidak dapat dipakai.');
+      e.target.value = '';
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran file maksimal 5 MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setGambarUrl(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    lepasPratinjau();
+    setBerkasBaru(file);
+    setPratinjauBaru(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -116,20 +140,20 @@ export const ManajemenSliderLpm: React.FC = () => {
       return;
     }
 
-    if (!gambarUrl.trim()) {
-      alert('Silakan unggah foto banner slider terlebih dahulu.');
+    if (!editingId && !berkasBaru) {
+      alert('Silakan unggah berkas gambar atau video slider terlebih dahulu.');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const payload: Partial<LpmBannerSliderItem> = {
+      const payload = {
         judul: judul.trim(),
         subjudul: subjudul.trim() || null,
-        gambarUrl,
         linkUrl: linkUrl.trim() || null,
         urutan: Number(urutan) || 0,
         active,
+        berkas: berkasBaru,
       };
 
       if (editingId) {
@@ -142,7 +166,7 @@ export const ManajemenSliderLpm: React.FC = () => {
       resetForm();
       await loadSliders();
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Gagal menyimpan foto slider.');
+      alert(err?.response?.data?.message || 'Gagal menyimpan media slider.');
     } finally {
       setIsSubmitting(false);
     }
@@ -164,21 +188,26 @@ export const ManajemenSliderLpm: React.FC = () => {
       setItemToDelete(null);
       await loadSliders();
     } catch {
-      alert('Gagal menghapus foto slider.');
+      alert('Gagal menghapus media slider.');
     }
   };
 
+  // Berkas baru diprioritaskan agar admin langsung melihat pilihannya.
+  const mediaPratinjau = pratinjauBaru || mediaLama;
+  const jenisPratinjau = pratinjauBaru
+    ? validasiBerkasMedia(berkasBaru).jenis
+    : jenisMedia(mediaLama);
+
   return (
     <div className="space-y-6">
-      {/* Header Halaman */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#CBD5E1] bg-white p-6 shadow-2xs">
+      {/* Header Halaman */}      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#CBD5E1] bg-white p-6 shadow-2xs">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
             <PhotoIcon className="w-7 h-7 text-[#166534]" />
             <span>Manajemen Slider Hero</span>
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-slate-500">
-            Kelola foto banner, judul slide, dan urutan rotasi tampilan pada halaman depan publik LPM UNUSU.
+            Kelola foto atau video banner, judul slide, dan urutan rotasi tampilan pada halaman depan publik LPM UNUSU.
           </p>
         </div>
         <button
@@ -187,14 +216,14 @@ export const ManajemenSliderLpm: React.FC = () => {
           className="inline-flex items-center gap-2 rounded-xl bg-[#166534] hover:bg-[#14532D] text-white px-4 py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all self-start sm:self-auto"
         >
           <PlusIcon className="w-4 h-4" />
-          <span>Tambah Foto Slider</span>
+          <span>Tambah Data</span>
         </button>
       </div>
 
       {/* Konten Utama */}
       {loading ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-xs text-slate-400">
-          Memuat data foto slider hero...
+          Memuat data media slider hero...
         </div>
       ) : error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center text-xs text-rose-700">
@@ -203,26 +232,47 @@ export const ManajemenSliderLpm: React.FC = () => {
       ) : sliders.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center space-y-3">
           <PhotoIcon className="w-12 h-12 text-slate-300 mx-auto" />
-          <h3 className="text-sm font-bold text-slate-900">Belum Ada Foto Slider Custom</h3>
+          <h3 className="text-sm font-bold text-slate-900">Belum Ada Media Slider</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Halaman depan saat ini menampilkan foto banner bawaan sistem. Klik tombol di atas untuk mengunggah foto kegiatan penjaminan mutu kampus.
+            Halaman depan saat ini menampilkan media bawaan sistem. Klik tombol di atas untuk mengunggah foto atau video kegiatan penjaminan mutu kampus.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sliders.map((item) => (
+          {sliders.map((item) => {
+            const jenis = jenisMedia(item.gambarUrl);
+            return (
             <div
               key={item.id}
               className="rounded-2xl border border-[#CBD5E1] bg-white overflow-hidden shadow-2xs flex flex-col justify-between hover:shadow-md transition-shadow"
             >
               <div>
-                {/* Gambar Pratinjau */}
+                {/* Media Pratinjau */}
                 <div className="relative aspect-[16/9] bg-slate-100 overflow-hidden border-b border-slate-100">
-                  <img
-                    src={item.gambarUrl}
-                    alt={item.judul}
-                    className="w-full h-full object-cover"
-                  />
+                  {jenis === JENIS_MEDIA.VIDEO ? (
+                    <video
+                      src={item.gambarUrl}
+                      className="w-full h-full object-cover"
+                      muted
+                      loop
+                      playsInline
+                      preload="metadata"
+                      onMouseEnter={(e) => e.currentTarget.play().catch(() => {})}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.pause();
+                        e.currentTarget.currentTime = 0;
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src={item.gambarUrl}
+                      alt={item.judul}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold">
+                    {labelJenisMedia(item.gambarUrl)}
+                  </span>
                   <span
                     className={`absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                       item.active
@@ -283,7 +333,8 @@ export const ManajemenSliderLpm: React.FC = () => {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -293,7 +344,7 @@ export const ManajemenSliderLpm: React.FC = () => {
           <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-900">
-                {editingId ? 'Edit Foto Slider Hero' : 'Tambah Foto Slider Hero'}
+                {editingId ? 'Ubah Media Slider Hero' : 'Tambah Media Slider Hero'}
               </h3>
               <button
                 type="button"
@@ -332,42 +383,69 @@ export const ManajemenSliderLpm: React.FC = () => {
                 />
               </div>
 
-              {/* Area Upload File Gambar Langsung */}
+              {/* Area Unggah Media */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Unggah Berkas Gambar <span className="text-rose-500">*</span>
+                  Unggah Gambar atau Video {!editingId && <span className="text-rose-500">*</span>}
                 </label>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 transition-colors">
                       <ArrowUpTrayIcon className="w-4 h-4 text-emerald-800" />
-                      <span>Pilih Berkas Foto</span>
+                      <span>Pilih Berkas</span>
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/*,video/mp4,video/webm,video/ogg,video/quicktime"
                         onChange={handleFileUpload}
                         className="hidden"
                       />
                     </label>
-                    <span className="text-[11px] text-slate-400">Format: JPG, PNG, atau WebP (Maks 5 MB)</span>
+                    <span className="text-[11px] text-slate-400">
+                      Gambar JPG/PNG/WebP maks {MB(BATAS_GAMBAR_BYTE)} MB · Video MP4/WebM maks {MB(BATAS_VIDEO_BYTE)} MB
+                    </span>
                   </div>
 
-                  {gambarUrl && (
+                  {mediaPratinjau && (
                     <div className="relative mt-2 aspect-[16/9] w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
-                      <img src={gambarUrl} alt="Pratinjau" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setGambarUrl('');
-                          if (fileInputRef.current) fileInputRef.current.value = '';
-                        }}
-                        className="absolute top-2 right-2 rounded-full bg-rose-600 p-1 text-white shadow-md hover:bg-rose-700"
-                        title="Hapus Pratinjau"
-                      >
-                        <XMarkIcon className="w-3.5 h-3.5" />
-                      </button>
+                      {jenisPratinjau === JENIS_MEDIA.VIDEO ? (
+                        <video
+                          src={mediaPratinjau}
+                          className="w-full h-full object-cover"
+                          controls
+                          muted
+                          playsInline
+                          preload="metadata"
+                        />
+                      ) : (
+                        <img src={mediaPratinjau} alt="Pratinjau" className="w-full h-full object-cover" />
+                      )}
+                      {berkasBaru && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBerkasBaru(null);
+                            lepasPratinjau();
+                            if (fileInputRef.current) fileInputRef.current.value = '';
+                          }}
+                          className="absolute top-2 right-2 rounded-full bg-rose-600 p-1 text-white shadow-md hover:bg-rose-700"
+                          title="Batalkan Berkas Baru"
+                        >
+                          <XMarkIcon className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
+                  )}
+
+                  {berkasBaru && (
+                    <p className="text-[11px] font-semibold text-emerald-800">
+                      Berkas baru dipilih: {berkasBaru.name} ({labelJenisMedia(berkasBaru.name)})
+                    </p>
+                  )}
+                  {!berkasBaru && editingId && mediaLama && (
+                    <p className="text-[11px] text-slate-500">
+                      Biarkan kosong bila media lama tetap dipakai. Berkas lama dihapus dari server saat diganti.
+                    </p>
                   )}
                 </div>
               </div>
@@ -438,7 +516,7 @@ export const ManajemenSliderLpm: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4 text-center">
             <ExclamationTriangleIcon className="w-12 h-12 text-rose-500 mx-auto" />
-            <h4 className="font-bold text-sm text-slate-900">Hapus Foto Slider Ini?</h4>
+            <h4 className="font-bold text-sm text-slate-900">Hapus Media Slider Ini?</h4>
             <p className="text-xs text-slate-500">
               Foto "{itemToDelete.judul}" akan dihapus permanen dari rotasi hero slider halaman depan.
             </p>
