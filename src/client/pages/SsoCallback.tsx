@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ssoLogin } from '../services/api';
 import type { AppAccessInfo } from '../services/api';
@@ -115,6 +115,14 @@ export function SsoCallbackPage() {
   const navigate = useNavigate();
   const [masalah, setMasalah] = useState<Masalah | null>(null);
   const [denial, setDenial] = useState<AppAccessInfo | null>(null);
+  /*
+   * React StrictMode memasang efek dua kali di mode pengembangan, dan halaman
+   * ini juga bisa dirender ulang. Tanpa penanda, tiket sekali-pakai ditembak
+   * dua request paralel: satu sukses, satu dibatalkan (HTTP 499), lalu UI
+   * sempat membaca keadaan gagal dan melempar pengguna kembali ke halaman
+   * masuk. Penanda ini memastikan penukaran hanya dijalankan sekali.
+   */
+  const sudahJalan = useRef(false);
 
   /*
    * Tiket dapat sampai ke tab ini lewat dua jalan: query `/sso/callback?token=`
@@ -157,6 +165,10 @@ export function SsoCallbackPage() {
       navigate('/admin', { replace: true });
       return;
     }
+
+    // Hanya satu penukaran tiket per pemasangan halaman.
+    if (sudahJalan.current) return;
+    sudahJalan.current = true;
 
     const token = tokenDariUrl || TIKET_TERAKHIR;
 
