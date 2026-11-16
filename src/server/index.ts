@@ -111,6 +111,39 @@ const SSO_BASE_URL = process.env.SSO_BASE_URL || "http://localhost:5000";
 const SSO_CLIENT_ID = process.env.SSO_CLIENT_ID || "lpm-unusu";
 const SSO_CLIENT_KEY = process.env.SSO_CLIENT_KEY || "";
 
+/**
+ * GET /api/sso/session-check
+ *
+ * Meneruskan pemeriksaan sesi ONE UNUSU lewat origin aplikasi ini sendiri.
+ *
+ * Sebelumnya browser memanggil API Hub langsung. Alamatnya berasal dari
+ * `VITE_SSO_API_URL`, yang bila tidak diisi jatuh ke `http://localhost:5000`
+ * — alamat komputer pengunjung, bukan server. Akibatnya pemeriksaan selalu
+ * gagal dan pengguna terlempar ke halaman masuk. Dengan diteruskan dari sisi
+ * server, cookie sesi ikut terbawa pada jalur yang sama seperti penukaran
+ * tiket, dan aplikasi tidak lagi bergantung pada alamat absolut di browser.
+ *
+ * Ketidakpastian (server SSO tidak dapat dihubungi) dijawab dengan
+ * `authenticated: null`, BUKAN `false`, agar sesi lokal tidak diputus.
+ */
+app.get("/api/sso/session-check", async (req: Request, res: Response) => {
+  try {
+    const cookie = req.headers.cookie ?? "";
+    const upstream = await fetch(`${SSO_BASE_URL}/api/sso/session-check`, {
+      headers: cookie ? { cookie } : {},
+    });
+
+    const payload = (await upstream.json().catch(() => null)) as any;
+    if (!payload) {
+      return res.status(502).json({ status: false, authenticated: null, message: "Pemeriksa sesi SSO tidak merespons." });
+    }
+
+    return res.status(upstream.status).json(payload);
+  } catch (error: any) {
+    return res.status(502).json({ status: false, authenticated: null, message: error?.message });
+  }
+});
+
 interface SsoUserPayload {
   id: number;
   username: string;

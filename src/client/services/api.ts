@@ -165,9 +165,15 @@ export const fetchSession = () =>
  * - authenticated: true -> sesi ONE UNUSU aktif.
  * - authenticated: false -> pengguna telah logout dari ONE UNUSU.
  * - authenticated: null -> gagal menghubungi server SSO (offline/network error).
+ *
+ * Alamat memakai jalur relatif `/api` agar diteruskan server aplikasi ini
+ * sendiri (lihat `GET /api/sso/session-check` di src/server/index.ts).
+ * Sebelumnya di sini tertulis `http://localhost:5000/api`, yaitu alamat
+ * komputer pengunjung — pemeriksaan selalu gagal di produksi sehingga
+ * pengguna terlempar ke halaman masuk.
  */
 export const checkOneUnusuSession = async () => {
-  const ssoApiUrl = import.meta.env.VITE_SSO_API_URL || 'http://localhost:5000/api';
+  const ssoApiUrl = import.meta.env.VITE_SSO_API_URL || '/api';
   try {
     const res = await axios.get<{
       status: boolean;
@@ -180,6 +186,10 @@ export const checkOneUnusuSession = async () => {
     });
     return res.data;
   } catch (err: any) {
+    /*
+     * Kegagalan menghubungi pemeriksa sesi BUKAN bukti sesi berakhir. Nilai
+     * `authenticated: null` membuat pemanggil mempertahankan sesi lokal.
+     */
     return {
       status: false,
       authenticated: null,
