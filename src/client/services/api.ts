@@ -141,7 +141,7 @@ api.interceptors.response.use(
   }
 );
 
-export const ssoLogin = (client_id: string, token: string) =>
+export const ssoLogin = (token: string) =>
   api.post<{
     success: boolean;
     token: string;
@@ -149,7 +149,7 @@ export const ssoLogin = (client_id: string, token: string) =>
     appAccess?: AppAccessInfo;
     code?: string;
     message?: string;
-  }>('/auth/sso', { client_id, token });
+  }>('/auth/sso', { token });
 
 /** Verifikasi ulang sesi ke server + ambil cakupan akses & izin pengguna. */
 export const fetchSession = () =>

@@ -593,13 +593,10 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
 // Verifikasi token SSO sekali-pakai lalu terbitkan sesi lokal
 app.post("/api/auth/sso", async (req: Request, res: Response) => {
   try {
-    const { client_id, token } = req.body ?? {};
+    const { token } = req.body ?? {};
 
-    if (!client_id || !token) {
-      return res.status(400).json({ success: false, message: "client_id dan token wajib diisi" });
-    }
-    if (client_id !== SSO_CLIENT_ID) {
-      return res.status(400).json({ success: false, message: "Client ID tidak cocok dengan aplikasi ini" });
+    if (typeof token !== "string" || token.length < 32 || token.length > 256) {
+      return res.status(400).json({ success: false, message: "Tiket SSO tidak valid" });
     }
     if (!SSO_CLIENT_KEY) {
       return res.status(500).json({ success: false, message: "SSO_CLIENT_KEY belum dikonfigurasi di server" });

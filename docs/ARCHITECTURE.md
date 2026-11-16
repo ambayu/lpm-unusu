@@ -22,9 +22,9 @@ sequenceDiagram
         Client->>Portal: Redirect ke https://one.unusu.ac.id/sso/authorize?client_id={VITE_SSO_CLIENT_ID}
         User->>Portal: Login dengan akun ONE UNUSU
         Portal->>Portal: Verifikasi kredensial & otorisasi role
-        Portal->>Client: Redirect ke https://lpm.unusu.ac.id/sso/callback?client_id=...&token={SINGLE_USE_TOKEN}
-        Client->>Server: POST /api/auth/sso { client_id, token }
-        Server->>Portal: POST /api/v2/website/verify-token { client_id, client_key, token }
+        Portal->>Client: Redirect ke https://lpm.unusu.ac.id/sso/callback?token={SINGLE_USE_TOKEN}
+        Client->>Server: POST /api/auth/sso { token }
+        Server->>Portal: POST /api/v2/website/verify-token { client_id dari env, client_key, token }
         Portal-->>Server: Token valid, data user & roles
         Server->>Server: Buat sesi lokal JWT
         Server-->>Client: Kembalikan session token & profil user

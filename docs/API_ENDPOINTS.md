@@ -19,7 +19,7 @@ Seluruh route di bawah `app.use('/api', authenticate)` **kecuali** `/api/health`
 | Method | Path | Guard | Keterangan |
 |---|---|---|---|
 | GET | `/api/health` | publik | Status server |
-| POST | `/api/auth/sso` | publik | Tukar single-use token ke Portal (`verify-token` v2) → JWT 7 hari + `user` + `appAccess`. `403` bila peran bukan milik LPM |
+| POST | `/api/auth/sso` | publik | Body `{ token }`; client ID dan client key diambil dari env server. Tukar single-use token ke ONE (`verify-token` v2) → JWT 7 hari + `user` + `appAccess`. ONE memverifikasi tiket terikat client LPM; `403` bila peran bukan milik LPM |
 | GET | `/api/auth/me` | login | Verifikasi sesi + cakupan aplikasi (dipakai `AuthContext` saat boot) |
 | GET | `/api/auth/app-roles` | login | Daftar peran sah LPM + daftar peran aplikasi lain yang ditolak |
 | GET | `/api/security/access-denials?limit=25` | `requireLpmAdmin` | Jejak penolakan akses lintas aplikasi (`source`, `ssoRole`, `reason`, akun, `foreignApp`, `path`, `ip`) + `summary.foreignAdmin` / `summary.other`. Disimpan in-memory maks 100 entri |

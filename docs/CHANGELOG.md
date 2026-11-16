@@ -8,6 +8,7 @@
 
 ### Fixed
 - URL tiket callback dibersihkan dari address bar setelah dibaca; respons menambahkan `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, dan `X-Frame-Options: DENY`.
+- Callback hanya membawa tiket. Browser tidak lagi mengirim client ID; backend LPM memakai identitas aplikasi dan client key dari environment saat meminta validasi ONE.
 
 ## [2026-11-17] — Slider Hero Berbasis Berkas dengan Dukungan Video
 

@@ -12,7 +12,7 @@ Subdomain produksi melayani SPA di root domain. URL kanonis tidak memakai prefix
 |---|---|---|---|
 | `/` | `LandingPage` | `pages/Landing.tsx` | Beranda publik, tanpa guard, tanpa redirect paksa |
 | `/login` | `LoginPage` | `pages/Login.tsx` | Tombol SSO ke Portal ONE UNUSU (`/sso/authorize?client_id={VITE_SSO_CLIENT_ID}`) |
-| `/sso/callback` | `SsoCallbackPage` | `pages/SsoCallback.tsx` | Tukar single-use token; dedup request per token (StrictMode-safe) |
+| `/sso/callback` | `SsoCallbackPage` | `pages/SsoCallback.tsx` | Menerima `token` saja; client ID untuk verifikasi diambil dari env server; dedup request per token (StrictMode-safe) |
 | `/akses-ditolak` | `AccessDeniedPage` | `pages/AccessDenied.tsx` | Penolakan lintas aplikasi (mis. `ADMIN_LPPM`), menampilkan peran & cakupan |
 
 ## 2. Rute Panel Admin (dibungkus `ProtectedRoute` → `SidebarLayout`)

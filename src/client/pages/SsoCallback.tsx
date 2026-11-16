@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { ssoLogin } from '../services/api';
 import type { AppAccessInfo } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -81,15 +80,15 @@ export function terjemahkanGagalSso(err: any, payload: any): Masalah {
   };
 }
 
-function exchangeSsoToken(clientId: string, token: string): Promise<SsoExchangeResult> {
-  const key = `${clientId}:${token}`;
+function exchangeSsoToken(token: string): Promise<SsoExchangeResult> {
+  const key = token;
   const pending = exchangeRequests.get(key);
 
   if (pending) {
     return pending;
   }
 
-  const request = ssoLogin(clientId, token);
+  const request = ssoLogin(token);
   exchangeRequests.set(key, request);
 
   request.catch(() => {
@@ -100,14 +99,12 @@ function exchangeSsoToken(clientId: string, token: string): Promise<SsoExchangeR
 }
 
 export function SsoCallbackPage() {
-  const [params] = useSearchParams();
   const { saveSession } = useAuth();
   const [masalah, setMasalah] = useState<Masalah | null>(null);
   const [denial, setDenial] = useState<AppAccessInfo | null>(null);
 
   useEffect(() => {
-    const clientId = params.get('client_id');
-    const token = params.get('token');
+    const token = new URLSearchParams(window.location.search).get('token');
 
     // Tiket sekali pakai tidak perlu tertinggal di address bar/history/referrer.
     window.history.replaceState(null, '', `${window.location.pathname}`);
@@ -115,7 +112,7 @@ export function SsoCallbackPage() {
     // Portal mengirim balik pengguna tanpa tiket bila permintaan izin tidak
     // selesai. Ini keadaan normal, bukan kerusakan, jadi penjelasannya dibuat
     // ringan dan tidak menuduh pengguna melakukan kesalahan.
-    if (!clientId || !token) {
+    if (!token) {
       setMasalah({
         jenis: 'kosong',
         judul: 'Permintaan masuk belum selesai',
@@ -134,7 +131,7 @@ export function SsoCallbackPage() {
 
     (async () => {
       try {
-        const response = await exchangeSsoToken(clientId, token);
+        const response = await exchangeSsoToken(token);
         if (!response.data?.success) {
           throw new Error('Respons masuk tidak dapat dibaca');
         }
