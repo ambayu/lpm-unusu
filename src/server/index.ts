@@ -59,6 +59,25 @@ const clientDistPath = path.resolve(process.cwd(), "dist/client");
 app.use(express.static(clientDistPath));
 app.use("/lpm", express.static(clientDistPath));
 
+/**
+ * Normalisasi alamat tanpa awalan aplikasi.
+ *
+ * Aplikasi ini dipasang di sub-path `/lpm`. Bila pengunjung membuka `/login`
+ * (tanpa awalan), SPA tetap termuat karena fallback di bawah mengirim
+ * index.html, tetapi router berjalan dengan basename kosong dan alamatnya
+ * berubah menjadi `/lpm/login` begitu halaman dimuat ulang — pengguna merasa
+ * "terlempar". Pengalihan di sisi server membuat semua tautan lama langsung
+ * mendarat pada bentuk yang benar, sebelum React sempat berjalan.
+ *
+ * Hanya jalur halaman yang dialihkan; `/api`, berkas statis, dan media
+ * dibiarkan agar tidak merusak aset maupun permintaan data.
+ */
+app.get(/^\/(?!lpm(\/|$)|api(\/|$)|assets(\/|$)|media(\/|$)).*/, (req: Request, res: Response, next: NextFunction) => {
+  // Permintaan berkas (mengandung titik) diteruskan ke static/fallback.
+  if (req.path.includes(".")) return next();
+  return res.redirect(302, `/lpm${req.originalUrl}`);
+});
+
 // Media slider hero (gambar & video) disajikan sebagai berkas statis publik.
 try {
   pastikanDirektoriMediaSlider();
