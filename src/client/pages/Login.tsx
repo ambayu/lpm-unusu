@@ -15,7 +15,18 @@ import { assetUrl } from '../lib/assets';
 import { SSO_ROLE_LABEL } from '../services/api';
 
 const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5178';
-const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || 'lpm-unusu';
+
+/**
+ * Client ID resmi aplikasi ini pada registrasi SSO ONE UNUSU.
+ *
+ * Nilai cadangan WAJIB berupa client ID (16 karakter heksadesimal), bukan nama
+ * aplikasi. Sebelumnya di sini tertulis `'lpm-unusu'`, sehingga bila variabel
+ * lingkungan tidak tersedia saat build, tautan masuk mengarah ke
+ * `/authorize?client_id=lpm-unusu` dan portal menjawab "Aplikasi cabang tidak
+ * ditemukan atau sedang tidak aktif" — pengguna tidak pernah bisa masuk.
+ * Nilai ini harus sama dengan `SSO_CLIENT_ID` di `.env` server.
+ */
+const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || '014813db6bffb39f';
 
 /** Ditulis oleh halaman callback SSO ketika server menolak cakupan aplikasi. */
 const DENIED_FLAG_KEY = 'lpm_sso_denied';
