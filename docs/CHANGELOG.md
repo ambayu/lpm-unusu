@@ -1,5 +1,14 @@
 # Changelog — LPM UNUSU
 
+## [2026-11-16]
+
+### Changed
+- LPM di subdomain memakai URL root (`/login`, `/admin`, `/sso/callback`) tanpa prefix `/lpm`; URL legacy `/lpm/*` dialihkan permanen ke path kanonis.
+- URL portal SSO dan client ID memakai konfigurasi environment yang cocok dengan gateway `/sso` dan registrasi LPM.
+
+### Fixed
+- URL tiket callback dibersihkan dari address bar setelah dibaca; respons menambahkan `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, dan `X-Frame-Options: DENY`.
+
 ## [2026-11-17] — Slider Hero Berbasis Berkas dengan Dukungan Video
 
 ### Added

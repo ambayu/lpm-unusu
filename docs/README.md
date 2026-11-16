@@ -108,7 +108,7 @@ Internal (AMI)**, serta **RBAC** (Pengguna, Peran, Izin) dan **Dashboard**.
 
 Environment wajib: `JWT_SECRET` (server berhenti bila kosong), `SSO_BASE_URL`,
 `SSO_CLIENT_ID` (default `lpm-unusu`), `SSO_CLIENT_KEY`. Frontend: `VITE_API_URL`,
-`VITE_ONE_UNUSU_URL`, `VITE_SSO_CLIENT_ID`.
+`VITE_ONE_UNUSU_URL`, `VITE_SSO_CLIENT_ID`. Untuk produksi LPM gunakan `SSO_BASE_URL=https://one.unusu.ac.id/sso`, `SSO_CLIENT_ID=014813db6bffb39f`, dan URL portal frontend `https://one.unusu.ac.id/sso`; aplikasi disajikan pada root subdomain (`/login`, bukan `/lpm/login`).
 
 ---
 

@@ -11,18 +11,18 @@ LPM UNUSU dibangun dengan pola **Fullstack Monolith** terpisah secara modular:
 sequenceDiagram
     autonumber
     actor User as Pengguna / Auditor
-    participant Portal as ONE UNUSU Gateway (Port 5000 / 5173)
+    participant Portal as ONE UNUSU Gateway (/sso)
     participant Client as LPM Frontend (Vite)
     participant Server as LPM Backend (Port 5004)
     participant DB as MySQL (Prisma)
 
-    User->>Client: Buka aplikasi LPM UNUSU
+    User->>Client: Buka https://lpm.unusu.ac.id/login
     Client->>Client: Cek sesi lokal (JWT di localStorage)
     alt Sesi tidak ada
-        Client->>Portal: Redirect ke /authorize?client_id=lpm-unusu
+        Client->>Portal: Redirect ke https://one.unusu.ac.id/sso/authorize?client_id={VITE_SSO_CLIENT_ID}
         User->>Portal: Login dengan akun ONE UNUSU
         Portal->>Portal: Verifikasi kredensial & otorisasi role
-        Portal->>Client: Redirect ke /sso/callback?token={SINGLE_USE_TOKEN}
+        Portal->>Client: Redirect ke https://lpm.unusu.ac.id/sso/callback?client_id=...&token={SINGLE_USE_TOKEN}
         Client->>Server: POST /api/auth/sso { client_id, token }
         Server->>Portal: POST /api/v2/website/verify-token { client_id, client_key, token }
         Portal-->>Server: Token valid, data user & roles

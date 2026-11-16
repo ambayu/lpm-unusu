@@ -109,6 +109,9 @@ export function SsoCallbackPage() {
     const clientId = params.get('client_id');
     const token = params.get('token');
 
+    // Tiket sekali pakai tidak perlu tertinggal di address bar/history/referrer.
+    window.history.replaceState(null, '', `${window.location.pathname}`);
+
     // Portal mengirim balik pengguna tanpa tiket bila permintaan izin tidak
     // selesai. Ini keadaan normal, bukan kerusakan, jadi penjelasannya dibuat
     // ringan dan tidak menuduh pengguna melakukan kesalahan.
@@ -140,9 +143,7 @@ export function SsoCallbackPage() {
 
         if (!cancelled) {
           // Setelah login sukses SELALU mendarat di panel, bukan halaman publik.
-          // BASE_URL dipertahankan untuk deploy di subfolder.
-          const dashboardPath = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/admin`;
-          window.location.replace(dashboardPath);
+          window.location.replace('/admin');
         }
       } catch (err: any) {
         if (cancelled) return;

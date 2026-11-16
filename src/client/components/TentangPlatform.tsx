@@ -56,8 +56,7 @@ export const TentangPlatform: React.FC<TentangPlatformProps> = ({
   fotoTransparan = false,
 }) => {
   const [usePortrait, setUsePortrait] = useState(Boolean(portraitSrc));
-  const base = import.meta.env.BASE_URL || '/';
-  const resolve = (p?: string) => (p ? (p.startsWith('http') ? p : `${base}${p.replace(/^\//, '')}`) : '');
+  const resolve = (p?: string) => (p ? (p.startsWith('http') ? p : `/${p.replace(/^\//, '')}`) : '');
   const src = resolve(usePortrait ? portraitSrc : fallbackSrc);
 
   return (

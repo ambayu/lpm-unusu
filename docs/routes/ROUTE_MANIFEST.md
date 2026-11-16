@@ -4,14 +4,14 @@ Manifest tunggal rute SPA. **Sumber kode:** `src/client/App.tsx`.
 Setiap penambahan rute wajib diperbarui di sini **dan** di `SidebarLayout` bila rute
 tampil di navigasi.
 
-Basename router ditentukan otomatis dari `import.meta.env.BASE_URL` (mis. `/lpm`).
+Subdomain produksi melayani SPA di root domain. URL kanonis tidak memakai prefix `/lpm`.
 
 ## 1. Rute Publik
 
 | Path | Komponen | Berkas | Catatan |
 |---|---|---|---|
 | `/` | `LandingPage` | `pages/Landing.tsx` | Beranda publik, tanpa guard, tanpa redirect paksa |
-| `/login` | `LoginPage` | `pages/Login.tsx` | Tombol SSO ke Portal ONE UNUSU (`/authorize?client_id=lpm-unusu`) |
+| `/login` | `LoginPage` | `pages/Login.tsx` | Tombol SSO ke Portal ONE UNUSU (`/sso/authorize?client_id={VITE_SSO_CLIENT_ID}`) |
 | `/sso/callback` | `SsoCallbackPage` | `pages/SsoCallback.tsx` | Tukar single-use token; dedup request per token (StrictMode-safe) |
 | `/akses-ditolak` | `AccessDeniedPage` | `pages/AccessDenied.tsx` | Penolakan lintas aplikasi (mis. `ADMIN_LPPM`), menampilkan peran & cakupan |
 

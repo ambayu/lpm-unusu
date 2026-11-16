@@ -116,12 +116,7 @@ api.interceptors.request.use((config) => {
 const PUBLIC_PATHS = ['/', '/login', '/sso/callback', '/akses-ditolak'];
 
 const isPublicPath = (pathname: string) => {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
-  let path = pathname;
-  if (base && path.startsWith(base)) {
-    path = path.slice(base.length);
-  }
-  path = path.replace(/\/+$/, '').replace(/\/index\.html$/, '');
+  const path = pathname.replace(/\/+$/, '').replace(/\/index\.html$/, '');
   return PUBLIC_PATHS.includes(path || '/');
 };
 
@@ -134,7 +129,7 @@ api.interceptors.response.use(
     if (status === 401 && !isPublicPath(path)) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
-      window.location.replace(import.meta.env.BASE_URL + 'login');
+      window.location.replace('/login');
     }
     // Peran di luar cakupan aplikasi (mis. admin LPPM): sesi lokal dibersihkan
     // agar tidak ada sisa kredensial lintas aplikasi di peramban.

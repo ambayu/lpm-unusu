@@ -69,49 +69,11 @@ function ProtectedRoute({
   return halaman;
 }
 
-const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, '');
-
-/**
- * Basename router SELALU `BASE_PATH` (mis. `/lpm`), tanpa menebak dari URL.
- *
- * Sebelumnya nilai ini dihitung dari `window.location.pathname`: bila
- * pengunjung membuka `/login` (tanpa awalan `/lpm`), basename menjadi kosong,
- * lalu ketika halaman dimuat ulang pada `/lpm/login` basename berubah menjadi
- * `/lpm`. Satu aplikasi pun berjalan dalam dua mode perutean yang berbeda —
- * akibatnya pengguna yang menekan tombol masuk terlempar dari `/login` ke
- * `/lpm/login`. Semua alamat lama tanpa awalan kini dinormalkan lebih dulu
- * (lihat `normalkanKeBasePath`), sehingga basename cukup satu nilai.
- */
-const routerBasename = BASE_PATH;
-
-/**
- * Mengalihkan alamat yang tidak memakai awalan aplikasi ke bentuk berawalan.
- *
- * Contoh: `/login` -> `/lpm/login`, `/sso/callback` -> `/lpm/sso/callback`.
- * Alamat yang sudah benar, berkas statis, dan panggilan API dibiarkan apa
- * adanya agar tidak mengganggu aset maupun permintaan ke server.
- *
- * Dijalankan sekali saat modul dimuat — sebelum React dirender — sehingga
- * router tidak pernah melihat dua bentuk URL yang berbeda.
- */
-function normalkanKeBasePath(): void {
-  if (!BASE_PATH) return;
-
-  const { pathname, search, hash } = window.location;
-  if (pathname === BASE_PATH || pathname.startsWith(`${BASE_PATH}/`)) return;
-
-  // Aset & API dilayani di akar, jadi tidak boleh dialihkan ke bawah /lpm.
-  if (pathname.startsWith('/assets/') || pathname.startsWith('/api/')) return;
-
-  window.history.replaceState(null, '', `${BASE_PATH}${pathname}${search}${hash}`);
-}
-
-normalkanKeBasePath();
-
+// Subdomain LPM melayani aplikasi di root domain, bukan di `/lpm`.
 export function App() {
   return (
     <AuthProvider>
-      <Router basename={routerBasename}>
+      <Router>
         <Routes>
           {/* Halaman Landing Publik */}
           <Route path="/" element={<LandingPage />} />

@@ -32,6 +32,16 @@ dotenv.config();
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5004;
+const clientDistPath = path.resolve(process.cwd(), "dist/client");
+
+// Callback SSO membawa tiket sekali pakai di query string; jangan bocorkan URL
+// callback sebagai Referer ke layanan atau aset pihak lain.
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  next();
+});
 
 /**
  * Penyajian berkas arsip dokumen lewat URL bertanda tangan.
@@ -55,27 +65,17 @@ app.use(cors({
 app.use(express.json({ limit: "10mb" }));
 
 // Static files in production
-const clientDistPath = path.resolve(process.cwd(), "dist/client");
+app.get("/sso/callback", (_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
+  return res.sendFile(path.join(clientDistPath, "index.html"), (err) => {
+    if (err) next(err);
+  });
+});
 app.use(express.static(clientDistPath));
-app.use("/lpm", express.static(clientDistPath));
 
-/**
- * Normalisasi alamat tanpa awalan aplikasi.
- *
- * Aplikasi ini dipasang di sub-path `/lpm`. Bila pengunjung membuka `/login`
- * (tanpa awalan), SPA tetap termuat karena fallback di bawah mengirim
- * index.html, tetapi router berjalan dengan basename kosong dan alamatnya
- * berubah menjadi `/lpm/login` begitu halaman dimuat ulang — pengguna merasa
- * "terlempar". Pengalihan di sisi server membuat semua tautan lama langsung
- * mendarat pada bentuk yang benar, sebelum React sempat berjalan.
- *
- * Hanya jalur halaman yang dialihkan; `/api`, berkas statis, dan media
- * dibiarkan agar tidak merusak aset maupun permintaan data.
- */
-app.get(/^\/(?!lpm(\/|$)|api(\/|$)|assets(\/|$)|media(\/|$)).*/, (req: Request, res: Response, next: NextFunction) => {
-  // Permintaan berkas (mengandung titik) diteruskan ke static/fallback.
-  if (req.path.includes(".")) return next();
-  return res.redirect(302, `/lpm${req.originalUrl}`);
+// URL lama /lpm/* tetap berfungsi, tetapi URL kanonis sekarang di root domain.
+app.use("/lpm", (req: Request, res: Response) => {
+  return res.redirect(308, req.originalUrl.slice("/lpm".length) || "/");
 });
 
 // Media slider hero (gambar & video) disajikan sebagai berkas statis publik.
@@ -126,8 +126,8 @@ if (!JWT_SECRET) {
   console.error("FATAL: JWT_SECRET belum diset di environment. Server dihentikan demi keamanan.");
   process.exit(1);
 }
-const SSO_BASE_URL = process.env.SSO_BASE_URL || "http://localhost:5000";
-const SSO_CLIENT_ID = process.env.SSO_CLIENT_ID || "lpm-unusu";
+const SSO_BASE_URL = process.env.SSO_BASE_URL || "http://localhost:5000/sso";
+const SSO_CLIENT_ID = process.env.SSO_CLIENT_ID || "014813db6bffb39f";
 const SSO_CLIENT_KEY = process.env.SSO_CLIENT_KEY || "";
 
 /**
@@ -148,7 +148,7 @@ const SSO_CLIENT_KEY = process.env.SSO_CLIENT_KEY || "";
 app.get("/api/sso/session-check", async (req: Request, res: Response) => {
   try {
     const cookie = req.headers.cookie ?? "";
-    const upstream = await fetch(`${SSO_BASE_URL}/api/sso/session-check`, {
+    const upstream = await fetch(`${SSO_BASE_URL.replace(/\/$/, "")}/api/sso/session-check`, {
       headers: cookie ? { cookie } : {},
     });
 
@@ -605,7 +605,7 @@ app.post("/api/auth/sso", async (req: Request, res: Response) => {
       return res.status(500).json({ success: false, message: "SSO_CLIENT_KEY belum dikonfigurasi di server" });
     }
 
-    const ssoResponse = await fetch(`${SSO_BASE_URL}/api/v2/website/verify-token`, {
+    const ssoResponse = await fetch(`${SSO_BASE_URL.replace(/\/$/, "")}/api/v2/website/verify-token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ client_id: SSO_CLIENT_ID, client_key: SSO_CLIENT_KEY, token }),
@@ -2318,10 +2318,11 @@ app.delete("/api/kategori/:id", requirePermission("dokumen:delete"), async (req:
 // GET /api/prodi (Daftar prodi dari SSO One UNUSU Academic Hierarchy)
 app.get("/api/prodi", async (_req: Request, res: Response) => {
   try {
-    const ssoBase = process.env.SSO_BASE_URL || "http://localhost:5000";
+    const ssoBase = (process.env.SSO_BASE_URL || "http://localhost:5000/sso").replace(/\/$/, "");
+    const academicBase = ssoBase.endsWith("/sso") ? ssoBase.slice(0, -4) : ssoBase;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);
-    const upstreamRes = await fetch(`${ssoBase}/api/academic/hierarchy`, {
+    const upstreamRes = await fetch(`${academicBase}/api/academic/hierarchy`, {
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
