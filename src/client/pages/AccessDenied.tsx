@@ -23,7 +23,7 @@ export function AccessDeniedPage() {
   const { user, appAccess, logout } = useAuth();
   const navigate = useNavigate();
 
-  const isForeignAdmin = appAccess?.reason === 'foreign_app_admin';
+  const isForeignAdmin = false;
   const ssoRoleLabel = appAccess?.ssoRoleLabel || appAccess?.ssoRole || '';
   const alreadyAllowed = !!appAccess?.allowed;
 
@@ -72,15 +72,19 @@ export function AccessDeniedPage() {
                 <h2 className="text-base font-bold text-slate-900 leading-snug">
                   {alreadyAllowed
                     ? 'Akun Anda sudah memiliki akses panel LPM'
-                    : isForeignAdmin
-                    ? 'Akun Anda adalah administrator aplikasi lain'
-                    : 'Peran Anda tidak memiliki akses ke LPM UNUSU'}
+                    : appAccess?.reason === 'not_registered'
+                      ? 'Akun Anda belum terdaftar di LPM UNUSU'
+                      : appAccess?.reason === 'inactive_account'
+                        ? 'Akun LPM Anda sedang nonaktif'
+                        : appAccess?.reason === 'no_role'
+                          ? 'Peran LPM Anda belum ditetapkan'
+                          : 'Peran Anda tidak memiliki akses ke LPM UNUSU'}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-1.5">
                   {alreadyAllowed
                     ? 'Tidak ada pembatasan pada sesi Anda saat ini. Silakan lanjutkan ke dashboard panel penjaminan mutu.'
                     : appAccess?.message ||
-                      'Panel LPM UNUSU hanya dapat diakses Administrator LPM, Superadmin ekosistem, dan Dosen/Auditor Mutu.'}
+                      'Panel LPM UNUSU hanya dapat diakses pengguna yang telah didaftarkan dan diberi peran oleh Admin LPM.'}
                 </p>
               </div>
             </div>

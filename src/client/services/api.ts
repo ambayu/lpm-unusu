@@ -26,14 +26,17 @@ export interface SessionUser {
 
 /**
  * Cakupan akses aplikasi.
- * Dihitung SERVER dari IZIN MASUK yang melekat pada peran, bukan dari nama
- * peran. Klien hanya menampilkan hasilnya.
+ *
+ * Dihitung SERVER dari KEANGGOTAAN pengguna di tabel pengguna LPM, bukan dari
+ * nama peran SSO. Pengguna yang belum didaftarkan Admin LPM tidak punya baris
+ * keanggotaan sama sekali, sehingga masuk ke kategori `not_registered`.
  */
 export type AppAccessReason =
   | 'allowed'
-  | 'foreign_app_admin'
-  | 'no_izin_masuk'
-  | 'missing_role';
+  | 'not_registered'
+  | 'inactive_account'
+  | 'no_role'
+  | 'superadmin_bypass';
 
 /** Tingkat masuk panel: ditentukan oleh izin masuk yang dimiliki. */
 export type TingkatMasuk = 'admin' | 'dosen' | 'mahasiswa';
@@ -45,24 +48,16 @@ export interface AppAccessInfo {
   reason: AppAccessReason;
   ssoRole: string;
   ssoRoleLabel: string;
-  /** Tingkat masuk efektif (null bila tidak punya izin masuk sama sekali). */
+  /** Tingkat masuk efektif (null bila belum ditetapkan peran di LPM). */
   tingkat: TingkatMasuk | null;
   roleLabel: string;
   isAppAdmin: boolean;
-  /** Seluruh kunci izin milik pengguna (izin masuk + izin fitur). */
+  /** Seluruh kunci izin milik pengguna (turunan dari peran LPM). */
   izin: string[];
   message: string;
 }
 
-const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || '014813db6bffb39f';
-
-/** Kunci izin masuk panel LPM — HARUS sama dengan server. */
-export const KUNCI_IZIN_MASUK: Record<TingkatMasuk, string> = {
-  admin: `${SSO_CLIENT_ID}:masuk_admin`,
-  dosen: `${SSO_CLIENT_ID}:masuk_dosen`,
-  mahasiswa: `${SSO_CLIENT_ID}:masuk_mahasiswa`,
-};
-
+/** Label tingkat akses panel LPM. */
 export const LABEL_TINGKAT: Record<TingkatMasuk, string> = {
   admin: 'Administrator LPM',
   dosen: 'Dosen / Auditor Mutu',
@@ -131,9 +126,13 @@ api.interceptors.response.use(
       localStorage.removeItem(USER_KEY);
       window.location.replace('/login');
     }
-    // Peran di luar cakupan aplikasi (mis. admin LPPM): sesi lokal dibersihkan
-    // agar tidak ada sisa kredensial lintas aplikasi di peramban.
-    if (status === 403 && (code === 'FOREIGN_APP_ADMIN' || code === 'APP_ACCESS_DENIED')) {
+    // Keanggotaan di luar cakupan aplikasi (belum terdaftar / nonaktif / tanpa
+    // peran): sesi lokal dibersihkan agar tidak ada sisa kredensial lintas
+    // aplikasi di peramban.
+    if (
+      status === 403 &&
+      (code === 'NOT_REGISTERED' || code === 'INACTIVE' || code === 'NO_ROLE' || code === 'APP_ACCESS_DENIED')
+    ) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
     }
@@ -434,17 +433,81 @@ export interface RbacIzin {
   keterangan?: string;
 }
 
-export const fetchRbacPengguna = () =>
-  api.get<{ success: boolean; data: RbacPengguna[] }>('/users');
-export const createRbacPengguna = (data: {
-  userId: number;
+/** Pengguna ONE UNUSU yang bisa dipilih dari direktori (tabel tambah pengguna). */
+export interface KandidatPenggunaOne {
+  id: number;
   username: string;
   nama: string;
-  email?: string | null;
-  ssoRole?: string | null;
-  status?: string;
-  peran: string[];
-}) => api.post<{ success: boolean; data: RbacPengguna; message: string }>('/users', data);
+  email: string | null;
+  noHp?: string | null;
+  nim?: string | null;
+  nidn?: string | null;
+  nip?: string | null;
+  fakultas?: string | null;
+  prodi?: string | null;
+  jenisKelamin?: string | null;
+  avatar?: string | null;
+  isActive?: boolean;
+  /** Kode peran kampus dari ONE UNUSU, mis. `DOSEN` atau `MAHASISWA`. */
+  role?: string | null;
+  roles?: string[];
+  sudahTerdaftar: boolean;
+}
+
+export const fetchRbacPengguna = () =>
+  api.get<{ success: boolean; data: RbacPengguna[] }>('/users');
+
+/** Kriteria penelusuran direktori ONE UNUSU untuk halaman Tambah Pengguna. */
+export interface KriteriaKandidat {
+  search?: string;
+  role?: string;
+  fakultas?: string;
+  prodi?: string;
+}
+
+/**
+ * Menelusuri pengguna direktori ONE UNUSU lewat server LPM.
+ *
+ * Panel LPM tidak punya daftar pengguna kampus sendiri — Admin LPM hanya
+ * memilih dari direktori SSO. Penelusuran diteruskan server memakai API key
+ * yang tersimpan di sisi server, jadi key tidak pernah sampai ke browser.
+ *
+ * Seluruh kriteria bersifat opsional: tanpa kriteria sama sekali server tetap
+ * mengembalikan maksimal 20 pengguna aktif agar tabel langsung terisi.
+ */
+export const cariKandidatPengguna = (kriteria: KriteriaKandidat | string = {}) => {
+  const params: Record<string, string> = {};
+  if (typeof kriteria === 'string') {
+    if (kriteria) params.search = kriteria;
+  } else {
+    if (kriteria.search) params.search = kriteria.search;
+    if (kriteria.role) params.role = kriteria.role;
+    if (kriteria.fakultas) params.fakultas = kriteria.fakultas;
+    if (kriteria.prodi) params.prodi = kriteria.prodi;
+  }
+
+  return api.get<{
+    success: boolean;
+    data: KandidatPenggunaOne[];
+    meta: { total: number; search: string; role: string; fakultas: string; prodi: string };
+  }>('/users/kandidat', { params });
+};
+
+/**
+ * Mendaftarkan pengguna ONE UNUSU ke LPM.
+ *
+ * `peran` bersifat opsional: pendaftaran dan penugasan peran sengaja dipisah.
+ * Pengguna disimpan lebih dulu tanpa peran, lalu Admin menetapkannya satu per
+ * satu lewat modal "Atur Peran" pada daftar pengguna.
+ *
+ * `kandidat` tidak lagi dipakai untuk pencarian; server memverifikasi pilihan
+ * berdasarkan `userIds` langsung ke ONE UNUSU lewat endpoint by-ids.
+ */
+export const createRbacPengguna = (data: {
+  userIds: number[];
+  peran?: string[];
+  kandidat?: Array<{ id: number; nama?: string; username?: string }>;
+}) => api.post<{ success: boolean; data: RbacPengguna[]; message: string }>('/users', data);
 export const updateRbacPengguna = (
   id: number | string,
   data: Partial<{ nama: string; email: string | null; ssoRole: string | null; status: string; peran: string[] }>

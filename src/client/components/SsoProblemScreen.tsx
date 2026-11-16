@@ -65,27 +65,37 @@ export function SsoProblemScreen({
   tahun = new Date().getFullYear(),
 }: Props) {
   const isDenial = Boolean(denial);
-  const isForeignAdmin = denial?.reason === 'foreign_app_admin';
 
   const judul = isDenial
-    ? isForeignAdmin
-      ? 'Akun ini terdaftar pada aplikasi lain'
-      : 'Akun ini belum memiliki akses ke LPM'
+    ? denial?.reason === 'not_registered'
+      ? 'Akun ini belum terdaftar di LPM'
+      : denial?.reason === 'inactive_account'
+        ? 'Akun LPM Anda sedang nonaktif'
+        : denial?.reason === 'no_role'
+          ? 'Peran LPM Anda belum ditetapkan'
+          : 'Akun ini belum memiliki akses ke LPM'
     : masalah?.judul || '';
 
   const penjelasan = isDenial
-    ? isForeignAdmin
-      ? 'Akun ONE UNUSU Anda berhasil dikenali, tetapi perannya tercatat sebagai administrator aplikasi lain. Satu akun boleh memiliki peran di banyak aplikasi, namun setiap panel hanya menerima peran miliknya sendiri.'
-      : 'Akun ONE UNUSU Anda berhasil dikenali, tetapi perannya belum mencakup panel LPM. Setiap aplikasi kampus memberi hak akses tersendiri, jadi akun yang biasa dipakai di aplikasi lain belum tentu bisa membuka panel ini.'
+    ? denial?.reason === 'not_registered'
+      ? 'Akun ONE UNUSU Anda berhasil dikenali, tetapi belum didaftarkan sebagai pengguna panel LPM. Pendaftaran dilakukan Admin LPM dari direktori ONE UNUSU, bukan otomatis saat login.'
+      : denial?.reason === 'inactive_account'
+        ? 'Akun LPM Anda sedang dinonaktifkan oleh Admin LPM. Selama nonaktif, seluruh halaman panel tidak dapat dibuka.'
+        : denial?.reason === 'no_role'
+          ? 'Akun Anda sudah terdaftar di panel LPM, tetapi belum diberi peran. Tanpa peran, tidak ada izin fitur yang bisa dipakai.'
+          : 'Akun ONE UNUSU Anda berhasil dikenali, tetapi belum memiliki akses ke panel LPM. Setiap aplikasi kampus memberi hak akses tersendiri.'
     : masalah?.penjelasan || '';
 
   const langkah = isDenial
     ? [
-        isForeignAdmin
-          ? `Akun Anda tercatat sebagai administrator ${denial?.ssoRoleLabel || 'aplikasi lain di ekosistem ONE UNUSU'}.`
-          : `Peran yang aktif pada akun Anda belum termasuk peran LPM.`,
-        'Bila Anda memang bertugas di LPM, minta Superadmin ONE UNUSU menambahkan peran Administrator LPM pada akun Anda.',
-        'Setelah peran ditambahkan, silakan masuk lagi dari halaman ini.',
+        denial?.reason === 'not_registered'
+          ? 'Minta Admin LPM mendaftarkan akun Anda melalui menu Manajemen Pengguna.'
+          : denial?.reason === 'inactive_account'
+            ? 'Minta Admin LPM mengaktifkan kembali akun Anda.'
+            : denial?.reason === 'no_role'
+              ? 'Minta Admin LPM menetapkan peran untuk akun Anda.'
+              : 'Minta Admin LPM memberikan peran panel LPM pada akun Anda.',
+        'Setelah diperbaiki, silakan masuk lagi dari halaman ini.',
       ]
     : masalah?.langkah || [];
 

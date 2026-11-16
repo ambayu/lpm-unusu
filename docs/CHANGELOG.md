@@ -1,5 +1,41 @@
 # Changelog — LPM UNUSU
 
+## [2026-11-16] — Superadmin Langsung Mendapat Izin Saat Login
+
+### Fixed
+- **Superadmin masuk LPM dengan panel kosong, harus refresh dulu.** Dua cacat sekaligus:
+  1. `ambilIzinPengguna()` menerima `_ssoRole` tetapi mengabaikannya. Superadmin yang belum punya peran lokal mendapat `izin` kosong, sehingga setiap endpoint membalas 403 dan panel terkunci — termasuk halaman pengguna yang justru dibutuhkan untuk memperbaikinya. Kini Superadmin memperoleh seluruh izin fitur lewat `seluruhIzin()`.
+  2. Respons `POST /api/auth/sso` tidak menyertakan `izin`, padahal klien memakainya untuk menentukan menu dan tombol. Sesi baru tampil kosong sampai halaman di-refresh (yang memicu `/api/auth/me`). Kini `izin` ikut dikirim di level atas sekaligus di dalam `appAccess`.
+
+### Notes
+- Jaring pengaman ini **hanya** berlaku untuk `ssoRole = SUPERADMIN`. Dosen tetap memperoleh izin sesuai peran lokalnya (12 izin untuk peran `dosen`), bukan seluruh 40 izin.
+
+## [2026-11-20] — Akses Berbasis Keanggotaan & Pendaftaran dari ONE UNUSU
+
+### Changed
+- **Izin masuk global tidak lagi dipakai.** `masuk_admin`/`masuk_dosen`/`masuk_mahasiswa` dihapus dari katalog ONE UNUSU. Akses panel LPM kini ditentukan oleh **keanggotaan di `lpm_users`**.
+- **Tidak ada auto-provisioning.** Sebelumnya pengguna yang login lewat SSO langsung dibuatkan baris pengguna. Sekarang baris hanya lahir ketika **Admin LPM** mendaftarkan pengguna; tanpa baris, akses ditolak `NOT_REGISTERED`.
+- **`putuskanAkses` menerima `{ ssoRole, roles, statusAkun }`.** Urutan pemeriksaannya disengaja: Superadmin → keanggotaan → status → peran, sehingga pesan penolakan selalu menyebut langkah perbaikan yang tepat.
+- **Keanggotaan dan status dibaca ulang pada setiap permintaan**, jadi penonaktifan oleh Admin LPM berlaku seketika tanpa menunggu JWT kedaluwarsa.
+- **SUPERADMIN tetap selalu bisa masuk** meski tidak terdaftar (jaring pengaman ekosistem).
+
+### Added
+- **`GET /api/users/kandidat?search=`** — mencari pengguna di direktori ONE UNUSU lewat API key di sisi server. Minimal 2 karakter (`422`); menandai pengguna yang sudah terdaftar (`sudahTerdaftar`) agar tidak dipilih dua kali.
+- **`POST /api/users`** menerima `{ userIds, peran, kandidat }` dan **memverifikasi ulang setiap id** ke direktori ONE UNUSU sebelum menyimpan. Id karangan ditolak `400`, pendaftaran ganda `409`.
+- **Modal `ModalPilihPengguna`** — pencarian dengan jeda 350 ms, tabel bernomor urut, penanda "Sudah terdaftar", dan pemilihan peran untuk semua pengguna yang dicentang.
+- **Dropdown peran langsung di tabel** `/admin/pengguna`: satu pilihan = satu peran, tersimpan seketika tanpa membuka halaman ubah.
+- **`ONE_UNUSU_API_KEY`** pada `.env` server (diterbitkan lewat API Hub ONE UNUSU). Key hanya ada di server, tidak pernah sampai ke browser.
+
+### Changed (antarmuka)
+- **`/admin/pengguna/tambah`** tidak lagi berisi isian biodata manual — hanya pemicu modal. Halaman ubah menampilkan biodata **baca-saja** (milik ONE UNUSU) plus peran dan status.
+- **Pesan penolakan** di `Login`, `AccessDenied`, `SsoProblemScreen`, dan `AuthContext` dibedakan per kode: `NOT_REGISTERED`, `INACTIVE`, `NO_ROLE`.
+- **`AppAccessReason`** klien diperbarui: `allowed` | `not_registered` | `inactive_account` | `no_role` | `superadmin_bypass`. `KUNCI_IZIN_MASUK` dan `foreign_app_admin` dihapus.
+- **Interceptor `api.ts`** membersihkan sesi lokal untuk `403` dengan kode `NOT_REGISTERED`/`INACTIVE`/`NO_ROLE`/`FOREIGN_APP_TOKEN` lalu mengarahkan ke `/akses-ditolak` dengan alasan yang sesuai.
+
+### Verified
+- Uji end-to-end 7/7: `search` 1 karakter → `422`, `search "sep"` → 2 hasil, daftar → `201`, daftar ulang → `409`, id karangan → `400`.
+- Superadmin bypass lewat tiket SSO asli: `200` dengan `reason = superadmin_bypass`.
+
 ## [2026-11-16]
 
 ### Changed

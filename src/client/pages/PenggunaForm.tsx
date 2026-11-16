@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { FormPageTemplate } from '../components/FormPageTemplate';
 import { CardContainer } from '../components/CardContainer';
+import { TabelPilihPengguna } from '../components/TabelPilihPengguna';
 import { useAuth } from '../context/AuthContext';
 import {
   fetchRbacPengguna,
@@ -17,12 +18,17 @@ import { UserCircleIcon } from '@heroicons/react/24/outline';
  *
  * Rute: `/admin/pengguna/tambah` dan `/admin/pengguna/edit/:id`.
  *
- * Peran yang dipilih di sini adalah PERAN LPM (admin / dosen / mahasiswa),
- * bukan peran SSO mentah. Izin pengguna diturunkan dari peran tersebut —
- * itulah sebabnya formulir memakai `peran: string[]`, bukan `ssoRole`.
+ * Mode TAMBAH langsung menampilkan tabel direktori ONE UNUSU lengkap dengan
+ * pencarian dan filter peran/fakultas/prodi. Admin mencentang beberapa orang
+ * sekaligus, memilih peran bawaan, lalu menyimpan — server memverifikasi ulang
+ * setiap id ke ONE UNUSU. Setelah berhasil, halaman berpindah ke daftar
+ * pengguna agar peran tiap orang dapat disesuaikan lewat modal.
+ *
+ * Mode UBAH hanya mengatur peran dan status; biodata tetap milik ONE UNUSU.
  */
 export const PenggunaFormPage: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
   const isEdit = Boolean(id);
   const { bisa } = useAuth();
   const bolehSimpan = isEdit ? bisa('pengguna:update') : bisa('pengguna:create');
@@ -32,6 +38,9 @@ export const PenggunaFormPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [sukses, setSukses] = useState<string | null>(null);
   const [opsiPeran, setOpsiPeran] = useState<RbacPeran[]>([]);
+
+  // Mode tambah: id yang dicentang pada tabel.
+  const [terpilih, setTerpilih] = useState<number[]>([]);
 
   const [formData, setFormData] = useState({
     userId: '' as string,
@@ -139,30 +148,6 @@ export const PenggunaFormPage: React.FC = () => {
             : formData.peran,
         });
         setSukses(`Perubahan data pengguna "${formData.nama}" berhasil disimpan.`);
-      } else {
-        const userIdNum = Number(formData.userId);
-        if (!Number.isFinite(userIdNum) || userIdNum <= 0) {
-          throw new Error('ID pengguna ONE UNUSU wajib berupa angka positif.');
-        }
-        await createRbacPengguna({
-          userId: userIdNum,
-          username: formData.username,
-          nama: formData.nama,
-          email: formData.email || null,
-          ssoRole: formData.ssoRole || null,
-          status: formData.status,
-          peran: formData.peran,
-        });
-        setSukses(`Pengguna "${formData.nama}" berhasil ditambahkan.`);
-        setFormData({
-          userId: '',
-          username: '',
-          nama: '',
-          email: '',
-          ssoRole: '',
-          status: 'Aktif',
-          peran: [],
-        });
       }
     } catch (err: any) {
       setError(err?.response?.data?.message || err.message || 'Terjadi kesalahan sistem.');
@@ -171,10 +156,84 @@ export const PenggunaFormPage: React.FC = () => {
     }
   };
 
+  /**
+   * Simpan hasil centang tabel.
+   *
+   * Peran TIDAK dikirim: pendaftaran dan penugasan peran dipisah. Pengguna
+   * tersimpan tanpa peran, lalu Admin menetapkannya satu per satu lewat tombol
+   * "Atur Peran" pada daftar pengguna.
+   */
+  const simpanDariTabel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSukses(null);
+
+    if (terpilih.length === 0) {
+      setError('Centang minimal satu pengguna pada tabel direktori ONE UNUSU.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await createRbacPengguna({
+        userIds: terpilih,
+      });
+      setTerpilih([]);
+      // Pindah ke daftar pengguna; peran tiap orang disesuaikan lewat modal di sana.
+      navigate('/admin/pengguna', {
+        replace: true,
+        state: { pesan: res.data?.message || 'Pengguna berhasil didaftarkan ke LPM.' },
+      });
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err.message || 'Gagal mendaftarkan pengguna.');
+      setSubmitting(false);
+    }
+  };
+
+  // ---------- Mode TAMBAH: tabel direktori bercentang ----------
+  if (!isEdit) {
+    return (
+      <FormPageTemplate
+        title="Tambah Pengguna LPM"
+        description="Centang pengguna dari direktori ONE UNUSU. Peran ditetapkan setelah penyimpanan melalui tombol Atur Peran pada daftar pengguna."
+        badge={
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-lpm-blue-50 border border-lpm-blue-200 text-[10px] font-bold uppercase tracking-wider text-lpm-blue-900">
+            <UserCircleIcon className="w-3.5 h-3.5" aria-hidden="true" />
+            Tata Kelola
+          </span>
+        }
+        backTo="/admin/pengguna"
+        backLabel="Kembali"
+        submitLabel={
+          terpilih.length > 0 ? `Tambahkan ${terpilih.length} Pengguna` : 'Tambahkan Pengguna'
+        }
+        submitting={submitting}
+        error={error}
+        onSubmit={simpanDariTabel}
+        accentClassName="bg-lpm-blue-900 hover:bg-lpm-blue-950"
+      >
+        {!bolehSimpan && (
+          <div className="p-4 rounded-[12px] bg-lpm-yellow-400 border border-lpm-yellow-400 text-lpm-blue-900 text-xs font-semibold">
+            Anda tidak memiliki izin untuk menambah pengguna LPM.
+          </div>
+        )}
+
+        <CardContainer
+          title="Direktori Pengguna ONE UNUSU"
+          subtitle="Pilih satu atau beberapa orang sekaligus. Server memverifikasi ulang setiap pilihan ke ONE UNUSU sebelum menyimpan."
+        >
+          <TabelPilihPengguna terpilih={terpilih} onUbahTerpilih={setTerpilih} />
+        </CardContainer>
+
+      </FormPageTemplate>
+    );
+  }
+
+  // ---------- Mode UBAH: biodata tetap baca-saja, peran & status bisa diubah ----------
   return (
     <FormPageTemplate
-      title={isEdit ? 'Edit Pengguna LPM' : 'Tambah Pengguna Baru'}
-      description="Akun pengguna LPM UNUSU terhubung langsung dengan ONE UNUSU SSO. Izin akses diturunkan dari peran yang dipilih."
+      title="Edit Pengguna LPM"
+      description="Biodata civitas dikelola ONE UNUSU (baca-saja). Yang diubah di sini hanya peran LPM dan status keaktifan akun."
       badge={
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-lpm-blue-50 border border-lpm-blue-200 text-[10px] font-bold uppercase tracking-wider text-lpm-blue-900">
           <UserCircleIcon className="w-3.5 h-3.5" aria-hidden="true" />
@@ -183,8 +242,8 @@ export const PenggunaFormPage: React.FC = () => {
       }
       backTo="/admin/pengguna"
       backLabel="Kembali"
-      isEdit={isEdit}
-      submitLabel={isEdit ? 'Simpan Perubahan' : 'Buat Pengguna'}
+      isEdit
+      submitLabel="Simpan Perubahan"
       submitting={submitting}
       error={error}
       onSubmit={handleSubmit}
@@ -201,7 +260,7 @@ export const PenggunaFormPage: React.FC = () => {
 
       {!bolehSimpan && (
         <div className="p-4 rounded-[12px] bg-lpm-yellow-400 border border-lpm-yellow-400 text-lpm-blue-900 text-xs font-semibold">
-          Anda tidak memiliki izin untuk menambah atau mengubah pengguna LPM.
+          Anda tidak memiliki izin untuk mengubah pengguna LPM.
         </div>
       )}
 
@@ -224,7 +283,7 @@ export const PenggunaFormPage: React.FC = () => {
                   type="text"
                   disabled
                   value={formData.username}
-                  className="w-full px-3 py-2 min-h-[44px] text-xs font-mono rounded-[10px] border border-[#CBD5E1] bg-slate-100 text-slate-600 cursor-not-allowed"
+                  className="w-full px-4 py-3 min-h-[44px] text-xs font-mono rounded-[10px] border border-[#D8E5DC] bg-slate-100 text-slate-600 cursor-not-allowed"
                 />
               </div>
 
@@ -236,7 +295,7 @@ export const PenggunaFormPage: React.FC = () => {
                   type="text"
                   disabled
                   value={formData.nama}
-                  className="w-full px-3 py-2 min-h-[44px] text-xs rounded-[10px] border border-[#CBD5E1] bg-slate-100 text-slate-600 cursor-not-allowed"
+                  className="w-full px-4 py-3 min-h-[44px] text-xs rounded-[10px] border border-[#D8E5DC] bg-slate-100 text-slate-600 cursor-not-allowed"
                 />
               </div>
 
@@ -247,18 +306,18 @@ export const PenggunaFormPage: React.FC = () => {
                 <input
                   type="email"
                   disabled
-                  value={formData.email || (formData.username.includes('@') ? formData.username : `${formData.username.toLowerCase()}@unusu.ac.id`)}
-                  className="w-full px-3 py-2 min-h-[44px] text-xs font-mono rounded-[10px] border border-[#CBD5E1] bg-slate-100 text-slate-600 cursor-not-allowed"
+                  value={formData.email || '—'}
+                  className="w-full px-4 py-3 min-h-[44px] text-xs font-mono rounded-[10px] border border-[#D8E5DC] bg-slate-100 text-slate-600 cursor-not-allowed"
                 />
               </div>
             </div>
-            <p className="text-[11px] text-slate-500 mt-2 italic">
-              🔒 Data biodata civitas dikelola terpusat di ONE UNUSU. Satelit LPM hanya mengelola hak peran dan status keaktifan akun.
+            <p className="text-[11px] text-slate-500 mt-2">
+              Data biodata civitas dikelola terpusat di ONE UNUSU. Panel LPM hanya mengelola peran dan status keaktifan akun.
             </p>
           </CardContainer>
 
           <CardContainer
-            title="Peran LPM & Status"
+            title="Peran LPM &amp; Status"
             subtitle="Izin akses pengguna mengikuti peran yang dipilih. Satu pengguna boleh memiliki lebih dari satu peran."
           >
             <div className="space-y-3.5">
@@ -267,30 +326,36 @@ export const PenggunaFormPage: React.FC = () => {
                   Peran <span className="text-rose-500">*</span>
                 </legend>
                 {opsiPeran.length === 0 ? (
-                  <p className="text-[11px] text-slate-400 italic">
-                    Daftar peran belum tersedia. Pastikan migrasi & seeder RBAC sudah dijalankan.
+                  <p className="text-[11px] text-slate-500 italic">
+                    Daftar peran belum tersedia. Pastikan migrasi &amp; seeder RBAC sudah dijalankan.
                   </p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {opsiPeran.map((p) => {
                       const dipilih = formData.peran.includes(p.kode);
+                      const terkunci = isTargetSuperadmin && p.kode === 'SUPERADMIN';
                       return (
                         <label
                           key={p.kode}
-                          className={`flex items-start gap-2.5 p-3 rounded-[10px] border cursor-pointer transition ${
-                            dipilih
-                              ? 'border-lpm-blue-900 bg-lpm-blue-50'
-                              : 'border-[#CBD5E1] bg-white hover:bg-slate-50'
+                          className={`flex items-start gap-2.5 p-3 rounded-[10px] border transition ${
+                            terkunci
+                              ? 'border-[#D8E5DC] bg-slate-100 cursor-not-allowed'
+                              : dipilih
+                                ? 'border-[#166534] bg-[#F0FDF4] cursor-pointer'
+                                : 'border-[#D8E5DC] bg-white hover:bg-slate-50 cursor-pointer'
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={dipilih}
+                            disabled={terkunci}
                             onChange={() => togglePeran(p.kode)}
-                            className="mt-0.5 w-4 h-4 accent-lpm-blue-900"
+                            className="mt-0.5 w-4 h-4 accent-[#166534]"
                           />
-                          <span>
-                            <span className="block text-xs font-bold text-slate-900">{p.nama || p.label}</span>
+                          <span className="min-w-0">
+                            <span className="block text-xs font-bold text-slate-900">
+                              {p.nama || p.label}
+                            </span>
                             <span className="block text-[11px] text-slate-500 leading-snug">
                               {p.deskripsi || p.description || `${p.permissionsCount} izin`}
                             </span>
@@ -311,21 +376,16 @@ export const PenggunaFormPage: React.FC = () => {
                     id="pengguna-status"
                     disabled={isTargetSuperadmin}
                     value={isTargetSuperadmin ? 'Aktif' : formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className={`w-full px-3 py-2 min-h-[44px] text-xs border border-[#CBD5E1] rounded-[10px] ${
-                      isTargetSuperadmin
-                        ? 'bg-slate-100 text-slate-500 cursor-not-allowed'
-                        : 'bg-white focus:outline-none focus:ring-2 focus:ring-lpm-blue-900/20 focus:border-lpm-blue-900'
-                    }`}
+                    onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
+                    className="w-full px-4 py-3 min-h-[44px] text-xs rounded-[10px] border border-[#D8E5DC] bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#166534] focus:border-[#166534] disabled:bg-slate-100 disabled:text-slate-600 disabled:cursor-not-allowed"
                   >
-                    <option value="Aktif">Aktif</option>
-                    <option value="Nonaktif">Nonaktif</option>
+                    <option value="Aktif">Aktif</option>                    <option value="Nonaktif">Nonaktif</option>
                   </select>
-                  {isTargetSuperadmin && (
-                    <p className="text-[10px] text-amber-600 mt-1 font-semibold">
-                      🔒 Akun Super Administrator terkunci permanen pada status Aktif.
-                    </p>
-                  )}
+                  <p className="text-[11px] text-slate-500 mt-1.5">
+                    {isTargetSuperadmin
+                      ? 'Akun Superadmin selalu aktif dan tidak dapat dinonaktifkan.'
+                      : 'Status dibaca ulang di setiap permintaan, jadi perubahan berlaku seketika.'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -335,5 +395,3 @@ export const PenggunaFormPage: React.FC = () => {
     </FormPageTemplate>
   );
 };
-
-export default PenggunaFormPage;

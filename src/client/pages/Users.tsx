@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   UsersIcon,
   UserPlusIcon,
@@ -13,10 +13,14 @@ import { useAuth } from '../context/AuthContext';
 import { CardContainer } from '../components/CardContainer';
 import { DataTable } from '../components/DataTable';
 import { ErrorState } from '../components/ErrorState';
+import { ModalAturPeran } from '../components/ModalAturPeran';
 import {
   SSO_ROLE_LABEL,
   fetchRbacPengguna,
+  fetchRbacPeran,
+  updateRbacPengguna,
   deleteRbacPengguna,
+  type RbacPeran,
   type RbacPengguna,
 } from '../services/api';
 
@@ -27,11 +31,34 @@ export const UsersPage: React.FC = () => {
   const bolehUbah = bisa('pengguna:update');
   const bolehHapus = bisa('pengguna:delete');
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [users, setUsers] = useState<RbacPengguna[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [opsiPeranKode, setOpsiPeranKode] = useState<RbacPeran[]>([]);
+  const [menyimpanPeran, setMenyimpanPeran] = useState(false);
+
+  // Modal atur peran
+  const [penggunaModal, setPenggunaModal] = useState<RbacPengguna | null>(null);
+  const [galatModal, setGalatModal] = useState<string | null>(null);
+
+  // Pesan sukses yang dibawa dari halaman Tambah Pengguna.
+  const [pesanSukses, setPesanSukses] = useState<string | null>(
+    (location.state as { pesan?: string } | null)?.pesan ?? null
+  );
+
+  useEffect(() => {
+    if (!pesanSukses) return;
+    // Bersihkan state rute agar pesan tidak muncul lagi saat halaman dimuat ulang.
+    navigate(location.pathname, { replace: true, state: null });
+    const jeda = setTimeout(() => setPesanSukses(null), 6000);
+    return () => clearTimeout(jeda);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -54,6 +81,46 @@ export const UsersPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Daftar peran resmi dari tabel lpm_roles — dipakai dropdown per baris.
+  useEffect(() => {
+    let aktif = true;
+    fetchRbacPeran()
+      .then((res) => {
+        if (aktif && res.data?.success) setOpsiPeranKode(res.data.data);
+      })
+      .catch(() => {
+        /* dropdown tetap kosong; pesan galat muncul saat menyimpan */
+      });
+    return () => {
+      aktif = false;
+    };
+  }, []);
+
+  /**
+   * Simpan peran dari modal.
+   *
+   * Server menetapkan izin dari peran, jadi perubahan ini langsung mengubah hak
+   * akses pada permintaan berikutnya. Daftar dimuat ulang agar tabel selalu
+   * mencerminkan isi database.
+   */
+  const simpanPeran = async (kode: string) => {
+    if (!penggunaModal) return;
+    setGalatModal(null);
+    setMenyimpanPeran(true);
+    try {
+      await updateRbacPengguna(penggunaModal.id, {
+        peran: kode ? [kode] : [],
+        status: penggunaModal.status || 'Aktif',
+      });
+      setPenggunaModal(null);
+      await fetchData();
+    } catch (err: any) {
+      setGalatModal(err?.response?.data?.message || err.message || 'Gagal mengubah peran pengguna.');
+    } finally {
+      setMenyimpanPeran(false);
+    }
+  };
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('Yakin ingin menghapus akses pengguna ini dari LPM?')) return;
@@ -111,6 +178,15 @@ export const UsersPage: React.FC = () => {
           )}
         </div>
       </CardContainer>
+
+      {pesanSukses && (
+        <div
+          role="status"
+          className="px-4 py-3.5 rounded-[12px] bg-[#F0FDF4] border border-[#166534] text-[#166534] text-xs font-semibold"
+        >
+          {pesanSukses}
+        </div>
+      )}
 
       {/* Filter & Search Bar */}
       <CardContainer>
@@ -200,23 +276,48 @@ export const UsersPage: React.FC = () => {
                 },
                 {
                   key: 'peran',
-                  header: 'Role Terkait',
-                  render: (u) =>
-                    u.peran.length === 0 ? (
-                      '-'
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {u.peran.map((p) => (
-                          <span
-                            key={p}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-lpm-blue-50 text-lpm-blue-900 border border-lpm-blue-200"
-                          >
-                            <ShieldCheckIcon className="w-3.5 h-3.5" aria-hidden="true" />
-                            {SSO_ROLE_LABEL[p.toUpperCase()] || p}
-                          </span>
-                        ))}
-                      </div>
-                    ),
+                  header: 'Peran LPM',
+                  headerClassName: 'min-w-[190px]',
+                  // Peran ditetapkan lewat modal: ruangnya cukup untuk
+                  // menjelaskan izin tiap peran, dan tidak berdekatan dengan
+                  // tombol hapus seperti pada dropdown di dalam baris.
+                  render: (u) => {
+                    const isSuper =
+                      u.ssoRole === 'SUPERADMIN' ||
+                      u.peran.includes('SUPERADMIN') ||
+                      u.username === 'admin';
+                    const label =
+                      u.peran.length === 0
+                        ? 'Tanpa peran'
+                        : u.peran
+                            .map((p) => SSO_ROLE_LABEL[p.toUpperCase()] || p)
+                            .join(', ');
+
+                    if (!bolehUbah) {
+                      return <span className="font-semibold text-slate-800">{label}</span>;
+                    }
+
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGalatModal(null);
+                          setPenggunaModal(u);
+                        }}
+                        disabled={isSuper}
+                        className={`inline-flex items-center gap-1.5 px-3 py-2 min-h-[36px] rounded-[8px] border text-xs font-semibold transition ${
+                          isSuper
+                            ? 'border-[#D8E5DC] bg-slate-100 text-slate-500 cursor-not-allowed'
+                            : 'border-[#D8E5DC] bg-white text-slate-900 hover:bg-[#F0FDF4] hover:border-[#166534] cursor-pointer'
+                        }`}
+                        title={isSuper ? 'Peran Superadmin tidak dapat diubah' : 'Atur peran'}
+                        aria-label={`Atur peran ${u.nama}`}
+                      >
+                        <ShieldCheckIcon className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                        <span className="truncate max-w-[150px]">{label}</span>
+                      </button>
+                    );
+                  },
                 },
                 ...(adaAksi
                   ? [
@@ -264,6 +365,20 @@ export const UsersPage: React.FC = () => {
           )}
         </CardContainer>
       )}
+
+      <ModalAturPeran
+        terbuka={Boolean(penggunaModal)}
+        pengguna={penggunaModal}
+        opsiPeran={opsiPeranKode}
+        sedangMenyimpan={menyimpanPeran}
+        pesanGalat={galatModal}
+        onTutup={() => {
+          if (menyimpanPeran) return;
+          setPenggunaModal(null);
+          setGalatModal(null);
+        }}
+        onSimpan={simpanPeran}
+      />
     </div>
   );
 };

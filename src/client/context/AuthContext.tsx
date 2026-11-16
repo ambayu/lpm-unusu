@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { AppAccessInfo, SessionUser, TingkatMasuk } from '../services/api';
-import { KUNCI_IZIN_MASUK, LABEL_TINGKAT, fetchSession, checkOneUnusuSession } from '../services/api';
+import { LABEL_TINGKAT, fetchSession, checkOneUnusuSession } from '../services/api';
 
 const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5178';
 const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || '014813db6bffb39f';
@@ -46,11 +46,11 @@ function fallbackAppAccess(): AppAccessInfo {
     app: 'lpm-unusu',
     appName: 'LPM UNUSU',
     allowed: false,
-    reason: 'no_izin_masuk',
+    reason: 'not_registered',
     ssoRole: '',
     ssoRoleLabel: '',
     tingkat: null,
-    roleLabel: 'Tanpa Izin Masuk',
+    roleLabel: 'Belum Terdaftar',
     isAppAdmin: false,
     izin: [],
     message: 'Izin akses belum dapat diverifikasi. Periksa koneksi ke server LPM.',
@@ -272,15 +272,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const bisa = useCallback((...kunci: string[]) => kunci.every((k) => izin.includes(k)), [izin]);
 
   const accessDenied = !!appAccess && appAccess.allowed === false;
-  const tingkat: TingkatMasuk | null =
-    appAccess?.tingkat ??
-    (izin.includes(KUNCI_IZIN_MASUK.admin)
-      ? 'admin'
-      : izin.includes(KUNCI_IZIN_MASUK.dosen)
-        ? 'dosen'
-        : izin.includes(KUNCI_IZIN_MASUK.mahasiswa)
-          ? 'mahasiswa'
-          : null);
+  // Tingkat dibaca dari keputusan server. Klien tidak lagi menebak dari izin
+  // `masuk_*` — izin itu sudah dihapus dari model akses.
+  const tingkat: TingkatMasuk | null = appAccess?.tingkat ?? null;
   const roleLabel = appAccess?.roleLabel || (tingkat ? LABEL_TINGKAT[tingkat] : 'Pengguna');
   const isAppAdmin = tingkat === 'admin';
 

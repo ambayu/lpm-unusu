@@ -75,7 +75,8 @@ export function LoginPage() {
   const deniedRoleLabel = deniedNotice?.ssoRole
     ? SSO_ROLE_LABEL[deniedNotice.ssoRole] || deniedNotice.ssoRole
     : 'Administrator aplikasi lain';
-  const deniedIsForeignAdmin = deniedNotice?.reason === 'foreign_app_admin';
+  const deniedIsForeignAdmin = false;
+  void deniedIsForeignAdmin;
 
   const handleSsoLogin = () => {
     if (redirecting) return;
@@ -163,30 +164,36 @@ export function LoginPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold text-rose-900">
-                    {deniedIsForeignAdmin
-                      ? 'Akun ini bukan administrator LPM'
-                      : 'Akses panel LPM ditolak'}
+                    {deniedNotice.reason === 'not_registered'
+                      ? 'Akun ini belum terdaftar di LPM UNUSU'
+                      : deniedNotice.reason === 'inactive_account'
+                        ? 'Akun LPM Anda sedang nonaktif'
+                        : deniedNotice.reason === 'no_role'
+                          ? 'Peran LPM Anda belum ditetapkan'
+                          : 'Akses panel LPM ditolak'}
                   </p>
                   <p className="mt-1 text-[11px] text-rose-800 leading-relaxed">
-                    {deniedIsForeignAdmin ? (
+                    {deniedNotice.reason === 'not_registered' ? (
                       <>
-                        Akun Anda terdaftar sebagai{' '}
-                        <strong className="font-bold">{deniedRoleLabel}</strong>
-                        {deniedNotice.app ? (
-                          <>
-                            {' '}
-                            pada <strong className="font-bold">{deniedNotice.app}</strong>
-                          </>
-                        ) : null}
-                        . Peran admin tidak berlaku lintas aplikasi, sehingga panel LPM UNUSU tidak
-                        dapat diakses dengan akun tersebut.
+                        Akun <strong className="font-bold">{deniedRoleLabel}</strong> belum
+                        didaftarkan sebagai pengguna LPM UNUSU. Hubungi Administrator LPM agar akun
+                        Anda didaftarkan dan diberi peran.
+                      </>
+                    ) : deniedNotice.reason === 'inactive_account' ? (
+                      <>
+                        Akun LPM Anda sedang dinonaktifkan. Hubungi Administrator LPM UNUSU untuk
+                        mengaktifkan kembali.
+                      </>
+                    ) : deniedNotice.reason === 'no_role' ? (
+                      <>
+                        Akun Anda sudah terdaftar, tetapi belum diberi peran apa pun. Hubungi
+                        Administrator LPM UNUSU untuk penetapan peran.
                       </>
                     ) : (
                       <>
-                        Peran{' '}
-                        <strong className="font-bold">{deniedRoleLabel}</strong> tidak termasuk
-                        cakupan aplikasi LPM UNUSU. Hubungi Administrator LPM untuk penyesuaian
-                        peran.
+                        Peran <strong className="font-bold">{deniedRoleLabel}</strong> tidak
+                        termasuk cakupan aplikasi LPM UNUSU. Hubungi Administrator LPM untuk
+                        penyesuaian peran.
                       </>
                     )}
                   </p>
