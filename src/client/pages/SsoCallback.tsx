@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ssoLogin } from '../services/api';
 import type { AppAccessInfo } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +9,17 @@ import { SsoProblemScreen } from '../components/SsoProblemScreen';
 type SsoExchangeResult = Awaited<ReturnType<typeof ssoLogin>>;
 
 const exchangeRequests = new Map<string, Promise<SsoExchangeResult>>();
+
+/** Kunci sesi lokal, sama dengan yang dibaca AuthProvider. */
+const TOKEN_KEY_CALLBACK = 'lpm_unusu_token';
+const USER_KEY_CALLBACK = 'lpm_unusu_user';
+
+/**
+ * Tiket terakhir yang terbaca dari address bar. Dipakai agar pemasangan ulang
+ * komponen setelah `replaceState` tidak kehilangan tiket dan salah menampilkan
+ * layar "permintaan belum selesai".
+ */
+let TIKET_TERAKHIR: string | null = null;
 
 /** Penanda sesi ditolak karena peran milik aplikasi lain, dibaca halaman Login. */
 const DENIED_FLAG_KEY = 'lpm_sso_denied';
@@ -100,18 +112,57 @@ function exchangeSsoToken(token: string): Promise<SsoExchangeResult> {
 
 export function SsoCallbackPage() {
   const { saveSession } = useAuth();
+  const navigate = useNavigate();
   const [masalah, setMasalah] = useState<Masalah | null>(null);
   const [denial, setDenial] = useState<AppAccessInfo | null>(null);
 
+  /*
+   * Tiket dapat sampai ke tab ini lewat dua jalan: query `/sso/callback?token=`
+   * pada permintaan pertama, atau sesi lokal yang sudah tersimpan. Kasus kedua
+   * bukan kegagalan — pengguna hanya perlu diarahkan ke panel, bukan diberi
+   * layar "permintaan belum selesai".
+   */
   useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get('token');
+    const adaTiketDiUrl = new URLSearchParams(window.location.search).has('token');
+    if (
+      !adaTiketDiUrl &&
+      localStorage.getItem(TOKEN_KEY_CALLBACK) &&
+      localStorage.getItem(USER_KEY_CALLBACK)
+    ) {
+      navigate('/admin', { replace: true });
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    /*
+     * Tiket dibaca sekali dari URL lalu disimpan di memori modul. Penyimpanan
+     * ini penting karena `replaceState` sudah membersihkan address bar: bila
+     * komponen terpasang ulang (React StrictMode memulangkan efek, atau halaman
+     * dimuat ulang), tiket tetap tersedia dan proses tidak dianggap batal.
+     */
+    const tokenDariUrl = new URLSearchParams(window.location.search).get('token');
+    if (tokenDariUrl && tokenDariUrl.length <= 256) {
+      TIKET_TERAKHIR = tokenDariUrl;
+    }
 
     // Tiket sekali pakai tidak perlu tertinggal di address bar/history/referrer.
     window.history.replaceState(null, '', `${window.location.pathname}`);
 
-    // Portal mengirim balik pengguna tanpa tiket bila permintaan izin tidak
-    // selesai. Ini keadaan normal, bukan kerusakan, jadi penjelasannya dibuat
-    // ringan dan tidak menuduh pengguna melakukan kesalahan.
+    /*
+     * Tanpa tiket di URL: bila sesi lokal sudah ada, pengguna kemungkinan
+     * membuka ulang tab callback setelah berhasil masuk. Arahkan ke panel
+     * alih-alih menampilkan galat.
+     */
+    if (!tokenDariUrl && localStorage.getItem(TOKEN_KEY_CALLBACK)) {
+      navigate('/admin', { replace: true });
+      return;
+    }
+
+    const token = tokenDariUrl || TIKET_TERAKHIR;
+
+    // Portal mengirim balik pengguna tanpa tiket bila permintaan izin memang
+    // tidak selesai. Ini keadaan normal, bukan kerusakan, jadi penjelasannya
+    // dibuat ringan dan tidak menuduh pengguna melakukan kesalahan.
     if (!token) {
       setMasalah({
         jenis: 'kosong',
@@ -137,6 +188,7 @@ export function SsoCallbackPage() {
         }
 
         saveSession(response.data.token, response.data.user, response.data.appAccess);
+        TIKET_TERAKHIR = null;
 
         if (!cancelled) {
           // Setelah login sukses SELALU mendarat di panel, bukan halaman publik.
@@ -171,7 +223,7 @@ export function SsoCallbackPage() {
     return () => {
       cancelled = true;
     };
-  }, [saveSession]);
+  }, [saveSession, navigate]);
 
   // Verifikasi tiket menunggu request jaringan nyata (server-to-server), jadi
   // layar tunggu penuh memang pantas ditampilkan. Gayanya disamakan dengan
