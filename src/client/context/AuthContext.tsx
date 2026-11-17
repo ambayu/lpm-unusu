@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import type { AppAccessInfo, SessionUser, TingkatMasuk } from '../services/api';
 import { LABEL_TINGKAT, fetchSession, checkOneUnusuSession } from '../services/api';
 
-const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5178';
+const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
 const SSO_CLIENT_ID = import.meta.env.VITE_SSO_CLIENT_ID || '014813db6bffb39f';
 
 interface AuthContextValue {

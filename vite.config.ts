@@ -13,7 +13,7 @@ export default defineConfig(() => ({
         changeOrigin: true
       },
       '/sso': {
-        target: 'http://localhost:5178',
+        target: 'http://localhost:5173',
         changeOrigin: true,
       },
     }
