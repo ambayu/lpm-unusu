@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { assetUrl } from '../lib/assets';
 import { SSO_ROLE_LABEL } from '../services/api';
 
-const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
+import { ONE_UNUSU_URL } from '../lib/ssoConfig';
 
 /**
  * Client ID resmi aplikasi ini pada registrasi SSO ONE UNUSU.

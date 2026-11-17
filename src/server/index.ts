@@ -28,6 +28,9 @@ import {
 } from "./sliderMedia.js";
 
 dotenv.config();
+if (process.env.NODE_ENV === 'production' && !process.env.SSO_BASE_URL?.trim()) throw new Error('Missing required SSO_BASE_URL configuration.');
+const SSO_BASE_URL = process.env.SSO_BASE_URL || 'http://localhost:5000/sso';
+if (!/^https?:$/.test(new URL(SSO_BASE_URL).protocol)) throw new Error('SSO_BASE_URL must use HTTP(S).');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -126,7 +129,6 @@ if (!JWT_SECRET) {
   console.error("FATAL: JWT_SECRET belum diset di environment. Server dihentikan demi keamanan.");
   process.exit(1);
 }
-const SSO_BASE_URL = process.env.SSO_BASE_URL || "http://localhost:5000/sso";
 const SSO_CLIENT_ID = process.env.SSO_CLIENT_ID || "014813db6bffb39f";
 const SSO_CLIENT_KEY = process.env.SSO_CLIENT_KEY || "";
 
@@ -135,10 +137,11 @@ const SSO_CLIENT_KEY = process.env.SSO_CLIENT_KEY || "";
  * endpoint berbasis API key seperti pencarian direktori pengguna.
  */
 const ONE_UNUSU_API_BASE = (
-  process.env.ONE_UNUSU_API_BASE || process.env.SSO_BASE_URL || "http://localhost:5000"
+  process.env.ONE_UNUSU_API_BASE || SSO_BASE_URL
 )
   .replace(/\/sso\/?$/, "")
   .replace(/\/$/, "");
+if (!/^https?:$/.test(new URL(ONE_UNUSU_API_BASE).protocol)) throw new Error('ONE_UNUSU_API_BASE must use HTTP(S).');
 
 /** API key yang diterbitkan di /admin/api-hub ONE UNUSU untuk aplikasi LPM. */
 const ONE_UNUSU_API_KEY = process.env.ONE_UNUSU_API_KEY || "";
@@ -2607,7 +2610,7 @@ app.delete("/api/kategori/:id", requirePermission("dokumen:delete"), async (req:
 // GET /api/prodi (Daftar prodi dari SSO One UNUSU Academic Hierarchy)
 app.get("/api/prodi", async (_req: Request, res: Response) => {
   try {
-    const ssoBase = (process.env.SSO_BASE_URL || "http://localhost:5000/sso").replace(/\/$/, "");
+    const ssoBase = SSO_BASE_URL.replace(/\/$/, "");
     const academicBase = ssoBase.endsWith("/sso") ? ssoBase.slice(0, -4) : ssoBase;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);

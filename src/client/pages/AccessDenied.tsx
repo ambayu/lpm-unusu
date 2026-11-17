@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 
-const ONE_UNUSU_URL = import.meta.env.VITE_ONE_UNUSU_URL || 'http://localhost:5173';
+import { ONE_UNUSU_URL } from '../lib/ssoConfig';
 
 /**
  * Halaman penolakan akses lintas aplikasi.
