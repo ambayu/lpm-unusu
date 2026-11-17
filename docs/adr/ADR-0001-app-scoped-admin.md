@@ -1,6 +1,8 @@
 # ADR-0001 — Pemisahan Administrator per Aplikasi (App-Scoped Role)
 
-- **Status:** Accepted
+- **Status:** Superseded untuk keputusan masuk (2026-11-18); pemisahan izin internal tetap berlaku.
+
+Keputusan terbaru pengguna: akses masuk ditentukan per peran pada ONE UNUSU, menggunakan penautan aplikasi yang dicocokkan persis dengan kode peran. Keanggotaan lokal tidak menjadi syarat login. Peran administrator dan izin tindakan LPM tidak diberikan otomatis karena pengguna diizinkan masuk; penugasan lokal aktif tetap menentukan fitur, dengan pengecualian SUPERADMIN.
 - **Tanggal:** 2026-11-04
 - **Konteks modul:** Autentikasi SSO ONE UNUSU, seluruh panel `/admin/*`, RBAC
 - **Rujukan kode:** `src/server/index.ts` (`resolveAppAccess`, `LPM_APP_ROLES`,

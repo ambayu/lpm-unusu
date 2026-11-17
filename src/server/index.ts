@@ -8,6 +8,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import dotenv from "dotenv";
 import path from "path";
 import jwt from "jsonwebtoken";
+import { CentralAccessError, checkCentralAccess, effectiveSsoRole, localFeaturesEnabled } from "./centralAccess.js";
 import { PrismaClient, Prisma } from "@prisma/client";
 import {
   pasangRuteBerkasArsip,
@@ -30,6 +31,7 @@ import {
 dotenv.config();
 if (process.env.NODE_ENV === 'production' && !process.env.SSO_BASE_URL?.trim()) throw new Error('Missing required SSO_BASE_URL configuration.');
 const SSO_BASE_URL = process.env.SSO_BASE_URL || 'http://localhost:5000/sso';
+const SSO_VERIFY_URL = process.env.SSO_VERIFY_URL || `${SSO_BASE_URL.replace(/\/$/, "")}/api/v2/website/verify-token`;
 if (!/^https?:$/.test(new URL(SSO_BASE_URL).protocol)) throw new Error('SSO_BASE_URL must use HTTP(S).');
 
 const app = express();
@@ -237,7 +239,7 @@ async function verifikasiPenggunaOneUnusu(
   // ditolak dengan pesan "tidak ditemukan". Endpoint by-ids mencocokkan id
   // secara langsung sehingga tidak ada lagi ketidakcocokan semacam itu.
   const res = await panggilOneUnusu<PenggunaOneUnusu[]>(
-    "/api/v2/website/users/by-ids",
+    "/api/v2/website/users",
     { ids: daftarId.slice(0, 50) }
   );
   if (!res.ok || !Array.isArray(res.data)) return hasil;
@@ -310,31 +312,18 @@ interface SsoSession {
 
 interface AuthRequest extends Request {
   user?: SsoSession;
+  akses?: AppAccessDecision;
   /** Kunci izin pengguna — selalu dibaca dari database, bukan dari JWT. */
   izin?: Set<string>;
 }
 
 // ==========================================
-// OTORISASI BERBASIS KEANGGOTAAN
-//
-// Sumber kebenaran akses ada di database LPM sendiri:
-//   - lpm_users        -> siapa yang boleh masuk panel (harus terdaftar)
-//   - lpm_user_roles   -> peran yang diberikan Admin LPM
-//   - lpm_role_permissions -> izin fitur yang diturunkan dari peran itu
-//
-// Pengguna TIDAK pernah dibuat otomatis saat login. Admin LPM mendaftarkan
-// mereka dari direktori ONE UNUSU, sehingga "belum terdaftar" benar-benar
-// berbeda dari "terdaftar tetapi nonaktif". Peran SSO hanya metadata tampilan;
-// satu-satunya pengecualian adalah SUPERADMIN yang selalu diloloskan.
-//
-// Keanggotaan dan status dibaca ulang pada SETIAP permintaan, jadi penonaktifan
-// oleh Admin LPM berlaku seketika tanpa menunggu JWT kedaluwarsa.
+// ONE menentukan izin masuk pada setiap request JWT; peran lokal hanya fitur.
+// Tidak ada auto-provisioning. Tanpa anggota aktif, izin fitur lokal kosong.
 // ==========================================
 
 /**
- * Tingkat masuk panel LPM. Diturunkan dari peran LOKAL yang dipegang pengguna
- * di `lpm_user_roles`, bukan dari izin `masuk_*` milik ONE UNUSU — izin masuk
- * global sudah dihapus dan tidak lagi dibaca di aplikasi ini.
+ * Tingkat fitur LPM, bukan syarat masuk aplikasi.
  */
 const TINGKAT_MASUK_LPM = ["admin", "dosen", "mahasiswa"] as const;
 
@@ -364,14 +353,7 @@ const ROLE_LABEL_SSO: Record<string, string> = {
 /**
  * Ambil izin, peran, dan STATUS keanggotaan seorang pengguna dari database LPM.
  *
- * Tidak ada lagi auto-provisioning. Baris `lpm_users` hanya lahir ketika Admin
- * LPM mendaftarkan pengguna dari modal pilih-pengguna ONE UNUSU. Kalau barisnya
- * tidak ada, `userRecord` bernilai null dan pemanggil wajib menolak akses —
- * itulah satu-satunya cara membedakan "sudah didaftarkan" dari "cuma lewat".
- *
- * Nama dan email TIDAK diperbarui di sini: penyegaran dilakukan saat login
- * (`/api/auth/sso`), bukan pada setiap request, supaya tidak ada penulisan ke
- * database di jalur baca yang dipanggil sangat sering.
+ * Tidak menulis akun lokal; baris yang tidak ada atau nonaktif tidak memberi fitur.
  */
 /**
  * Mendaftarkan seluruh izin yang dikenal ke sebuah himpunan.
@@ -386,18 +368,12 @@ const seluruhIzin = async (): Promise<string[]> => {
 
 const ambilIzinPengguna = async (
   userId: number,
-  ssoRole: string,
-  userInfo?: { username?: string }
-): Promise<{ izin: Set<string>; roles: string[]; userRecord: any }> => {
+  ssoRole: string
+) => {
   const hasil = new Set<string>();
 
   const user = await prisma.lpmUser.findFirst({
-    where: {
-      OR: [
-        { userId },
-        ...(userInfo?.username ? [{ username: userInfo.username }] : []),
-      ],
-    },
+    where: { userId },
     include: {
       peran: {
         include: {
@@ -416,7 +392,7 @@ const ambilIzinPengguna = async (
   });
 
   const roleKodes: string[] = [];
-  if (user) {
+  if (user && localFeaturesEnabled(user.status)) {
     for (const ur of user.peran) {
       roleKodes.push(ur.role.kode);
       for (const rp of ur.role.izin) {
@@ -437,12 +413,7 @@ const ambilIzinPengguna = async (
 };
 
 /**
- * Tingkat masuk tertinggi yang dimiliki pengguna (null = tidak boleh masuk).
- *
- * Tingkat kini diturunkan dari PERAN LOKAL yang dipegang pengguna di
- * `lpm_user_roles`, bukan dari izin `masuk_*` milik ONE UNUSU. Izin `masuk_*`
- * sudah dihapus: siapa yang boleh masuk LPM ditentukan sepenuhnya oleh
- * keanggotaan di tabel pengguna LPM.
+ * Tingkat fitur lokal tertinggi (null = tanpa peran fitur).
  */
 const tingkatMasukDari = (roles: string[]): TingkatMasuk | null => {
   const kode = roles.map((r) => r.toLowerCase());
@@ -486,13 +457,7 @@ const APP_NAME = "LPM UNUSU";
 /**
  * Putusan akses aplikasi LPM.
  *
- * Sumber kebenaran TUNGGAL adalah keanggotaan pada tabel pengguna LPM
- * (`lpm_users` + `lpm_user_roles`). Pemegang peran SSO `SUPERADMIN` selalu
- * diloloskan sebagai jaring pengaman, supaya panel tidak pernah terkunci
- * permanen walau tabel pengguna kosong atau admin keliru menonaktifkan dirinya.
- *
- * Tidak ada lagi tebakan dari nama peran SSO (`ADMIN_LPM` dan sejenisnya):
- * peran kampus tidak pernah memberi hak masuk ke panel LPM.
+ * Dipanggil hanya setelah check-access ONE berhasil; peran pusat biasa tidak memberi fitur admin.
  */
 const putuskanAkses = (params: {
   ssoRole: string;
@@ -500,7 +465,7 @@ const putuskanAkses = (params: {
   statusAkun: string | null;
 }): AppAccessDecision => {
   const ssoRole = (params.ssoRole || "").toUpperCase();
-  const tingkat = tingkatMasukDari(params.roles);
+  const tingkat = ssoRole === "SUPERADMIN" ? "admin" : tingkatMasukDari(localFeaturesEnabled(params.statusAkun) ? params.roles : []);
   const dasar = {
     app: APP_CODE,
     appName: APP_NAME,
@@ -519,34 +484,6 @@ const putuskanAkses = (params: {
       allowed: true,
       reason: "superadmin_bypass",
       message: `Selamat datang di panel ${APP_NAME}.`,
-    };
-  }
-
-  // Belum pernah didaftarkan Admin LPM.
-  if (params.statusAkun === null) {
-    return {
-      ...dasar,
-      allowed: false,
-      reason: "not_registered",
-      message: `Akun Anda belum terdaftar di ${APP_NAME}. Hubungi Admin LPM untuk didaftarkan.`,
-    };
-  }
-
-  if (params.statusAkun !== "Aktif") {
-    return {
-      ...dasar,
-      allowed: false,
-      reason: "inactive_account",
-      message: `Akun ${APP_NAME} Anda sedang nonaktif. Hubungi Admin LPM untuk mengaktifkan kembali.`,
-    };
-  }
-
-  if (!tingkat) {
-    return {
-      ...dasar,
-      allowed: false,
-      reason: "no_role",
-      message: `Akun Anda belum ditetapkan peran oleh Admin ${APP_NAME}. Hubungi Admin LPM.`,
     };
   }
 
@@ -669,14 +606,11 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
   }
 
   try {
-    const ssoRole = String(decoded.ssoRole ?? "");
     const userId = Number(decoded.id);
-
-    // Keanggotaan dibaca ulang dari database pada setiap permintaan sehingga
-    // penonaktifan oleh Admin LPM berlaku seketika, tanpa menunggu JWT habis.
-    const resAkses = await ambilIzinPengguna(userId, ssoRole, {
-      username: typeof decoded.username === "string" ? decoded.username : undefined,
-    });
+    if (decoded.appCode !== APP_CODE) return res.status(403).json({ success: false, code: "FOREIGN_APP_TOKEN", message: "Sesi bukan milik aplikasi LPM." });
+    const central = await checkCentralAccess(SSO_VERIFY_URL, SSO_CLIENT_ID, SSO_CLIENT_KEY, userId);
+    const ssoRole = effectiveSsoRole(central);
+    const resAkses = await ambilIzinPengguna(userId, ssoRole);
     const izin = resAkses.izin;
     const akses = putuskanAkses({
       ssoRole,
@@ -684,7 +618,7 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
       statusAkun: resAkses.userRecord ? String(resAkses.userRecord.status ?? "") : null,
     });
 
-    // Penjaga keanggotaan: bukan anggota aktif LPM, seluruh API panel ditolak.
+    // Pertahankan bentuk respons penolakan untuk kompatibilitas klien.
     if (!akses.allowed) {
       recordAccessDenial({
         source: "api_request",
@@ -705,12 +639,13 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
     }
 
     (req as AuthRequest).izin = izin;
+    (req as AuthRequest).akses = { ...akses, izin: Array.from(izin) };
     (req as AuthRequest).user = {
       id: userId,
       username: String(decoded.username ?? ""),
       nama: String(decoded.nama ?? ""),
       email: typeof decoded.email === "string" ? decoded.email : null,
-      role: akses.tingkat ?? "mahasiswa",
+      role: akses.tingkat ?? "",
       ssoRole,
       nim: typeof decoded.nim === "string" ? decoded.nim : null,
       nidn: typeof decoded.nidn === "string" ? decoded.nidn : null,
@@ -719,6 +654,7 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
     };
     next();
   } catch (error: any) {
+    if (error instanceof CentralAccessError) return res.status(error.status).json({ success: false, code: error.status === 403 ? "IZIN_MASUK_DITOLAK" : "CENTRAL_ACCESS_UNAVAILABLE", message: error.message });
     console.error("Gagal memuat izin pengguna:", error?.message);
     return res.status(500).json({ success: false, message: "Gagal memverifikasi izin akses" });
   }
@@ -736,8 +672,9 @@ app.post("/api/auth/sso", async (req: Request, res: Response) => {
       return res.status(500).json({ success: false, message: "SSO_CLIENT_KEY belum dikonfigurasi di server" });
     }
 
-    const ssoResponse = await fetch(`${SSO_BASE_URL.replace(/\/$/, "")}/api/v2/website/verify-token`, {
+    const ssoResponse = await fetch(SSO_VERIFY_URL, {
       method: "POST",
+      signal: AbortSignal.timeout(5000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ client_id: SSO_CLIENT_ID, client_key: SSO_CLIENT_KEY, token }),
     });
@@ -751,15 +688,12 @@ app.post("/api/auth/sso", async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: ssoPayload?.message || "Verifikasi token SSO gagal" });
     }
 
-    // Keanggotaan LPM dibaca dari database lokal. Pengguna yang belum
-    // didaftarkan Admin LPM TIDAK dibuatkan akun di sini — itulah pembeda
-    // antara "sudah didaftarkan" dan "baru lewat".
-    const resAkses = await ambilIzinPengguna(ssoUser.id, ssoUser.role, {
-      username: ssoUser.username,
-    });
+    const central = await checkCentralAccess(SSO_VERIFY_URL, SSO_CLIENT_ID, SSO_CLIENT_KEY, ssoUser.id);
+    const ssoRole = effectiveSsoRole(central);
+    const resAkses = await ambilIzinPengguna(ssoUser.id, ssoRole);
     const izinSso = resAkses.izin;
     const akses = putuskanAkses({
-      ssoRole: ssoUser.role,
+      ssoRole,
       roles: resAkses.roles,
       statusAkun: resAkses.userRecord ? String(resAkses.userRecord.status ?? "") : null,
     });
@@ -782,31 +716,13 @@ app.post("/api/auth/sso", async (req: Request, res: Response) => {
       });
     }
 
-    // Segarkan biodata yang bersumber dari ONE UNUSU. Peran lokal TIDAK
-    // disentuh: penugasan peran adalah wewenang Admin LPM.
-    if (resAkses.userRecord) {
-      const namaBaru = ssoUser.nama || resAkses.userRecord.nama;
-      const emailBaru = ssoUser.email ?? resAkses.userRecord.email ?? null;
-      const ssoRoleBaru = ssoUser.role ? String(ssoUser.role).toUpperCase() : resAkses.userRecord.ssoRole;
-      if (
-        namaBaru !== resAkses.userRecord.nama ||
-        emailBaru !== resAkses.userRecord.email ||
-        ssoRoleBaru !== resAkses.userRecord.ssoRole
-      ) {
-        await prisma.lpmUser.update({
-          where: { id: resAkses.userRecord.id },
-          data: { nama: namaBaru, email: emailBaru, ssoRole: ssoRoleBaru },
-        }).catch(() => null);
-      }
-    }
-
     const sessionUser: SsoSession = {
       id: ssoUser.id,
       username: ssoUser.username,
       nama: ssoUser.nama,
       email: ssoUser.email ?? null,
-      role: akses.tingkat ?? "mahasiswa",
-      ssoRole: ssoUser.role,
+      role: akses.tingkat ?? "",
+      ssoRole,
       nim: ssoUser.nim ?? null,
       nidn: ssoUser.nidn ?? null,
       prodi: ssoUser.prodi ?? null,
@@ -827,6 +743,7 @@ app.post("/api/auth/sso", async (req: Request, res: Response) => {
       izin: Array.from(izinSso),
     });
   } catch (error: any) {
+    if (error instanceof CentralAccessError) return res.status(error.status).json({ success: false, code: error.status === 403 ? "IZIN_MASUK_DITOLAK" : "CENTRAL_ACCESS_UNAVAILABLE", message: error.message });
     res.status(500).json({ success: false, message: "Gagal memproses SSO: " + error?.message });
   }
 });
@@ -859,8 +776,7 @@ const requirePermission = (...kunci: string[]) =>
 
 /** Wajib memegang peran LPM `admin` (lewati pemeriksaan izin `masuk_*`). */
 const requirePeranAdminLpm = (req: Request, res: Response, next: NextFunction) => {
-  const user = (req as AuthRequest).user;
-  if (!user || user.role !== "admin") {
+  if (!(req as AuthRequest).akses?.isAppAdmin) {
     return res.status(403).json({
       success: false,
       code: "IZIN_KURANG",
@@ -891,11 +807,7 @@ app.get("/api/security/access-denials", requirePermission("keamanan:view"), (req
 app.get("/api/auth/me", (req: Request, res: Response) => {
   const user = (req as AuthRequest).user!;
   const izin = (req as AuthRequest).izin ?? new Set<string>();
-  const akses = putuskanAkses({
-    ssoRole: user.ssoRole,
-    roles: [user.role],
-    statusAkun: "Aktif",
-  });
+  const akses = (req as AuthRequest).akses;
   res.json({ success: true, user, appAccess: akses, izin: Array.from(izin) });
 });
 

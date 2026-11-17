@@ -1,5 +1,14 @@
 # Changelog — LPM UNUSU
 
+## [2026-11-18] — Keputusan akses masuk per peran ONE UNUSU
+
+- Kebijakan terbaru menggantikan kewajiban pendaftaran anggota untuk login: izin masuk ditentukan per peran pada ONE UNUSU. Peran dan izin fitur internal LPM tetap terpisah; hak masuk tidak berarti administrator.
+- Integrasi menggunakan pemeriksaan akses server-ke-server dengan ONE; tanpa keanggotaan lokal, pengguna tidak otomatis diberi izin tindakan atau dibuatkan akun lokal.
+
+## [2026-11-17] — Endpoint direktori terpadu
+
+- Verifikasi pilihan pengguna memakai `POST /api/v2/website/users` dengan `ids`, menggantikan URL `/users/by-ids`; tetap mencocokkan ID langsung.
+
 ## [2026-11-16] — Superadmin Langsung Mendapat Izin Saat Login
 
 ### Fixed

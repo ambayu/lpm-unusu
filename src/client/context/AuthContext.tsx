@@ -172,12 +172,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIzin([]);
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(IZIN_KEY);
-        } else if (status === 401) {
+        } else if (status === 401 || status === 403) {
           clearSession();
         } else {
-          // Gagal jaringan: pakai izin tersimpan agar panel tetap bisa dibuka,
-          // tetapi server tetap menolak operasi yang tidak diizinkan.
-          setAppAccess((prev) => prev ?? { ...fallbackAppAccess(), allowed: cachedIzin.length > 0, izin: cachedIzin });
+          setIzin([]);
+          setAppAccess(fallbackAppAccess());
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -230,10 +229,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIzin([]);
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(IZIN_KEY);
+      } else if (error?.response?.status === 401 || error?.response?.status === 403) {
+        clearSession();
+      } else {
+        setIzin([]);
+        setAppAccess(fallbackAppAccess());
       }
-      /* kegagalan jaringan diabaikan — izin terakhir tetap dipakai */
     }
-  }, []);
+  }, [clearSession]);
 
   /**
    * Revalidasi izin saat tab kembali aktif.
