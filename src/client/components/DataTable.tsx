@@ -111,6 +111,7 @@ export function DataTable<T>({
         >
           <thead>
             <tr className="border-b border-[#CBD5E1] bg-slate-50/70 text-slate-600 font-bold uppercase tracking-wider">
+              <th scope="col" className={`${cellPadding} ${headTypeClass} w-16 text-center normal-case`}>No</th>
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -125,6 +126,7 @@ export function DataTable<T>({
           <tbody className="divide-y divide-[#CBD5E1]/60">
             {rows.map((row, index) => (
               <tr key={rowKey(row, index)} className="hover:bg-slate-50/80 transition-colors">
+                <td className={`${cellPadding} ${cellTypeClass} text-center tabular-nums`}>{index + 1}</td>
                 {columns.map((col) => (
                   <td key={col.key} className={`${cellPadding} ${cellTypeClass} ${col.cellClassName ?? ''}`}>
                     {col.render
