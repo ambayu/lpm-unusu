@@ -12,14 +12,17 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { ListPageTemplate, ListActionButton } from '../components/ListPageTemplate';
 import { ModalAturPeran } from '../components/ModalAturPeran';
+import { ModalPilihPengguna } from '../components/ModalPilihPengguna';
 import {
   SSO_ROLE_LABEL,
   fetchRbacPengguna,
   fetchRbacPeran,
+  createRbacPengguna,
   updateRbacPengguna,
   deleteRbacPengguna,
   type RbacPeran,
   type RbacPengguna,
+  type KandidatPenggunaOne,
 } from '../services/api';
 
 export const UsersPage: React.FC = () => {
@@ -40,6 +43,10 @@ export const UsersPage: React.FC = () => {
   const [menyimpanPeran, setMenyimpanPeran] = useState(false);
   const [memprosesStatusId, setMemprosesStatusId] = useState<number | null>(null);
 
+  // Modal Tambah Pengguna dari Direktori ONE UNUSU
+  const [bukaModalTambah, setBukaModalTambah] = useState(false);
+  const [sedangMenyimpanTambah, setSedangMenyimpanTambah] = useState(false);
+
   // Modal atur peran
   const [penggunaModal, setPenggunaModal] = useState<RbacPengguna | null>(null);
   const [galatModal, setGalatModal] = useState<string | null>(null);
@@ -48,17 +55,13 @@ export const UsersPage: React.FC = () => {
   const [targetHapus, setTargetHapus] = useState<RbacPengguna | null>(null);
   const [menghapus, setMenghapus] = useState(false);
 
-  // Pesan sukses dari rute form
-  const [pesanSukses, setPesanSukses] = useState<string | null>(
-    (location.state as { pesan?: string } | null)?.pesan ?? null
-  );
+  // Pesan sukses
+  const [notifikasiSukses, setNotifikasiSukses] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!pesanSukses) return;
-    navigate(location.pathname, { replace: true, state: null });
-    const jeda = setTimeout(() => setPesanSukses(null), 6000);
-    return () => clearTimeout(jeda);
-  }, [pesanSukses, location.pathname, navigate]);
+  const tampilkanNotifikasi = (pesan: string) => {
+    setNotifikasiSukses(pesan);
+    setTimeout(() => setNotifikasiSukses(null), 5000);
+  };
 
   const fetchData = async () => {
     try {
@@ -99,6 +102,37 @@ export const UsersPage: React.FC = () => {
     u.peran.some((p) => p.toUpperCase() === 'SUPERADMIN') ||
     u.username === 'admin';
 
+  const handleSimpanPegawaiBaru = async (params: {
+    pengguna: KandidatPenggunaOne[];
+    peran: string;
+  }) => {
+    try {
+      setSedangMenyimpanTambah(true);
+      const userIds = params.pengguna.map((p) => p.id);
+      const kandidat = params.pengguna.map((p) => ({
+        id: p.id,
+        nama: p.nama,
+        username: p.username,
+      }));
+
+      const res = await createRbacPengguna({
+        userIds,
+        kandidat,
+        peran: params.peran ? [params.peran] : [],
+      });
+
+      setBukaModalTambah(false);
+      tampilkanNotifikasi(
+        res.data?.message || `${params.pengguna.length} pengguna berhasil ditambahkan sebagai pegawai LPM.`
+      );
+      await fetchData();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err.message || 'Gagal menambahkan pengguna.');
+    } finally {
+      setSedangMenyimpanTambah(false);
+    }
+  };
+
   const gantiStatus = async (u: RbacPengguna, statusBaru: string) => {
     if (isSuperadmin(u)) {
       alert('Status akun Super Administrator tidak dapat diubah.');
@@ -114,6 +148,7 @@ export const UsersPage: React.FC = () => {
       setUsers((prev) =>
         prev.map((item) => (item.id === u.id ? { ...item, status: statusBaru } : item))
       );
+      tampilkanNotifikasi(`Status akun ${u.nama} berhasil diubah menjadi ${statusBaru}.`);
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Gagal memperbarui status akun.');
     } finally {
@@ -131,6 +166,7 @@ export const UsersPage: React.FC = () => {
         status: penggunaModal.status || 'Aktif',
       });
       setPenggunaModal(null);
+      tampilkanNotifikasi(`Peran ${penggunaModal.nama} berhasil diperbarui.`);
       await fetchData();
     } catch (err: any) {
       setGalatModal(err?.response?.data?.message || err.message || 'Gagal mengubah peran pengguna.');
@@ -145,6 +181,7 @@ export const UsersPage: React.FC = () => {
       setMenghapus(true);
       await deleteRbacPengguna(targetHapus.id);
       setTargetHapus(null);
+      tampilkanNotifikasi(`Pengguna ${targetHapus.nama} berhasil dihapus dari panel LPM.`);
       await fetchData();
     } catch (err: any) {
       alert(err?.response?.data?.message || err.message || 'Gagal menghapus pengguna.');
@@ -248,7 +285,7 @@ export const UsersPage: React.FC = () => {
                 ? 'border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed'
                 : 'border-slate-200 bg-white text-slate-900 hover:bg-lpm-blue-50 hover:border-lpm-blue-700 cursor-pointer'
             }`}
-            title={isSuper ? 'Peran Superadmin tidak dapat diubah' : 'Atur peran'}
+            title={isSuper ? 'Peran Superadmin tidak dapat diubah' : 'Klik untuk ubah peran'}
             aria-label={`Atur peran ${u.nama}`}
           >
             <ShieldCheckIcon className="w-3.5 h-3.5 text-lpm-blue-700 flex-shrink-0" />
@@ -303,14 +340,18 @@ export const UsersPage: React.FC = () => {
         const isSuper = isSuperadmin(u);
         return (
           <div className="inline-flex items-center justify-end gap-1.5">
-            {bolehUbah && (
-              <Link
-                to={`/admin/pengguna/edit/${u.id}`}
+            {bolehUbah && !isSuper && (
+              <button
+                type="button"
+                onClick={() => {
+                  setGalatModal(null);
+                  setPenggunaModal(u);
+                }}
                 className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-lpm-blue-50 hover:text-lpm-blue-800 transition cursor-pointer"
-                title={`Ubah pengguna ${u.nama}`}
+                title={`Atur peran ${u.nama}`}
               >
-                <PencilSquareIcon className="w-4 h-4" />
-              </Link>
+                <ShieldCheckIcon className="w-4 h-4" />
+              </button>
             )}
             {bolehHapus && !isSuper && u.id !== userSekarang?.id && (
               <button
@@ -330,16 +371,32 @@ export const UsersPage: React.FC = () => {
 
   return (
     <>
+      {notifikasiSukses && (
+        <div className="mb-4 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 flex items-center justify-between text-xs font-semibold animate-fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircleIcon className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{notifikasiSukses}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotifikasiSukses(null)}
+            className="text-emerald-700 hover:text-emerald-900 cursor-pointer"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
       <ListPageTemplate<RbacPengguna>
         title="Manajemen Pengguna & Auditor"
-        description="Pengguna panel LPM dipilih dari direktori ONE UNUSU dan diatur peran serta status penugasannya secara terpusat."
+        description="Daftar pegawai dan auditor panel LPM yang terdaftar di database lokal. Tambah pegawai baru langsung dari direktori kampus ONE UNUSU."
         actions={
           bolehTambah ? (
             <ListActionButton
-              to="/admin/pengguna/tambah"
+              onClick={() => setBukaModalTambah(true)}
               icon={<UserPlusIcon className="w-4 h-4" />}
             >
-              Pilih Pengguna ONE UNUSU
+              Tambah Pengguna ONE UNUSU
             </ListActionButton>
           ) : undefined
         }
@@ -361,7 +418,7 @@ export const UsersPage: React.FC = () => {
           </select>
         }
         tableTitle="Daftar Pengguna & Auditor LPM"
-        tableSubtitle={`Total ${filteredUsers.length} pengguna terdaftar`}
+        tableSubtitle={`Total ${filteredUsers.length} pengguna terdaftar di database`}
         columns={columns}
         rows={filteredUsers}
         rowKey={(u) => u.id}
@@ -369,6 +426,16 @@ export const UsersPage: React.FC = () => {
         error={error}
         onRetry={fetchData}
         emptyMessage="Belum ada pengguna panel LPM yang terdaftar."
+      />
+
+      {/* Modal Tambah Pengguna dari Direktori ONE UNUSU */}
+      <ModalPilihPengguna
+        terbuka={bukaModalTambah}
+        opsiPeran={opsiPeranKode}
+        idTerdaftar={users.map((u) => u.username)}
+        sedangMenyimpan={sedangMenyimpanTambah}
+        onTutup={() => setBukaModalTambah(false)}
+        onSimpan={handleSimpanPegawaiBaru}
       />
 
       {/* Modal Atur Peran */}
@@ -407,7 +474,7 @@ export const UsersPage: React.FC = () => {
                 type="button"
                 disabled={menghapus}
                 onClick={() => setTargetHapus(null)}
-                className="px-4 py-2 text-xs font-semibold rounded-[10px] border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+                className="px-4 py-2 text-xs font-semibold rounded-[10px] border border-slate-200 text-slate-600 hover:bg-slate-50 transition cursor-pointer"
               >
                 Batal
               </button>
@@ -415,7 +482,7 @@ export const UsersPage: React.FC = () => {
                 type="button"
                 disabled={menghapus}
                 onClick={handleKonfirmasiHapus}
-                className="px-4 py-2 text-xs font-bold rounded-[10px] bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition disabled:opacity-50"
+                className="px-4 py-2 text-xs font-bold rounded-[10px] bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition disabled:opacity-50 cursor-pointer"
               >
                 {menghapus ? 'Menghapus...' : 'Ya, Hapus Akses'}
               </button>
