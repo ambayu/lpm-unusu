@@ -1,32 +1,32 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  UsersIcon,
   UserPlusIcon,
   PencilSquareIcon,
   TrashIcon,
-  MagnifyingGlassIcon,
   ShieldCheckIcon,
-  CheckBadgeIcon
+  CheckCircleIcon,
+  XCircleIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
-import { CardContainer } from '../components/CardContainer';
-import { DataTable } from '../components/DataTable';
-import { ErrorState } from '../components/ErrorState';
+import { ListPageTemplate, ListActionButton } from '../components/ListPageTemplate';
 import { ModalAturPeran } from '../components/ModalAturPeran';
+import { ModalPilihPengguna } from '../components/ModalPilihPengguna';
 import {
   SSO_ROLE_LABEL,
   fetchRbacPengguna,
   fetchRbacPeran,
+  createRbacPengguna,
   updateRbacPengguna,
   deleteRbacPengguna,
   type RbacPeran,
   type RbacPengguna,
+  type KandidatPenggunaOne,
 } from '../services/api';
 
 export const UsersPage: React.FC = () => {
-  // Tombol & aksi ditentukan oleh IZIN, bukan nama peran.
-  const { bisa } = useAuth();
+  const { bisa, pengguna: userSekarang } = useAuth();
   const bolehTambah = bisa('pengguna:create');
   const bolehUbah = bisa('pengguna:update');
   const bolehHapus = bisa('pengguna:delete');
@@ -41,24 +41,27 @@ export const UsersPage: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [opsiPeranKode, setOpsiPeranKode] = useState<RbacPeran[]>([]);
   const [menyimpanPeran, setMenyimpanPeran] = useState(false);
+  const [memprosesStatusId, setMemprosesStatusId] = useState<number | null>(null);
+
+  // Modal Tambah Pengguna dari Direktori ONE UNUSU
+  const [bukaModalTambah, setBukaModalTambah] = useState(false);
+  const [sedangMenyimpanTambah, setSedangMenyimpanTambah] = useState(false);
 
   // Modal atur peran
   const [penggunaModal, setPenggunaModal] = useState<RbacPengguna | null>(null);
   const [galatModal, setGalatModal] = useState<string | null>(null);
 
-  // Pesan sukses yang dibawa dari halaman Tambah Pengguna.
-  const [pesanSukses, setPesanSukses] = useState<string | null>(
-    (location.state as { pesan?: string } | null)?.pesan ?? null
-  );
+  // Modal konfirmasi hapus
+  const [targetHapus, setTargetHapus] = useState<RbacPengguna | null>(null);
+  const [menghapus, setMenghapus] = useState(false);
 
-  useEffect(() => {
-    if (!pesanSukses) return;
-    // Bersihkan state rute agar pesan tidak muncul lagi saat halaman dimuat ulang.
-    navigate(location.pathname, { replace: true, state: null });
-    const jeda = setTimeout(() => setPesanSukses(null), 6000);
-    return () => clearTimeout(jeda);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Pesan sukses
+  const [notifikasiSukses, setNotifikasiSukses] = useState<string | null>(null);
+
+  const tampilkanNotifikasi = (pesan: string) => {
+    setNotifikasiSukses(pesan);
+    setTimeout(() => setNotifikasiSukses(null), 5000);
+  };
 
   const fetchData = async () => {
     try {
@@ -79,31 +82,80 @@ export const UsersPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, []);
 
-  // Daftar peran resmi dari tabel lpm_roles — dipakai dropdown per baris.
   useEffect(() => {
     let aktif = true;
     fetchRbacPeran()
       .then((res) => {
         if (aktif && res.data?.success) setOpsiPeranKode(res.data.data);
       })
-      .catch(() => {
-        /* dropdown tetap kosong; pesan galat muncul saat menyimpan */
-      });
+      .catch(() => {});
     return () => {
       aktif = false;
     };
   }, []);
 
-  /**
-   * Simpan peran dari modal.
-   *
-   * Server menetapkan izin dari peran, jadi perubahan ini langsung mengubah hak
-   * akses pada permintaan berikutnya. Daftar dimuat ulang agar tabel selalu
-   * mencerminkan isi database.
-   */
+  const isSuperadmin = (u: RbacPengguna) =>
+    (u.ssoRole || '').toUpperCase() === 'SUPERADMIN' ||
+    u.peran.some((p) => p.toUpperCase() === 'SUPERADMIN') ||
+    u.username === 'admin';
+
+  const handleSimpanPegawaiBaru = async (params: {
+    pengguna: KandidatPenggunaOne[];
+    peran: string;
+  }) => {
+    try {
+      setSedangMenyimpanTambah(true);
+      const userIds = params.pengguna.map((p) => p.id);
+      const kandidat = params.pengguna.map((p) => ({
+        id: p.id,
+        nama: p.nama,
+        username: p.username,
+      }));
+
+      const res = await createRbacPengguna({
+        userIds,
+        kandidat,
+        peran: params.peran ? [params.peran] : [],
+      });
+
+      setBukaModalTambah(false);
+      tampilkanNotifikasi(
+        res.data?.message || `${params.pengguna.length} pengguna berhasil ditambahkan sebagai pegawai LPM.`
+      );
+      await fetchData();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err.message || 'Gagal menambahkan pengguna.');
+    } finally {
+      setSedangMenyimpanTambah(false);
+    }
+  };
+
+  const gantiStatus = async (u: RbacPengguna, statusBaru: string) => {
+    if (isSuperadmin(u)) {
+      alert('Status akun Super Administrator tidak dapat diubah.');
+      return;
+    }
+
+    try {
+      setMemprosesStatusId(u.id);
+      await updateRbacPengguna(u.id, {
+        status: statusBaru,
+        peran: u.peran,
+      });
+      setUsers((prev) =>
+        prev.map((item) => (item.id === u.id ? { ...item, status: statusBaru } : item))
+      );
+      tampilkanNotifikasi(`Status akun ${u.nama} berhasil diubah menjadi ${statusBaru}.`);
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Gagal memperbarui status akun.');
+    } finally {
+      setMemprosesStatusId(null);
+    }
+  };
+
   const simpanPeran = async (kode: string) => {
     if (!penggunaModal) return;
     setGalatModal(null);
@@ -114,6 +166,7 @@ export const UsersPage: React.FC = () => {
         status: penggunaModal.status || 'Aktif',
       });
       setPenggunaModal(null);
+      tampilkanNotifikasi(`Peran ${penggunaModal.nama} berhasil diperbarui.`);
       await fetchData();
     } catch (err: any) {
       setGalatModal(err?.response?.data?.message || err.message || 'Gagal mengubah peran pengguna.');
@@ -122,263 +175,321 @@ export const UsersPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Yakin ingin menghapus akses pengguna ini dari LPM?')) return;
+  const handleKonfirmasiHapus = async () => {
+    if (!targetHapus || menghapus) return;
     try {
-      await deleteRbacPengguna(id);
-      fetchData();
+      setMenghapus(true);
+      await deleteRbacPengguna(targetHapus.id);
+      setTargetHapus(null);
+      tampilkanNotifikasi(`Pengguna ${targetHapus.nama} berhasil dihapus dari panel LPM.`);
+      await fetchData();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err.message || 'Terjadi kesalahan sistem');
+      alert(err?.response?.data?.message || err.message || 'Gagal menghapus pengguna.');
+    } finally {
+      setMenghapus(false);
     }
   };
 
-  /** Daftar peran unik untuk dropdown filter (diambil dari data pengguna). */
   const opsiPeran = useMemo(() => {
     const set = new Set<string>();
     users.forEach((u) => u.peran.forEach((p) => set.add(p)));
     return Array.from(set).sort();
   }, [users]);
 
-  const filteredUsers = users.filter((u) => {
-    const q = search.toLowerCase();
-    const matchSearch =
-      u.nama.toLowerCase().includes(q) ||
-      u.username.toLowerCase().includes(q) ||
-      (u.email ? u.email.toLowerCase().includes(q) : false);
-    const matchRole = !roleFilter || u.peran.includes(roleFilter);
-    return matchSearch && matchRole;
-  });
+  const filteredUsers = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return users.filter((u) => {
+      const matchSearch =
+        !q ||
+        u.nama.toLowerCase().includes(q) ||
+        u.username.toLowerCase().includes(q) ||
+        (u.email ? u.email.toLowerCase().includes(q) : false);
+      const matchRole = !roleFilter || u.peran.includes(roleFilter);
+      return matchSearch && matchRole;
+    });
+  }, [users, search, roleFilter]);
 
-  const adaAksi = bolehUbah || bolehHapus;
+  const columns = [
+    {
+      key: 'no',
+      header: 'NO',
+      headerClassName: 'w-12 text-center',
+      cellClassName: 'text-center font-mono text-slate-400 text-xs',
+      render: (_u: RbacPengguna, index?: number) => (index !== undefined ? index + 1 : '-'),
+    },
+    {
+      key: 'username',
+      header: 'NIDN / NIM',
+      headerClassName: 'w-40',
+      cellClassName: 'font-mono font-semibold text-slate-800',
+      render: (u: RbacPengguna) => u.username,
+    },
+    {
+      key: 'nama',
+      header: 'Nama Lengkap',
+      headerClassName: 'min-w-[200px]',
+      cellClassName: 'font-bold text-slate-900',
+      render: (u: RbacPengguna) => (
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-full bg-lpm-blue-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
+            {u.nama ? u.nama.charAt(0).toUpperCase() : 'U'}
+          </div>
+          <span className="truncate">{u.nama}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'email',
+      header: 'Email SSO',
+      headerClassName: 'min-w-[200px]',
+      cellClassName: 'text-slate-600 font-mono text-xs',
+      render: (u: RbacPengguna) =>
+        u.email || (u.username.includes('@') ? u.username : `${u.username.toLowerCase()}@unusu.ac.id`),
+    },
+    {
+      key: 'peran',
+      header: 'Peran LPM',
+      headerClassName: 'min-w-[180px]',
+      render: (u: RbacPengguna) => {
+        const isSuper = isSuperadmin(u);
+        const label =
+          u.peran.length === 0
+            ? 'Tanpa peran'
+            : u.peran.map((p) => SSO_ROLE_LABEL[p.toUpperCase()] || p).join(', ');
+
+        if (!bolehUbah) {
+          return (
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-xs font-semibold ${
+                isSuper
+                  ? 'bg-rose-50 border-rose-200 text-rose-700'
+                  : 'bg-slate-50 border-slate-200 text-slate-700'
+              }`}
+            >
+              <ShieldCheckIcon className="w-3.5 h-3.5 text-lpm-blue-700" />
+              <span>{label}</span>
+            </span>
+          );
+        }
+
+        return (
+          <button
+            type="button"
+            onClick={() => {
+              setGalatModal(null);
+              setPenggunaModal(u);
+            }}
+            disabled={isSuper}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[34px] rounded-[8px] border text-xs font-semibold transition ${
+              isSuper
+                ? 'border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed'
+                : 'border-slate-200 bg-white text-slate-900 hover:bg-lpm-blue-50 hover:border-lpm-blue-700 cursor-pointer'
+            }`}
+            title={isSuper ? 'Peran Superadmin tidak dapat diubah' : 'Klik untuk ubah peran'}
+            aria-label={`Atur peran ${u.nama}`}
+          >
+            <ShieldCheckIcon className="w-3.5 h-3.5 text-lpm-blue-700 flex-shrink-0" />
+            <span className="truncate max-w-[150px]">{label}</span>
+          </button>
+        );
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status Akun',
+      headerClassName: 'w-36 text-center',
+      cellClassName: 'text-center',
+      render: (u: RbacPengguna) => {
+        const isSuper = isSuperadmin(u);
+        if (!bolehUbah || isSuper) {
+          const aktif = u.status === 'Aktif';
+          return (
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                aktif
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border-rose-200'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${aktif ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <span>{u.status || 'Aktif'}</span>
+            </span>
+          );
+        }
+
+        return (
+          <select
+            value={u.status || 'Aktif'}
+            disabled={memprosesStatusId === u.id}
+            onChange={(e) => gantiStatus(u, e.target.value)}
+            className="px-2.5 py-1 min-h-[32px] text-xs font-semibold rounded-[8px] border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-lpm-blue-700/30 cursor-pointer disabled:opacity-60"
+            aria-label={`Status akun ${u.nama}`}
+          >
+            <option value="Aktif">Aktif</option>
+            <option value="Nonaktif">Nonaktif</option>
+          </select>
+        );
+      },
+    },
+    {
+      key: 'aksi',
+      header: 'Aksi',
+      headerClassName: 'w-24 text-right',
+      cellClassName: 'text-right',
+      render: (u: RbacPengguna) => {
+        const isSuper = isSuperadmin(u);
+        return (
+          <div className="inline-flex items-center justify-end gap-1.5">
+            {bolehUbah && !isSuper && (
+              <button
+                type="button"
+                onClick={() => {
+                  setGalatModal(null);
+                  setPenggunaModal(u);
+                }}
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-lpm-blue-50 hover:text-lpm-blue-800 transition cursor-pointer"
+                title={`Atur peran ${u.nama}`}
+              >
+                <ShieldCheckIcon className="w-4 h-4" />
+              </button>
+            )}
+            {bolehHapus && !isSuper && u.id !== userSekarang?.id && (
+              <button
+                type="button"
+                onClick={() => setTargetHapus(u)}
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+                title={`Hapus pengguna ${u.nama}`}
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Top Header Card */}
-      <CardContainer>
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-[10px] bg-lpm-blue-50 text-lpm-blue-800 flex items-center justify-center">
-                <UsersIcon className="w-5 h-5" />
-              </div>
-              <h1 className="text-xl font-bold text-slate-900">Manajemen Pengguna & Auditor</h1>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Daftar pengguna dengan hak akses terhadap audit, dokumen mutu, dan standar SPMI UNUSU.
-            </p>
+    <>
+      {notifikasiSukses && (
+        <div className="mb-4 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 flex items-center justify-between text-xs font-semibold animate-fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircleIcon className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{notifikasiSukses}</span>
           </div>
-          {bolehTambah && (
-            <Link
-              to="/admin/pengguna/tambah"
-              className="inline-flex items-center gap-2 bg-lpm-blue-900 hover:bg-lpm-blue-800 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition shadow-xs cursor-pointer"
-            >
-              <UserPlusIcon className="w-4 h-4" />
-              Tambah Pengguna
-            </Link>
-          )}
-        </div>
-      </CardContainer>
-
-      {pesanSukses && (
-        <div
-          role="status"
-          className="px-4 py-3.5 rounded-[12px] bg-[#F0FDF4] border border-[#166534] text-[#166534] text-xs font-semibold"
-        >
-          {pesanSukses}
+          <button
+            type="button"
+            onClick={() => setNotifikasiSukses(null)}
+            className="text-emerald-700 hover:text-emerald-900 cursor-pointer"
+          >
+            Tutup
+          </button>
         </div>
       )}
 
-      {/* Filter & Search Bar */}
-      <CardContainer>
-        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
-          <div className="relative w-full md:w-80">
-            <MagnifyingGlassIcon className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-            <input
-              type="text"
-              placeholder="Cari nama, username, atau email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-lpm-blue-800 focus:border-transparent"
-            />
-          </div>
-          <div className="flex items-center gap-2.5 w-full md:w-auto">
-            <label className="text-xs font-semibold text-slate-500">Filter Peran:</label>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="border border-slate-200 rounded-xl text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-lpm-blue-800 bg-white"
+      <ListPageTemplate<RbacPengguna>
+        title="Manajemen Pengguna & Auditor"
+        description="Daftar pegawai dan auditor panel LPM yang terdaftar di database lokal. Tambah pegawai baru langsung dari direktori kampus ONE UNUSU."
+        actions={
+          bolehTambah ? (
+            <ListActionButton
+              onClick={() => setBukaModalTambah(true)}
+              icon={<UserPlusIcon className="w-4 h-4" />}
             >
-              <option value="">Semua Peran</option>
-              {opsiPeran.map((p) => (
-                <option key={p} value={p}>
-                  {SSO_ROLE_LABEL[p.toUpperCase()] || p}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </CardContainer>
+              Tambah Pengguna ONE UNUSU
+            </ListActionButton>
+          ) : undefined
+        }
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Cari pengguna berdasarkan nama, NIDN, atau email..."
+        filters={
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-lpm-blue-700/30"
+          >
+            <option value="">Semua Peran</option>
+            {opsiPeran.map((p) => (
+              <option key={p} value={p}>
+                {SSO_ROLE_LABEL[p.toUpperCase()] || p}
+              </option>
+            ))}
+          </select>
+        }
+        tableTitle="Daftar Pengguna & Auditor LPM"
+        tableSubtitle={`Total ${filteredUsers.length} pengguna terdaftar di database`}
+        columns={columns}
+        rows={filteredUsers}
+        rowKey={(u) => u.id}
+        loading={loading}
+        error={error}
+        onRetry={fetchData}
+        emptyMessage="Belum ada pengguna panel LPM yang terdaftar."
+      />
 
-      {/* Table Card */}
-      {error ? (
-        <ErrorState description={error} onRetry={fetchData} />
-      ) : (
-        <CardContainer title="Daftar Pengguna Aktif & Hak Akses">
-          {loading ? (
-            <div className="p-12 text-center text-xs text-slate-500" role="status">
-              Memuat data pengguna...
-            </div>
-          ) : (
-            <DataTable
-              minTableWidth="min-w-[1100px]"
-              rows={filteredUsers}
-              rowKey={(u) => u.id}
-              emptyMessage="Belum ada data pengguna yang sesuai kriteria."
-              columns={[
-                {
-                  key: 'username',
-                  header: 'NIDN / NIM',
-                  headerClassName: 'w-40',
-                  cellClassName: 'font-mono font-semibold text-slate-800',
-                  render: (u) => u.username,
-                },
-                {
-                  key: 'nama',
-                  header: 'Nama Lengkap',
-                  headerClassName: 'min-w-[200px]',
-                  cellClassName: 'font-bold text-slate-900',
-                  render: (u) => u.nama,
-                },
-                {
-                  key: 'email',
-                  header: 'Email',
-                  headerClassName: 'min-w-[220px]',
-                  cellClassName: 'text-slate-600 font-mono',
-                  render: (u) =>
-                    u.email || (u.username.includes('@') ? u.username : `${u.username.toLowerCase()}@unusu.ac.id`),
-                },
-                {
-                  key: 'status',
-                  header: 'Status Akun',
-                  headerClassName: 'w-36',
-                  render: (u) => (
-                    <span
-                      className={`inline-flex items-center gap-1 font-semibold px-2.5 py-1 rounded-full border ${
-                        u.status === 'Aktif'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-rose-50 text-rose-700 border-rose-200'
-                      }`}
-                    >
-                      <CheckBadgeIcon className="w-3.5 h-3.5" aria-hidden="true" />
-                      {u.status || 'Aktif'}
-                    </span>
-                  ),
-                },
-                {
-                  key: 'peran',
-                  header: 'Peran LPM',
-                  headerClassName: 'min-w-[190px]',
-                  // Peran ditetapkan lewat modal: ruangnya cukup untuk
-                  // menjelaskan izin tiap peran, dan tidak berdekatan dengan
-                  // tombol hapus seperti pada dropdown di dalam baris.
-                  render: (u) => {
-                    const isSuper =
-                      u.ssoRole === 'SUPERADMIN' ||
-                      u.peran.includes('SUPERADMIN') ||
-                      u.username === 'admin';
-                    const label =
-                      u.peran.length === 0
-                        ? 'Tanpa peran'
-                        : u.peran
-                            .map((p) => SSO_ROLE_LABEL[p.toUpperCase()] || p)
-                            .join(', ');
+      {/* Modal Tambah Pengguna dari Direktori ONE UNUSU */}
+      <ModalPilihPengguna
+        terbuka={bukaModalTambah}
+        opsiPeran={opsiPeranKode}
+        idTerdaftar={users.map((u) => u.username)}
+        sedangMenyimpan={sedangMenyimpanTambah}
+        onTutup={() => setBukaModalTambah(false)}
+        onSimpan={handleSimpanPegawaiBaru}
+      />
 
-                    if (!bolehUbah) {
-                      return <span className="font-semibold text-slate-800">{label}</span>;
-                    }
-
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setGalatModal(null);
-                          setPenggunaModal(u);
-                        }}
-                        disabled={isSuper}
-                        className={`inline-flex items-center gap-1.5 px-3 py-2 min-h-[36px] rounded-[8px] border text-xs font-semibold transition ${
-                          isSuper
-                            ? 'border-[#D8E5DC] bg-slate-100 text-slate-500 cursor-not-allowed'
-                            : 'border-[#D8E5DC] bg-white text-slate-900 hover:bg-[#F0FDF4] hover:border-[#166534] cursor-pointer'
-                        }`}
-                        title={isSuper ? 'Peran Superadmin tidak dapat diubah' : 'Atur peran'}
-                        aria-label={`Atur peran ${u.nama}`}
-                      >
-                        <ShieldCheckIcon className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
-                        <span className="truncate max-w-[150px]">{label}</span>
-                      </button>
-                    );
-                  },
-                },
-                ...(adaAksi
-                  ? [
-                      {
-                        key: 'aksi',
-                        header: 'Aksi',
-                        headerClassName: 'w-28 text-center',
-                        cellClassName: 'text-center',
-                        render: (u: (typeof filteredUsers)[number]) => {
-                          const isSuper =
-                            u.ssoRole === 'SUPERADMIN' ||
-                            u.peran.includes('SUPERADMIN') ||
-                            u.username === 'admin';
-                          return (
-                            <div className="inline-flex items-center justify-center gap-2">
-                              {bolehUbah && (
-                                <Link
-                                  to={`/admin/pengguna/edit/${u.id}`}
-                                  className="inline-flex items-center justify-center w-9 h-9 rounded-[8px] border border-slate-200 text-slate-600 hover:text-lpm-blue-900 hover:bg-lpm-blue-50 transition cursor-pointer"
-                                  title="Edit Pengguna"
-                                  aria-label={`Edit ${u.nama}`}
-                                >
-                                  <PencilSquareIcon className="w-4 h-4" />
-                                </Link>
-                              )}
-                              {bolehHapus && !isSuper && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDelete(u.id)}
-                                  className="inline-flex items-center justify-center w-9 h-9 rounded-[8px] border border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                                  title="Hapus Pengguna"
-                                  aria-label={`Hapus ${u.nama}`}
-                                >
-                                  <TrashIcon className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          );
-                        },
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-          )}
-        </CardContainer>
-      )}
-
+      {/* Modal Atur Peran */}
       <ModalAturPeran
-        terbuka={Boolean(penggunaModal)}
+        terbuka={penggunaModal !== null}
         pengguna={penggunaModal}
         opsiPeran={opsiPeranKode}
         sedangMenyimpan={menyimpanPeran}
         pesanGalat={galatModal}
         onTutup={() => {
-          if (menyimpanPeran) return;
           setPenggunaModal(null);
           setGalatModal(null);
         }}
         onSimpan={simpanPeran}
       />
-    </div>
+
+      {/* Modal Konfirmasi Hapus */}
+      {targetHapus && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-[16px] max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4 animate-scale-up">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
+                <TrashIcon className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 text-sm">Hapus Akses Pengguna LPM?</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Apakah Anda yakin ingin menghapus akses panel LPM untuk{' '}
+                  <strong className="text-slate-800">{targetHapus.nama}</strong> ({targetHapus.username})? Pengguna ini tidak akan bisa login ke panel LPM lagi.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={menghapus}
+                onClick={() => setTargetHapus(null)}
+                className="px-4 py-2 text-xs font-semibold rounded-[10px] border border-slate-200 text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={menghapus}
+                onClick={handleKonfirmasiHapus}
+                className="px-4 py-2 text-xs font-bold rounded-[10px] bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition disabled:opacity-50 cursor-pointer"
+              >
+                {menghapus ? 'Menghapus...' : 'Ya, Hapus Akses'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

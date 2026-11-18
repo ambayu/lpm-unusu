@@ -2519,33 +2519,48 @@ app.delete("/api/kategori/:id", requirePermission("dokumen:delete"), async (req:
   }
 });
 
-// GET /api/prodi (Daftar prodi dari SSO One UNUSU Academic Hierarchy)
+// GET /api/prodi (Daftar prodi dari API Hub ONE UNUSU - Organisasi)
 app.get("/api/prodi", async (_req: Request, res: Response) => {
   try {
     const ssoBase = SSO_BASE_URL.replace(/\/$/, "");
     const academicBase = ssoBase.endsWith("/sso") ? ssoBase.slice(0, -4) : ssoBase;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
-    const upstreamRes = await fetch(`${academicBase}/api/academic/hierarchy`, {
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+    };
+    if (ONE_UNUSU_API_KEY) {
+      headers.Authorization = `Bearer ${ONE_UNUSU_API_KEY}`;
+    }
+
+    let upstreamRes = await fetch(`${academicBase}/api/v2/website/organisasi`, {
+      headers,
       signal: controller.signal,
-    });
+    }).catch(() => null);
+
+    // Fallback bila endpoint organisasi belum tersedia
+    if (!upstreamRes || !upstreamRes.ok) {
+      upstreamRes = await fetch(`${academicBase}/api/academic/hierarchy`, {
+        signal: controller.signal,
+      }).catch(() => null);
+    }
     clearTimeout(timeoutId);
 
-    if (upstreamRes.ok) {
+    if (upstreamRes && upstreamRes.ok) {
       const json = await upstreamRes.json() as { status?: boolean; data?: any[] };
       const faculties = Array.isArray(json.data) ? json.data : [];
       const prodiList: Array<{ id: number; code: string; name: string; degree: string; facultyName: string }> = [];
       for (const f of faculties) {
-        if (Array.isArray(f.studyPrograms)) {
-          for (const sp of f.studyPrograms) {
-            prodiList.push({
-              id: sp.id,
-              code: sp.code,
-              name: sp.name,
-              degree: sp.degree || '',
-              facultyName: f.name || '',
-            });
-          }
+        const studyPrograms = Array.isArray(f.prodi) ? f.prodi : (Array.isArray(f.studyPrograms) ? f.studyPrograms : []);
+        for (const sp of studyPrograms) {
+          prodiList.push({
+            id: sp.id,
+            code: sp.code || sp.kode || '',
+            name: sp.name || sp.nama || '',
+            degree: sp.degree || sp.jenjang || '',
+            facultyName: f.name || f.nama || '',
+          });
         }
       }
       return res.json({ success: true, data: prodiList });

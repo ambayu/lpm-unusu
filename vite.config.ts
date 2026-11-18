@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
         changeOrigin: true
       },
       '/sso': {
-        target: env.VITE_ONE_UNUSU_URL || 'http://localhost:5183',
+        target: env.VITE_ONE_UNUSU_URL || 'http://localhost:5173',
         changeOrigin: true,
       },
     }
